@@ -70,13 +70,15 @@ class MultiDomainIdentity:
         consistency_score = self._assess_consistency(new_traits, current_domain.embedding, current_domain.confidence)
         validation_score = self._assess_social_validation(new_traits, social_feedback, domain, narrative_context)
         resistance = self._calculate_resistance(current_domain, consistency_score, validation_score)
-        
+
         update_threshold = 0.3 + (current_domain.stability * 0.4)
         combined_support = consistency_score * 0.4 + validation_score * 0.6
 
         update_occurred = False
         if combined_support > update_threshold:
-            update_strength = self._calculate_update_strength(consistency_score, validation_score, resistance, current_domain.confidence)
+            update_strength = self._calculate_update_strength(
+                consistency_score, validation_score, resistance, current_domain.confidence
+            )
             identity_delta = new_traits - current_domain.embedding
             constrained_delta = identity_delta * update_strength * (1 - resistance)
 
@@ -101,7 +103,9 @@ class MultiDomainIdentity:
 
         return update_occurred, consistency_score, validation_metrics
 
-    def _assess_consistency(self, new_traits: np.ndarray, current_embedding: np.ndarray, current_confidence: float) -> float:
+    def _assess_consistency(
+        self, new_traits: np.ndarray, current_embedding: np.ndarray, current_confidence: float
+    ) -> float:
         """Assess how consistent new traits are with existing self-concept."""
         if current_confidence < 0.1:
             return 0.8
@@ -117,7 +121,9 @@ class MultiDomainIdentity:
         confidence_modulated = consistency ** (1 + current_confidence)
         return float(np.clip(confidence_modulated, 0.0, 1.0))
 
-    def _assess_social_validation(self, new_traits: np.ndarray, social_feedback: Dict[str, float], domain: IdentityDomain, narrative_context: str) -> float:
+    def _assess_social_validation(
+        self, new_traits: np.ndarray, social_feedback: Dict[str, float], domain: IdentityDomain, narrative_context: str
+    ) -> float:
         """Assess social validation for identity claims."""
         if not social_feedback:
             return 0.3
@@ -136,11 +142,15 @@ class MultiDomainIdentity:
         social_approval = social_feedback.get("social_approval_rating", 0.0)
         peer_recognition = social_feedback.get("peer_recognition", 0.0)
 
-        validation_score = positive_interactions * 0.3 + social_approval * 0.4 + peer_recognition * 0.3 - negative_interactions * 0.2
+        validation_score = (
+            positive_interactions * 0.3 + social_approval * 0.4 + peer_recognition * 0.3 - negative_interactions * 0.2
+        )
         final_validation = base_validation * 0.3 + validation_score * 0.7
         return float(np.clip(final_validation, 0.0, 1.0))
 
-    def _calculate_resistance(self, current_domain: DomainIdentity, consistency_score: float, validation_score: float) -> float:
+    def _calculate_resistance(
+        self, current_domain: DomainIdentity, consistency_score: float, validation_score: float
+    ) -> float:
         """Calculate psychological resistance to identity change."""
         stability_resistance = current_domain.stability * 0.4
         consistency_resistance = (1 - consistency_score) * 0.5
@@ -149,7 +159,9 @@ class MultiDomainIdentity:
         total_resistance = stability_resistance + consistency_resistance + validation_resistance + confidence_resistance
         return float(np.clip(total_resistance, 0.0, 0.9))
 
-    def _calculate_update_strength(self, consistency_score: float, validation_score: float, resistance: float, current_confidence: float) -> float:
+    def _calculate_update_strength(
+        self, consistency_score: float, validation_score: float, resistance: float, current_confidence: float
+    ) -> float:
         """Calculate how strongly to update the identity embedding."""
         evidence_strength = consistency_score * 0.4 + validation_score * 0.6
         resistance_modulated = evidence_strength * (1 - resistance)
@@ -211,6 +223,11 @@ class MultiDomainIdentity:
         weighted_coherence = sum(s * w for s, w in zip(similarities, weights)) / total_weight
         return float(weighted_coherence)
 
+    def get_identity_stability(self) -> float:
+        """Get overall identity stability across domains"""
+        stabilities = [d.stability for d in self.domains.values()]
+        return float(np.mean(stabilities)) if stabilities else 0.5
+
 
 class SocialValidationCollector:
     """Collects and processes social feedback for identity validation."""
@@ -243,8 +260,10 @@ class SocialValidationCollector:
                 valence = schema.impression_valence
                 interactions = schema.interaction_count
                 total_valence += valence
-                if valence > 0.3: positive_count += interactions
-                elif valence < -0.3: negative_count += interactions
+                if valence > 0.3:
+                    positive_count += interactions
+                elif valence < -0.3:
+                    negative_count += interactions
                 recognition_score += min(interactions / 10.0, 1.0)
 
         total_interactions = positive_count + negative_count

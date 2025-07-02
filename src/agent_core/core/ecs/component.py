@@ -2,17 +2,17 @@
 
 from abc import abstractmethod
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 from agent_core.cognition.identity.domain_identity import (
-    IdentityDomain,
     MultiDomainIdentity,
 )
 from agent_core.core.ecs.abstractions import CognitiveComponent
 
-# These types will be defined in other libraries (like arla-engine) or the
+# These types will be defined in other libraries (like agent-engine) or the
 # final simulation application. We use forward references to avoid circular dependencies.
 if TYPE_CHECKING:
     # A data class representing a single belief.
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     @dataclass
     class CounterfactualEpisode:
         pass
-    
+
     # A class representing a subjective view of another agent.
     class RelationalSchema:
         pass
@@ -74,13 +74,16 @@ class Component(CognitiveComponent):
         """
         return False  # Default: no auto-fix
 
+
 # --------------------------------------------------------------------------
 # --- Core Cognitive Components (World-Agnostic) ---
 # These components define the internal, psychological state of an agent.
 # --------------------------------------------------------------------------
 
+
 class MemoryComponent(Component):
     """Stores episodic, short-term, and causal memories."""
+
     def __init__(self) -> None:
         self.episodic_memory: List[Dict[str, Any]] = []
         self.short_term_memory: deque[Dict[str, Any]] = deque(maxlen=10)
@@ -103,6 +106,7 @@ class MemoryComponent(Component):
 
 class IdentityComponent(Component):
     """Stores the agent's multi-domain identity."""
+
     def __init__(self, embedding_dim: int) -> None:
         self.multi_domain_identity = MultiDomainIdentity(embedding_dim)
         self.embedding: np.ndarray = self.multi_domain_identity.get_global_identity_embedding()
@@ -118,7 +122,11 @@ class IdentityComponent(Component):
             "identity_coherence": self.multi_domain_identity.get_identity_coherence(),
             "identity_stability": self.get_identity_stability(),
         }
-    
+
+    def get_identity_stability(self) -> float:
+        """Delegates the call to the underlying MultiDomainIdentity object."""
+        return self.multi_domain_identity.get_identity_stability()
+
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         errors: List[str] = []
         if self.embedding is None or not isinstance(self.embedding, np.ndarray):
@@ -128,6 +136,7 @@ class IdentityComponent(Component):
 
 class GoalComponent(Component):
     """Stores agent goals."""
+
     def __init__(self, embedding_dim: int) -> None:
         self.current_symbolic_goal: Optional[str] = None
         self.symbolic_goals_data: Dict[str, Dict[str, Any]] = {}
@@ -143,6 +152,7 @@ class GoalComponent(Component):
 
 class EmotionComponent(Component):
     """Stores the agent's current emotional state (valence, arousal)."""
+
     def __init__(self, valence: float = 0.0, arousal: float = 0.5) -> None:
         self.valence: float = valence
         self.arousal: float = arousal
@@ -154,16 +164,19 @@ class EmotionComponent(Component):
             "arousal": self.arousal,
             "current_emotion_category": self.current_emotion_category,
         }
-    
+
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         errors = []
-        if not -1.0 <= self.valence <= 1.0: errors.append("Valence out of bounds.")
-        if not 0.0 <= self.arousal <= 1.0: errors.append("Arousal out of bounds.")
+        if not -1.0 <= self.valence <= 1.0:
+            errors.append("Valence out of bounds.")
+        if not 0.0 <= self.arousal <= 1.0:
+            errors.append("Arousal out of bounds.")
         return len(errors) == 0, errors
 
 
 class AffectComponent(Component):
     """Stores affective state, including prediction errors and dissonance."""
+
     def __init__(self, affective_buffer_maxlen: int) -> None:
         self.prediction_delta_magnitude: float = 0.0
         self.predictive_delta_smooth: float = 0.5
@@ -184,6 +197,7 @@ class AffectComponent(Component):
 
 class EpisodeComponent(Component):
     """Stores narrative arcs (episodes) chunked from the agent's experiences."""
+
     def __init__(self) -> None:
         self.episodes: List["Episode"] = []
 
@@ -196,6 +210,7 @@ class EpisodeComponent(Component):
 
 class BeliefSystemComponent(Component):
     """Holds the agent's core beliefs and actionable rules."""
+
     def __init__(self) -> None:
         self.belief_base: Dict[str, "Belief"] = {}
         self.rule_base: List[str] = []
@@ -209,6 +224,7 @@ class BeliefSystemComponent(Component):
 
 class SocialMemoryComponent(Component):
     """Stores relational schemas about other agents."""
+
     def __init__(self, schema_embedding_dim: int, device) -> None:
         self.schemas: Dict[str, "RelationalSchema"] = {}
         self.schema_embedding_dim = schema_embedding_dim
@@ -223,6 +239,7 @@ class SocialMemoryComponent(Component):
 
 class ValueSystemComponent(Component):
     """Holds personal multipliers for subjective rewards and costs."""
+
     def __init__(self) -> None:
         self.combat_victory_multiplier: float = 1.0
         self.collaboration_multiplier: float = 1.0
@@ -235,13 +252,14 @@ class ValueSystemComponent(Component):
             "collaboration_multiplier": self.collaboration_multiplier,
             "risk_tolerance": self.risk_tolerance,
         }
-    
+
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         return True, []
 
 
 class CompetenceComponent(Component):
     """Stores an objective record of an agent's actions to track skill."""
+
     def __init__(self) -> None:
         self.action_counts: Dict[str, int] = defaultdict(int)
 
@@ -258,22 +276,27 @@ class CompetenceComponent(Component):
 # part of the agent's core cognitive state.
 # --------------------------------------------------------------------------
 
+
 class ActionPlanComponent(Component):
     """A placeholder for the agent's chosen action for the current tick."""
-    def __init__(self, action_type: Optional[Any] = None, intent: Optional[Any] = None, params: Optional[Dict[str, Any]] = None) -> None:
+
+    def __init__(
+        self, action_type: Optional[Any] = None, intent: Optional[Any] = None, params: Optional[Dict[str, Any]] = None
+    ) -> None:
         self.action_type = action_type
         self.intent = intent
         self.params = params if params is not None else {}
 
     def to_dict(self) -> Dict[str, Any]:
         return {"action_type": str(self.action_type), "intent": str(self.intent)}
-    
+
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         return True, []
 
 
 class ActionOutcomeComponent(Component):
     """Stores the result of the last executed action."""
+
     def __init__(self) -> None:
         self.success: bool = False
         self.reward: float = 0.0

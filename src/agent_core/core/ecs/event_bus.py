@@ -30,4 +30,5 @@ class EventBus:
             except Exception as e:
                 print(f"ERROR: Handler {i} ({handler.__name__}) failed for event '{event_type}': {e}")
                 import traceback
+
                 traceback.print_exc()

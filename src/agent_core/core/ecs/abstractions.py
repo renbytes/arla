@@ -1,13 +1,6 @@
 # src/agent_core/core/ecs/abstractions.py
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Sequence, Tuple, Type
-
-# Forward declaration to avoid circular imports
-if "TYPE_CHECKING" not in globals():
-    from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from src.agent_core.cognition.scaffolding import CognitiveScaffold
-    from src.agent_core.core.ecs.component import SimulationState
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
 
 
 class CognitiveComponent(ABC):
@@ -35,6 +28,23 @@ class CognitiveComponent(ABC):
         Attempts to automatically correct any validation errors.
         """
         return False
+
+
+# Forward declaration to avoid circular imports
+if "TYPE_CHECKING" not in globals():
+    from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from agent_core.cognition.scaffolding import CognitiveScaffold
+
+    # Import EventBus so it's defined for the type hint below.
+    from agent_core.core.ecs.event_bus import EventBus
+
+    # Expand the SimulationState placeholder to include attributes
+    # that other systems will need to access. This satisfies mypy.
+    class SimulationState:
+        event_bus: Optional[EventBus]
+        entities: Dict[str, Dict[Type[CognitiveComponent], Any]]
+        config: Dict[str, Any]
 
 
 class CognitiveSystem(ABC):

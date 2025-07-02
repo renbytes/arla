@@ -9,7 +9,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
-    from src.agent_core.core.ecs.component import SimulationState
+    # FIX: Define SimulationState as a forward reference here.
+    # It will be fully defined in the arla-engine library, but the interface
+    # needs to know about the type for hinting purposes.
+    class SimulationState:
+        pass
 
 
 class ActionInterface(ABC):
@@ -36,7 +40,9 @@ class ActionInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate_possible_params(self, entity_id: str, simulation_state: "SimulationState", current_tick: int) -> List[Dict[str, Any]]:
+    def generate_possible_params(
+        self, entity_id: str, simulation_state: "SimulationState", current_tick: int
+    ) -> List[Dict[str, Any]]:
         """
         Generates all possible valid parameter combinations for this action
         for a given entity.
@@ -44,14 +50,18 @@ class ActionInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int) -> Dict[str, Any]:
+    def execute(
+        self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int
+    ) -> Dict[str, Any]:
         """
         Executes the action's logic and modifies the simulation state.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def get_feature_vector(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]
+    ) -> List[float]:
         """
         Generates the feature vector for this specific action variant.
         """

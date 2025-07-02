@@ -6,7 +6,7 @@ all available actions in the simulation.
 
 from typing import Dict, List, Type, cast
 
-from src.agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.actions.action_interface import ActionInterface
 
 
 class ActionRegistry:

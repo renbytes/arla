@@ -2,21 +2,24 @@
 
 from typing import Any, Dict
 
-# NOTE: This will have a dependency on the `arla-engine` in the future,
+# We keep the query_llm import here, but the client itself will be initialized lazily.
+from cognition.ai_models.openai_client import query_llm
+
+
+# NOTE: This will have a dependency on the `agent-engine` in the future,
 # which will provide the DB logger and async runner. For now, we mock them.
 class MockDbLogger:
     def log_scaffold_interaction(self, **kwargs):
         pass
 
+
 class MockAsyncRunner:
     def run_async(self, coro):
         pass
 
+
 db_logger_instance = MockDbLogger()
 async_runner_instance = MockAsyncRunner()
-
-# We keep the query_llm import here, but the client itself will be initialized lazily.
-from src.cognition.ai_models.openai_client import query_llm
 
 
 class CognitiveScaffold:
