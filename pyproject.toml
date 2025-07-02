@@ -1,0 +1,22 @@
+[project]
+name = "arla-core"
+version = "0.1.0"
+description = "Affective Reflective Learning Architecture - Core Components and Interfaces"
+authors = [{ name = "Your Name", email = "your@email.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "openai",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "ruff",
+    "mypy",
+]
+
+[tool.ruff]
+line-length = 120
