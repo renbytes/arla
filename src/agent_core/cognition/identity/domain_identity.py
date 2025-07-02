@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 import numpy as np
 
 if TYPE_CHECKING:
-    # This will be defined in the arla-engine or the final simulation application
+    # This will be defined in the agent-engine or the final simulation application
     from agent_core.core.ecs.component import RelationalSchema
 
 
