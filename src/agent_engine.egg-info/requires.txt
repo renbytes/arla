@@ -1,0 +1,12 @@
+numpy
+torch
+matplotlib
+omegaconf
+agent-core@ file:../agent-core
+
+[dev]
+pytest
+pytest-mock
+ruff
+mypy
+pip-tools
