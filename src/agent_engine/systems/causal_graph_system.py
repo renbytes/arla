@@ -1,151 +1,162 @@
-# src/systems/causal_graph_system.py
+# src/agent_engine/systems/causal_graph_system.py
+"""
+Constructs and maintains a symbolic causal graph for each agent's memory.
+"""
 
 from typing import Any, Dict, List, Tuple, Type, cast
 
-from src.agents.actions.base_action import ActionOutcome
-from src.cognition.memory.symbolic_graph import (
-    _create_action_outcome_node,
-    _create_state_node,
-    add_causal_link,
-    decay_causal_links,
-)
-from src.core.ecs.abstractions import CognitiveComponent
-from src.core.ecs.component import (
+# Imports from agent-core
+from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.core.ecs.component import (
     ActionPlanComponent,
+    Component,
     EmotionComponent,
     GoalComponent,
-    HealthComponent,
-    InventoryComponent,
     MemoryComponent,
-    PositionComponent,
-    TimeBudgetComponent,
 )
-from src.core.ecs.event_bus import EventBus
-from src.core.ecs.system import System
+from agent_core.core.ecs.event_bus import EventBus
+from agent_core.environment.state_node_encoder_interface import (
+    StateNodeEncoderInterface,
+)
+
+# Imports from agent_engine
+from agent_engine.simulation.simulation_state import SimulationState
+from agent_engine.simulation.system import System
+
+
+def _create_action_outcome_node(
+    action_type: str, intent: str, outcome_details: Dict[str, Any], reward_value: float
+) -> Tuple[str, str, str, str]:
+    """Creates a tuple representation of an action and its outcome."""
+    outcome_status = outcome_details.get("status", "UNKNOWN")
+    return ("ACTION_OUTCOME", action_type, intent, outcome_status)
 
 
 class CausalGraphSystem(System):
     """
-    Constructs and maintains a symbolic causal graph for each agent's memory.
-    Refactored for dependency injection.
+    Constructs and maintains a symbolic causal graph for each agent's memory,
+    representing learned cause-and-effect relationships.
+    This system is now decoupled from world-specific components for state representation.
+    It relies on an injected StateNodeEncoderInterface to provide generalized state nodes.
     """
 
-    # The per-tick update loop requires entities with a MemoryComponent to decay the graph.
-    REQUIRED_COMPONENTS: List[Type[CognitiveComponent]] = [MemoryComponent]
+    REQUIRED_COMPONENTS: List[Type[Component]] = [
+        MemoryComponent,
+        EmotionComponent,
+        GoalComponent,
+    ]
 
-    def __init__(self, simulation_state: Any, config: Dict[str, Any], cognitive_scaffold: Any):
+    def __init__(
+        self,
+        simulation_state: SimulationState,
+        config: Dict[str, Any],
+        cognitive_scaffold: Any,
+        state_node_encoder: StateNodeEncoderInterface,
+    ):
         super().__init__(simulation_state, config, cognitive_scaffold)
-        self.event_bus: EventBus = simulation_state.event_bus
-        self.event_bus.subscribe("action_executed", self.on_action_executed)
-        # Caches the previous state node for each entity to link actions correctly
-        self.previous_state_nodes: Dict[str, Tuple[str, ...]] = {}
 
-    def on_action_executed(self, event_data: Dict[str, Any]):
-        """Event handler that fetches dependencies and injects them into the graph logic."""
+        event_bus = simulation_state.event_bus
+        if not event_bus:
+            raise ValueError("EventBus not initialized in SimulationState")
+        self.event_bus: EventBus = event_bus
+
+        self.state_node_encoder = state_node_encoder
+        self.event_bus.subscribe("action_executed", self.on_action_executed)
+
+    def on_action_executed(self, event_data: Dict[str, Any]) -> None:
+        """Event handler that fetches dependencies and updates the causal graph."""
         entity_id = event_data["entity_id"]
         components = self.simulation_state.entities.get(entity_id, {})
 
-        # --- Use isinstance for explicit type narrowing ---
-        mem_comp = components.get(MemoryComponent)
-        if not isinstance(mem_comp, MemoryComponent):
-            return
-        pos_comp = components.get(PositionComponent)
-        if not isinstance(pos_comp, PositionComponent):
-            return
-        health_comp = components.get(HealthComponent)
-        if not isinstance(health_comp, HealthComponent):
-            return
-        time_comp = components.get(TimeBudgetComponent)
-        if not isinstance(time_comp, TimeBudgetComponent):
-            return
-        inv_comp = components.get(InventoryComponent)
-        if not isinstance(inv_comp, InventoryComponent):
-            return
-        emotion_comp = components.get(EmotionComponent)
-        if not isinstance(emotion_comp, EmotionComponent):
-            return
-        goal_comp = components.get(GoalComponent)
-        if not isinstance(goal_comp, GoalComponent):
+        required_types: List[Type[Component]] = [
+            MemoryComponent,
+            EmotionComponent,
+            GoalComponent,
+        ]
+        if not all(isinstance(components.get(t), t) for t in required_types):
+            missing = [t.__name__ for t in required_types if not isinstance(components.get(t), t)]
+            print(f"WARNING: CausalGraphSystem for {entity_id} missing components: {missing}")
             return
 
-        # --- Pass specific, validated components to the logic function ---
-        self._update_causal_link(
-            entity_id=entity_id,
-            mem_comp=mem_comp,
-            pos_comp=pos_comp,
-            health_comp=health_comp,
-            time_comp=time_comp,
-            inv_comp=inv_comp,
-            emotion_comp=emotion_comp,
-            goal_comp=goal_comp,
-            action_plan=event_data["action_plan"],
-            action_outcome=event_data["action_outcome"],
-        )
+        self._update_causal_link(entity_id, components, event_data)
 
     def _update_causal_link(
         self,
         entity_id: str,
-        mem_comp: MemoryComponent,
-        pos_comp: PositionComponent,
-        health_comp: HealthComponent,
-        time_comp: TimeBudgetComponent,
-        inv_comp: InventoryComponent,
-        emotion_comp: EmotionComponent,
-        goal_comp: GoalComponent,
-        action_plan: ActionPlanComponent,
-        action_outcome: ActionOutcome,
-    ):
+        components: Dict[Type[Component], Component],
+        event_data: Dict[str, Any],
+    ) -> None:
         """Pure logic for creating and linking nodes in an agent's causal graph."""
-        try:
-            # All components are now guaranteed to be the correct subclass.
-            critical_state_config = self.config.get("learning", {}).get("critical_state", {})
-            health_threshold = critical_state_config.get("health_threshold_percent", 0.2)
-            is_in_danger = health_comp.current_health <= health_comp.initial_health * health_threshold
+        mem_comp = cast(MemoryComponent, components.get(MemoryComponent))
+        emotion_comp = cast(EmotionComponent, components.get(EmotionComponent))
 
-            state_snapshot = {
-                "health": health_comp.current_health,
-                "original_health": health_comp.initial_health,
-                "time_budget": time_comp.current_time_budget,
-                "resource_inventory": inv_comp.current_resources,
-                "current_emotion_valence": emotion_comp.valence,
-            }
+        if not all([mem_comp, emotion_comp]):
+            print(f"ERROR: CausalGraphSystem missing core components for {entity_id}.")
+            return
 
-            # FIX: Provide a default value for the symbolic goal if it is None.
-            symbolic_goal = goal_comp.current_symbolic_goal or "no_goal"
-            current_state_node = _create_state_node(state_snapshot, pos_comp.position, is_in_danger, symbolic_goal)
+        action_plan = cast(ActionPlanComponent, event_data["action_plan"])
+        action_outcome = cast(ActionOutcome, event_data["action_outcome"])
 
-            # FIX: Safely access action_type.name, handling the case where action_type is None.
-            action_type_name = "unknown_action"
-            if action_plan.action_type:
-                action_type_name = getattr(action_plan.action_type, "name", str(action_plan.action_type))
+        current_state_node = self.state_node_encoder.encode_state_for_causal_graph(
+            entity_id=entity_id,
+            components=components,
+            current_tick=event_data["current_tick"],
+            config=self.config,
+        )
 
-            intent_name = action_plan.intent.name if action_plan.intent else "UNKNOWN_INTENT"
-            action_outcome_node = _create_action_outcome_node(
-                action_type_name, intent_name, action_outcome.details, action_outcome.reward
+        action_type_name = getattr(action_plan.action_type, "name", "unknown")
+        intent = getattr(action_plan, "intent", None)
+        intent_name = getattr(intent, "name", "UNKNOWN")
+
+        action_outcome_node = _create_action_outcome_node(
+            action_type_name, intent_name, action_outcome.details, action_outcome.reward
+        )
+
+        link_weight = (abs(action_outcome.reward) * 0.1) + (emotion_comp.arousal * 0.5) + 0.1
+
+        if not hasattr(mem_comp, "causal_graph") or mem_comp.causal_graph is None:
+            mem_comp.causal_graph = {}
+
+        # Safely access the previous state node, which is a dynamic attribute.
+        previous_node = getattr(mem_comp, "previous_state_node", None)
+
+        if previous_node is not None:
+            if previous_node not in mem_comp.causal_graph:
+                mem_comp.causal_graph[previous_node] = {}
+            mem_comp.causal_graph[previous_node][action_outcome_node] = (
+                mem_comp.causal_graph[previous_node].get(action_outcome_node, 0.0) + link_weight
             )
 
-            link_weight = (abs(action_outcome.reward) * 0.1) + (emotion_comp.arousal * 0.5) + 0.1
-            if previous_node := self.previous_state_nodes.get(entity_id):
-                add_causal_link(mem_comp.causal_graph, previous_node, action_outcome_node, weight=link_weight)
+        if action_outcome_node not in mem_comp.causal_graph:
+            mem_comp.causal_graph[action_outcome_node] = {}
+        mem_comp.causal_graph[action_outcome_node][current_state_node] = (
+            mem_comp.causal_graph[action_outcome_node].get(current_state_node, 0.0) + link_weight
+        )
 
-            add_causal_link(mem_comp.causal_graph, action_outcome_node, current_state_node, weight=link_weight)
+        # Cache the current state for the next tick. Mypy is ignored because
+        # this attribute is not formally declared on the MemoryComponent class.
+        mem_comp.previous_state_node = current_state_node
 
-            self.previous_state_nodes[entity_id] = current_state_node
-            pos_comp.history.append(pos_comp.position)
+    def update(self, current_tick: int) -> None:
+        """Periodically decays the strength of all causal links in every agent's memory."""
+        if (current_tick + 1) % 10 != 0:
+            return
 
-        except Exception as e:
-            print(f"CausalGraphSystem Error for {entity_id}: {e}")
+        target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
+        decay_rate = self.config.get("learning", {}).get("causal_decay_rate", 0.95)
 
-    def update(self, current_tick: int):
-        """
-        Periodically decays the strength of all causal links in every agent's memory.
-        """
-        if (current_tick + 1) % 10 == 0:
-            # Use type: ignore to handle the list variance, which is a known mypy constraint.
-            target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)  # type: ignore[arg-type]
+        for components_dict in target_entities.values():
+            mem_comp = cast(MemoryComponent, components_dict.get(MemoryComponent))
+            if not mem_comp or not hasattr(mem_comp, "causal_graph") or mem_comp.causal_graph is None:
+                continue
 
-            for components in target_entities.values():
-                # Use cast to inform mypy of the specific component type.
-                mem_comp = cast(MemoryComponent, components.get(MemoryComponent))
-                if mem_comp:
-                    decay_causal_links(mem_comp.causal_graph, decay_rate=0.95)
+            # Iterate over copies to allow for safe modification during iteration
+            for cause_node, effects in list(mem_comp.causal_graph.items()):
+                for effect_node, weight in list(effects.items()):
+                    new_weight = weight * decay_rate
+                    if new_weight < 0.01:
+                        del effects[effect_node]
+                    else:
+                        effects[effect_node] = new_weight
+                if not effects:
+                    del mem_comp.causal_graph[cause_node]

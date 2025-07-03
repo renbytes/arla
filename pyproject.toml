@@ -9,7 +9,7 @@ dependencies = [
     "torch",
     "matplotlib",
     "omegaconf",
-    "agent-core @ file:../agent-core"
+    "agent_core @ file:../agent_core"
 ]
 
 [project.optional-dependencies]
@@ -23,3 +23,20 @@ dev = [
 
 [tool.ruff]
 line-length = 120
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+
+# Overrides to ignore missing imports for libraries that don't have stubs
+[[tool.mypy.overrides]]
+module = [
+    "numpy.*",
+    "sklearn.*",
+    "matplotlib.*",
+    "omegaconf.*",
+    "openai.*",
+    "python_dotenv.*",
+]
+ignore_missing_imports = true

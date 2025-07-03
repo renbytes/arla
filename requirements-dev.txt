@@ -4,7 +4,7 @@
 #
 #    pip-compile --extra=dev --output-file=requirements-dev.txt pyproject.toml
 #
-file:../agent-core
+file:../agent_core
     # via agent-engine (pyproject.toml)
 annotated-types==0.7.0
     # via pydantic
@@ -66,14 +66,14 @@ networkx==3.5
     # via torch
 numpy==2.3.1
     # via
-    #   agent-core
+    #   agent_core
     #   agent-engine (pyproject.toml)
     #   contourpy
     #   matplotlib
 omegaconf==2.3.0
     # via agent-engine (pyproject.toml)
 openai==1.93.0
-    # via agent-core
+    # via agent_core
 packaging==25.0
     # via
     #   build
@@ -108,7 +108,7 @@ pytest-mock==3.14.1
 python-dateutil==2.9.0.post0
     # via matplotlib
 python-dotenv==1.1.1
-    # via agent-core
+    # via agent_core
 pyyaml==6.0.2
     # via omegaconf
 ruff==0.12.1

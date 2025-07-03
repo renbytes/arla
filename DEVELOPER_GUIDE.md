@@ -8,7 +8,7 @@ Follow these steps to get a clean, reproducible development environment.
 
 ### Step 1: Clone the Repository
 
-First, clone the agent-engine repository to your local machine. You will also need to clone agent-core, as the engine depends on it.
+First, clone the agent-engine repository to your local machine. You will also need to clone agent_core, as the engine depends on it.
 
 ```bash
 # Clone the engine
@@ -16,7 +16,7 @@ git clone https://github.com/renbytes/agent-engine.git
 cd agent-engine
 
 # Clone the core library alongside it
-git clone https://github.com/renbytes/agent-core.git ../agent-core
+git clone https://github.com/renbytes/agent_core.git ../agent_core
 ```
 
 ### Step 2: Create and Activate the Conda Environment
@@ -39,13 +39,13 @@ Your terminal prompt should now start with `(agent-dev)`.
 
 ### Step 3: Install Dependencies
 
-This project uses `pyproject.toml` to define its dependencies. We will install agent-core in "editable" mode so that changes you make there are immediately available to agent-engine.
+This project uses `pyproject.toml` to define its dependencies. We will install agent_core in "editable" mode so that changes you make there are immediately available to agent-engine.
 
-**Install agent-core in editable mode:**
-Navigate to the agent-core directory and run:
+**Install agent_core in editable mode:**
+Navigate to the agent_core directory and run:
 
 ```bash
-cd ../agent-core
+cd ../agent_core
 pip install -e .
 cd ../agent-engine
 ```
@@ -110,7 +110,7 @@ This will automatically discover and run all files named `test_*.py`.
 
 ## 4. Extending the Engine: Adding a New System
 
-The primary way to extend the engine is by adding new CognitiveSystems. These systems are world-agnostic and operate on the components defined in agent-core.
+The primary way to extend the engine is by adding new CognitiveSystems. These systems are world-agnostic and operate on the components defined in agent_core.
 
 Here is a basic example of how to create a new CuriositySystem.
 
@@ -118,12 +118,12 @@ Here is a basic example of how to create a new CuriositySystem.
 
 Create a new file at `src/agent_engine/systems/curiosity_system.py`.
 
-### Step 2: Define the Component (in agent-core)
+### Step 2: Define the Component (in agent_core)
 
-First, define the data component that this system will operate on. This belongs in agent-core because it's part of the agent's core "soul".
+First, define the data component that this system will operate on. This belongs in agent_core because it's part of the agent's core "soul".
 
 ```python
-# In agent-core/src/agent_core/core/ecs/component.py
+# In agent_core/src/agent_core/core/ecs/component.py
 
 class CuriosityComponent(Component):
     """Stores the agent's desire to explore unknown states."""
