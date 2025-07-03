@@ -9,11 +9,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
-    # FIX: Define SimulationState as a forward reference here.
-    # It will be fully defined in the agent-engine library, but the interface
-    # needs to know about the type for hinting purposes.
-    class SimulationState:
-        pass
+    from agent_core.core.ecs.abstractions import SimulationState
 
 
 class ActionInterface(ABC):

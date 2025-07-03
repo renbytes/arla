@@ -3,7 +3,7 @@
 from typing import Any, Dict
 
 # We keep the query_llm import here, but the client itself will be initialized lazily.
-from cognition.ai_models.openai_client import query_llm
+from agent_core.cognition.ai_models.openai_client import query_llm
 
 
 # NOTE: This will have a dependency on the `agent-engine` in the future,

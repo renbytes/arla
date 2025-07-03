@@ -8,7 +8,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     # This will be defined in the agent-engine or the final simulation application
-    from agent_core.core.ecs.component import RelationalSchema
+    from agent_core.core.schemas import RelationalSchema
 
 
 class IdentityDomain(Enum):

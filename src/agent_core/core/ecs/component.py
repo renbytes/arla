@@ -2,7 +2,6 @@
 
 from abc import abstractmethod
 from collections import defaultdict, deque
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -10,35 +9,17 @@ import numpy as np
 from agent_core.cognition.identity.domain_identity import (
     MultiDomainIdentity,
 )
-from agent_core.core.ecs.abstractions import CognitiveComponent
+from agent_core.core.ecs.base import CognitiveComponent
 
 # These types will be defined in other libraries (like agent-engine) or the
 # final simulation application. We use forward references to avoid circular dependencies.
 if TYPE_CHECKING:
-    # A data class representing a single belief.
-    @dataclass
-    class Belief:
-        statement: str
-        confidence: float
-        source_reflection_tick: int
-
-    # A data class representing a narrative episode.
-    @dataclass
-    class Episode:
-        pass
-
-    # A data class representing a "what if" scenario.
-    @dataclass
-    class CounterfactualEpisode:
-        pass
-
-    # A class representing a subjective view of another agent.
-    class RelationalSchema:
-        pass
-
-    # A neural network for decision-making.
-    class UtilityNetwork:
-        pass
+    from agent_core.core.schemas import (
+        Belief,
+        Episode,
+        CounterfactualEpisode,
+        RelationalSchema,
+    )
 
 
 class ComponentValidationError(Exception):
@@ -132,6 +113,29 @@ class IdentityComponent(Component):
         if self.embedding is None or not isinstance(self.embedding, np.ndarray):
             errors.append("embedding is None or not a numpy array")
         return len(errors) == 0, errors
+
+
+class ValidationComponent(Component):
+    """Stores confidence scores for an agent's reflections."""
+
+    def __init__(self) -> None:
+        self.reflection_confidence_scores: Dict[int, float] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"confidence_scores": self.reflection_confidence_scores}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if not isinstance(self.reflection_confidence_scores, dict):
+            return False, [
+                f"reflection_confidence_scores is not a dict but a {type(self.reflection_confidence_scores)}"
+            ]
+        return True, []
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        if not isinstance(self.reflection_confidence_scores, dict):
+            self.reflection_confidence_scores = {}
+            return True
+        return False
 
 
 class GoalComponent(Component):
@@ -275,6 +279,68 @@ class CompetenceComponent(Component):
 # These components are necessary for the engine to function but are not
 # part of the agent's core cognitive state.
 # --------------------------------------------------------------------------
+
+
+class TimeBudgetComponent(Component):
+    """
+    Manages an agent's time budget (or lifespan/energy) within the simulation.
+    This is a foundational utility component for the simulation engine,
+    representing an agent's capacity to perform actions.
+    """
+
+    def __init__(self, initial_time_budget: float, lifespan_std_dev_percent: float = 0.0) -> None:
+        self.initial_time_budget = initial_time_budget
+        self.max_time_budget = initial_time_budget * 2  # Max capacity for time/energy
+        self.current_time_budget: float = initial_time_budget
+        self.is_active: bool = True  # Whether the agent is currently able to act
+        self.action_counts: Dict[str, int] = defaultdict(int)  # Tracks how many times each action was performed
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if self.initial_time_budget <= 0:
+            errors.append(f"initial_time_budget must be > 0, got {self.initial_time_budget}")
+        if self.current_time_budget < 0:
+            errors.append(f"current_time_budget cannot be negative, got {self.current_time_budget}")
+        if self.max_time_budget <= 0:
+            errors.append(f"max_time_budget must be > 0, got {self.max_time_budget}")
+        if self.is_active and self.current_time_budget <= 0:
+            errors.append(f"Entity marked active but has no time budget ({self.current_time_budget})")
+        if not self.is_active and self.current_time_budget > 0:
+            errors.append(f"Entity marked inactive but has time budget ({self.current_time_budget})")
+        if self.current_time_budget > self.max_time_budget * 1.1:  # Allow slight overshoot for float precision
+            errors.append(f"current_time_budget ({self.current_time_budget}) exceeds max ({self.max_time_budget})")
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        fixed: bool = False
+        if self.current_time_budget < 0:
+            self.current_time_budget = 0
+            self.is_active = False
+            fixed = True
+        if self.is_active and self.current_time_budget <= 0:
+            self.is_active = False
+            fixed = True
+        # This auto-fix logic is a bit tricky: if inactive but has some time,
+        # it might be a bug. Setting to 0 if it's very low.
+        if (
+            not self.is_active
+            and self.current_time_budget > 0
+            and self.current_time_budget < self.initial_time_budget * 0.1
+        ):
+            self.current_time_budget = 0
+            fixed = True
+        if self.current_time_budget > self.max_time_budget:
+            self.current_time_budget = self.max_time_budget
+            fixed = True
+        return fixed
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "initial_time_budget": self.initial_time_budget,
+            "current_time_budget": self.current_time_budget,
+            "is_active": self.is_active,
+            "action_counts": self.action_counts,
+        }
 
 
 class ActionPlanComponent(Component):
