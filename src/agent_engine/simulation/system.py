@@ -9,8 +9,10 @@ from agent_core.cognition.scaffolding import CognitiveScaffold
 from agent_core.core.ecs.base import (
     CognitiveComponent,
 )
+from agent_core.core.ecs.abstractions import (
+    AbstractSimulationState,
+)
 from agent_engine.simulation.abstractions import (
-    SimulationState as AbstractSimulationState,
     CognitiveSystem,
 )
 from agent_engine.simulation.simulation_state import (

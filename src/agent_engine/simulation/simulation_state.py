@@ -9,10 +9,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Imports from agent_core
-from agent_core.cognition.identity.domain_identity import IdentityDomain
-from agent_engine.simulation.abstractions import (
-    SimulationState as AbstractSimulationState,
-)
+from agent_engine.cognition.identity.domain_identity import IdentityDomain
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
 from agent_core.core.ecs.component import (
     AffectComponent,
     Component,
@@ -33,60 +31,56 @@ if TYPE_CHECKING:
 class SimulationState(AbstractSimulationState):
     """
     Consolidates all simulation data into a single, world-agnostic container.
-    It holds references to the core services and the ECS data.
     """
 
     def __init__(self, config: Dict[str, Any], device: Any) -> None:
         self.config = config
         self.device = device
-        # FIX: Changed the value type from 'Any' to 'Component'.
-        # This correctly reflects that the dictionary stores component instances,
-        # fixing the [arg-type] errors in multiple downstream systems.
         self.entities: Dict[str, Dict[Type[Component], Component]] = {}
 
-        # --- Core Service and State Attributes ---
         self.simulation_id: str = ""
         self.environment: Optional["EnvironmentInterface"] = None
-        self.event_bus: Optional["EventBus"] = None
+        # FIX: Use a private attribute for the event bus storage.
+        self._event_bus: Optional["EventBus"] = None
         self.system_manager: Optional["SystemManager"] = None
-        self.db_logger: Optional[Any] = None
-        self.llm_client: Optional[Any] = None
         self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
         self.main_rng: Optional[np.random.Generator] = None
-        # --- End of declarations ---
+
+    # FIX: Implement the 'event_bus' as a property to satisfy the abstract base class.
+    @property
+    def event_bus(self) -> Optional["EventBus"]:
+        """Provides access to the simulation's event bus."""
+        return self._event_bus
+
+    # FIX: Add a setter for the property so it can be assigned from the engine.
+    @event_bus.setter
+    def event_bus(self, value: Optional["EventBus"]) -> None:
+        self._event_bus = value
 
     def add_entity(self, entity_id: str) -> None:
-        """Adds a new entity to the simulation."""
         if entity_id in self.entities:
             raise ValueError(f"Entity with ID {entity_id} already exists.")
         self.entities[entity_id] = {}
 
     def add_component(self, entity_id: str, component: Component) -> None:
-        """Adds a component to an existing entity."""
         if entity_id not in self.entities:
             raise ValueError(f"Cannot add component. Entity with ID {entity_id} does not exist.")
         self.entities[entity_id][type(component)] = component
 
     def get_component(self, entity_id: str, component_type: Type[Component]) -> Optional[Component]:
-        """Retrieves a component of a specific type from an entity."""
         return self.entities.get(entity_id, {}).get(component_type)
 
     def remove_entity(self, entity_id: str) -> None:
-        """Removes an entity and all its components from the simulation."""
         if entity_id in self.entities:
             del self.entities[entity_id]
 
     def get_entities_with_components(
         self, component_types: List[Type[Component]]
     ) -> Dict[str, Dict[Type[Component], Component]]:
-        """
-        Returns a dictionary of entities that possess all the specified component types.
-        """
         matching_entities = {}
         for entity_id, components in self.entities.items():
             if all(comp_type in components for comp_type in component_types):
                 matching_entities[entity_id] = components
-
         return matching_entities
 
     def get_internal_state_features_for_entity(
@@ -96,17 +90,12 @@ class SimulationState(AbstractSimulationState):
         goal_comp: Optional[GoalComponent],
         emo_comp: Optional[EmotionComponent],
     ) -> NDArray[np.float32]:
-        """
-        Constructs the internal state feature vector by concatenating the full,
-        multi-domain identity representation and other cognitive states.
-        """
         features: List[NDArray[np.float32]] = []
         flags: List[float] = []
         main_embedding_dim = get_config_value(
             self.config, "agent.cognitive.embeddings.main_embedding_dim", default=1536
         )
 
-        # Emotion & Affect features
         if emo_comp and aff_comp:
             features.append(
                 np.array(
@@ -124,7 +113,6 @@ class SimulationState(AbstractSimulationState):
             features.append(np.zeros(4, dtype=np.float32))
             flags.append(0.0)
 
-        # Current Goal features
         if (
             goal_comp
             and goal_comp.current_symbolic_goal
@@ -137,7 +125,6 @@ class SimulationState(AbstractSimulationState):
             features.append(np.zeros(main_embedding_dim, dtype=np.float32))
             flags.append(0.0)
 
-        # Multi-Domain Identity features
         if id_comp and hasattr(id_comp, "multi_domain_identity"):
             flags.append(1.0)
             domain_embeddings = [

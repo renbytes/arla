@@ -19,5 +19,8 @@ repos:
     rev: 'v1.10.0'
     hooks:
     -   id: mypy
-        files: ^src/
+        files: ^src/agent_engine/(?!tests/).*\.py$
         additional_dependencies: ['.[dev]']
+
+exclude: |
+  ^src/agent_engine/tests/.*

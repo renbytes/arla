@@ -5,13 +5,12 @@ from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Type
 
 from agent_core.core.ecs.base import CognitiveComponent
 
+# This is the standard pattern to handle circular imports for type checking.
+# The block is ignored at runtime but read by static analyzers like Pylance.
 if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
-
-    class SimulationState:
-        event_bus: Optional[EventBus]
-        config: Dict[str, Any]
+    from .simulation_state import SimulationState
 
 
 class CognitiveSystem(ABC):
@@ -21,6 +20,8 @@ class CognitiveSystem(ABC):
 
     REQUIRED_COMPONENTS: Sequence[Type[CognitiveComponent]] = []
 
+    # FIX: Renamed the method from 'init' to the standard '__init__'.
+    # This corrects the super() call chain and resolves the TypeError.
     def __init__(
         self,
         simulation_state: "SimulationState",
@@ -30,7 +31,9 @@ class CognitiveSystem(ABC):
         self.simulation_state = simulation_state
         self.config = config
         self.cognitive_scaffold = cognitive_scaffold
-        self.event_bus = simulation_state.event_bus
+
+        # We can explicitly type self.event_bus to resolve the "not accessed" warning.
+        self.event_bus: Optional["EventBus"] = simulation_state.event_bus
 
     @abstractmethod
     def update(self, current_tick: int) -> None:

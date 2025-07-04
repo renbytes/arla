@@ -113,9 +113,9 @@ def discover_emotions(
         if not cluster_indices.size:
             continue
 
+        buffer_list = list(affect_comp.affective_experience_buffer)
         sample_experiences = [
-            affect_comp.affective_experience_buffer[j]
-            for j in np.random.choice(cluster_indices, min(5, len(cluster_indices)), replace=False)
+            buffer_list[j] for j in np.random.choice(len(buffer_list), min(5, len(cluster_indices)), replace=False)
         ]
 
         # Pass the new context down to the helper function

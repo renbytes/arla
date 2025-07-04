@@ -11,10 +11,14 @@ import numpy as np
 from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent_core
+from agent_core.agents.action_generator_interface import ActionGeneratorInterface
+from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.cognition.scaffolding import CognitiveScaffold
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
+
+from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 
 # Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
@@ -32,9 +36,9 @@ class SimulationManager:
         self,
         config: DictConfig,
         environment: EnvironmentInterface,
-        scenario_loader: Any,
-        action_generator: Any,
-        decision_selector: Any,
+        scenario_loader: ScenarioLoaderInterface,
+        action_generator: ActionGeneratorInterface,
+        decision_selector: DecisionSelectorInterface,
         task_id: str = "local_run",
         experiment_id: Optional[str] = None,
         run_id: Optional[str] = None,
@@ -63,7 +67,10 @@ class SimulationManager:
         self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
 
         self._initialize_state()
+
+        print("Engine: Delegating to scenario loader to populate world...")
         self.scenario_loader.load()
+        print("Engine: Scenario loading complete.")
 
     def register_system(self, system_class: Type[Any], **kwargs: Any) -> None:
         """A convenience method to register a system with the SystemManager."""

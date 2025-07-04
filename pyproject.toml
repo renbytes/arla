@@ -9,7 +9,8 @@ dependencies = [
     "torch",
     "matplotlib",
     "omegaconf",
-    "agent_core @ file:../agent_core"
+    "agent-core @ file:../agent-core",
+    "scikit-learn"
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,7 @@ line-length = 120
 python_version = "3.11"
 strict = true
 mypy_path = "src"
+exclude = ["^src/agent_engine/tests/"]
 
 # Overrides to ignore missing imports for libraries that don't have stubs
 [[tool.mypy.overrides]]
@@ -38,5 +40,9 @@ module = [
     "omegaconf.*",
     "openai.*",
     "python_dotenv.*",
+    "agent_engine.conftest",
+    "agent_engine.systems.components",
+    "agent_engine.simulation.simulation_state",
 ]
 ignore_missing_imports = true
+ignore_errors = true

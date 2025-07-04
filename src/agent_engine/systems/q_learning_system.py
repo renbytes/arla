@@ -22,10 +22,10 @@ from agent_core.core.ecs.component import (
     TimeBudgetComponent,
 )
 from agent_core.core.ecs.event_bus import EventBus
+from agent_core.policy.state_encoder_interface import StateEncoderInterface
 
 # Imports from agent_engine
 from agent_engine.systems.components import QLearningComponent
-from agent_engine.policy.state_encoder import StateEncoder
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
 
@@ -49,7 +49,7 @@ class QLearningSystem(System):
         simulation_state: SimulationState,
         config: Dict[str, Any],
         cognitive_scaffold: Any,
-        state_encoder: StateEncoder,
+        state_encoder: StateEncoderInterface,
     ):
         # NOTE: The super call is now valid due to the inheritance fix.
         super().__init__(simulation_state, config, cognitive_scaffold)
@@ -72,10 +72,8 @@ class QLearningSystem(System):
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
             if not time_comp or not time_comp.is_active:
-                continue
-
-            current_state_features = self.state_encoder.encode(self.simulation_state, entity_id)
-            self.previous_states[entity_id] = current_state_features
+                current_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config)
+                self.previous_states[entity_id] = current_state_features
 
     def on_action_executed(self, event_data: Dict[str, Any]) -> None:
         """Event handler that triggers the Q-learning update step."""
@@ -97,7 +95,8 @@ class QLearningSystem(System):
             return
 
         target_id = action_plan.params.get("target_agent_id")
-        new_state_features = self.state_encoder.encode(self.simulation_state, entity_id, target_id)
+
+        new_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config, target_id)
 
         action_features = action_plan.action_type.get_feature_vector(
             entity_id, self.simulation_state, action_plan.params
