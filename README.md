@@ -96,3 +96,9 @@ pytest
 ```bash
 mypy src
 ```
+
+3. **Install Pre-Commit Hooks:** To check errors prior to pushing code, run:
+
+```bash
+pre-commit install
+```
