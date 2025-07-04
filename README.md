@@ -30,7 +30,7 @@ To set up a local development environment, clone the repository and install it i
 1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/your-username/agent-persist.git
+git clone https://github.com/renbytes/agent-persist.git
 cd agent-persist
 ```
 
