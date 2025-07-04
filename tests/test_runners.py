@@ -1,31 +1,37 @@
 # tests/test_runners.py
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock
 
 # Subject under test
 from agent_concurrent.runners import SerialSystemRunner, AsyncSystemRunner
 
 # --- Mocks and Fixtures ---
 
+
 class MockSystem:
     """A mock system that conforms to the SystemProtocol for testing."""
+
     def __init__(self, name: str, should_fail: bool = False):
         self.name = name
         self.should_fail = should_fail
         # Use AsyncMock for the update method to track async calls
         self.update = AsyncMock()
-        
+
         if self.should_fail:
-            self.update.side_effect = RuntimeError(f"System '{self.name}' failed as designed.")
+            self.update.side_effect = RuntimeError(
+                f"System '{self.name}' failed as designed."
+            )
 
     def __repr__(self) -> str:
         return f"MockSystem(name='{self.name}')"
+
 
 @pytest.fixture
 def systems():
     """Provides a list of mock systems for testing."""
     return [MockSystem("A"), MockSystem("B")]
+
 
 @pytest.fixture
 def systems_with_failure():
@@ -35,6 +41,7 @@ def systems_with_failure():
 
 # --- Test Cases for SerialSystemRunner ---
 
+
 @pytest.mark.asyncio
 async def test_serial_runner_executes_all_systems(systems):
     """
@@ -42,7 +49,7 @@ async def test_serial_runner_executes_all_systems(systems):
     """
     # Arrange
     runner = SerialSystemRunner()
-    
+
     # Act
     await runner.run(systems, current_tick=10)
 
@@ -50,15 +57,18 @@ async def test_serial_runner_executes_all_systems(systems):
     for system in systems:
         system.update.assert_awaited_once_with(current_tick=10)
 
+
 @pytest.mark.asyncio
-async def test_serial_runner_handles_failure_and_continues(systems_with_failure, capsys):
+async def test_serial_runner_handles_failure_and_continues(
+    systems_with_failure, capsys
+):
     """
     Tests that the SerialSystemRunner continues to run subsequent systems
     even if one of them fails.
     """
     # Arrange
     runner = SerialSystemRunner()
-    
+
     # Act
     await runner.run(systems_with_failure, current_tick=20)
 
@@ -80,6 +90,7 @@ async def test_serial_runner_handles_failure_and_continues(systems_with_failure,
 
 # --- Test Cases for AsyncSystemRunner ---
 
+
 @pytest.mark.asyncio
 async def test_async_runner_executes_all_systems(systems):
     """
@@ -87,13 +98,14 @@ async def test_async_runner_executes_all_systems(systems):
     """
     # Arrange
     runner = AsyncSystemRunner()
-    
+
     # Act
     await runner.run(systems, current_tick=30)
 
     # Assert
     for system in systems:
         system.update.assert_awaited_once_with(current_tick=30)
+
 
 @pytest.mark.asyncio
 async def test_async_runner_handles_failure_gracefully(systems_with_failure, capsys):
@@ -103,7 +115,7 @@ async def test_async_runner_handles_failure_gracefully(systems_with_failure, cap
     """
     # Arrange
     runner = AsyncSystemRunner()
-    
+
     # Act
     await runner.run(systems_with_failure, current_tick=40)
 
