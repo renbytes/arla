@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-concurrent"
+version = "0.1.0"
+authors = [
+  { name="Your Name", email="your@email.com" },
+]
+description = "A library for concurrent and parallel execution of agent-based simulation systems."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio", # For testing asynchronous code
+    "ruff",
+    "mypy"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/renbytes/agent-concurrent"
+"Bug Tracker" = "https://github.com/renbytes/agent-concurrent/issues"
