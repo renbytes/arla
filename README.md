@@ -1,17 +1,17 @@
-# Agent Concurrent
+# Agent Persist
 
-**A lightweight, decoupled library for concurrent and parallel execution of agent-based simulation systems.**
+**A robust, type-safe library for persisting and restoring agent-based simulation states.**
 
-`agent-concurrent` provides a simple and effective way to manage the execution flow of systems within a simulation. It offers both serial and asynchronous runners, allowing developers to choose the best execution strategy for their needs—whether for debugging, strict sequential logic, or high-performance parallel processing.
+`agent-persist` provides the critical infrastructure for saving and loading the complete state of a simulation. By leveraging Pydantic for data validation and serialization, it ensures that saved data is structured, correct, and can be reliably restored for analysis, debugging, or resuming a simulation.
 
 ---
 
 ### Key Features
 
-- **Decoupled Design:** Uses Python's `Protocol` to define the expected system interface, meaning it has no direct dependency on `agent-core` or `agent-engine`. It can run any list of objects that have an `async def update()` method.
-- **Asynchronous Execution:** The `AsyncSystemRunner` leverages Python's `asyncio` library to run all system updates concurrently, significantly speeding up simulations where systems are independent.
-- **Serial Execution:** The `SerialSystemRunner` executes systems one by one in a defined order, which is ideal for debugging or when a strict order of operations is required.
-- **Robust Error Handling:** Both runners are designed to gracefully handle exceptions within a system, logging the error without crashing the entire simulation loop.
+- **Robust Data Validation:** Built on `pydantic`, ensuring that all saved and loaded data conforms to a strict, well-defined schema. This prevents data corruption and runtime errors.
+- **Clear Schema:** Defines a clear, hierarchical data model (`SimulationSnapshot`, `AgentSnapshot`, `ComponentSnapshot`) that is self-documenting and easy to understand.
+- **Extensible Store Interface:** Provides an abstract `StateStore` base class, making it easy to implement new storage backends (e.g., a database, cloud storage) in the future.
+- **File-Based Implementation:** Includes a ready-to-use `FileStateStore` that handles saving snapshots to and loading from local JSON files.
 
 ---
 
@@ -20,7 +20,7 @@
 You can install the library directly from PyPI using pip:
 
 ```bash
-pip install agent-concurrent
+pip install agent-persist
 ```
 
 ## Development Setup
@@ -30,55 +30,69 @@ To set up a local development environment, clone the repository and install it i
 1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/renbytes/agent-concurrent.git
-cd agent-concurrent
+git clone https://github.com/your-username/agent-persist.git
+cd agent-persist
 ```
 
 2. **Create and activate a virtual environment (recommended):**
 
 ```bash
-conda create --name agent-concurrent python=3.11
-conda activate agent-concurrent
+# Using venv
+python -m venv venv
+source venv/bin/activate
+
+# Or using Conda
+conda create --name agent-persist-dev python=3.9
+conda activate agent-persist-dev
 ```
 
-3. **Install the package in editable mode with dev dependencies:** This command installs the package and includes tools like `pytest` for testing and `mypy` for static type checking.
+3. **Install the package in editable mode with dev dependencies:** This command installs the package and includes tools like `pytest` and `mypy`.
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .[dev]
 ```
 
 ## Basic Usage
 
-The library is designed to be straightforward to use. You simply choose a runner and pass it a list of system objects to execute.
+The library is designed to be straightforward. You create a `SimulationSnapshot` model with your simulation's data and use a `StateStore` to save or load it.
 
 ```python
-import asyncio
-from agent_concurrent import AsyncSystemRunner
+from pathlib import Path
+from agent_persist import FileStateStore, SimulationSnapshot
 
-# Define systems that conform to the SystemProtocol
-# (i.e., they have an async update method)
-class MySystemA:
-    async def update(self, current_tick: int):
-        print(f"System A updating for tick {current_tick}...")
-        await asyncio.sleep(0.1)
+# 1. Create a snapshot of your simulation state
+snapshot_data = SimulationSnapshot(
+    simulation_id="sim_alpha_42",
+    current_tick=250,
+    agents=[
+        {
+            "agent_id": "agent_x",
+            "components": [
+                {
+                    "component_type": "IdentityComponent",
+                    "data": {"stability": 0.85}
+                },
+                {
+                    "component_type": "TimeBudgetComponent",
+                    "data": {"current_time_budget": 750}
+                }
+            ]
+        }
+    ],
+    environment_state={"world_time": "night"}
+)
 
-class MySystemB:
-    async def update(self, current_tick: int):
-        print(f"System B updating for tick {current_tick}...")
-        await asyncio.sleep(0.1)
+# 2. Initialize a store with a file path
+snapshot_path = Path("./simulation_saves/snapshot_tick_250.json")
+store = FileStateStore(file_path=snapshot_path)
 
-async def main():
-    # Instantiate the runner
-    runner = AsyncSystemRunner()
+# 3. Save the snapshot
+store.save(snapshot_data)
 
-    # Create a list of systems
-    systems_to_run = [MySystemA(), MySystemB()]
+# 4. Load the snapshot back at a later time
+loaded_snapshot = store.load()
 
-    # Execute the systems for a given tick
-    await runner.run(systems=systems_to_run, current_tick=1)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+print(f"Loaded simulation '{loaded_snapshot.simulation_id}' from tick {loaded_snapshot.current_tick}.")
 ```
 
 ## Running Tests and Type Checking
