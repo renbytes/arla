@@ -9,7 +9,7 @@ dependencies = [
     "torch",
     "matplotlib",
     "omegaconf",
-    "agent-core @ file:../agent-core",
+    "agent-core @ git+https://github.com/renbytes/agent-core@main",
     "scikit-learn"
 ]
 
