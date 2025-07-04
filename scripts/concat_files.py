@@ -6,6 +6,9 @@ Edit the constants below to control what gets included / ignored,
 then just run `python dump_repo.py`.
 """
 
+from pathlib import Path
+from typing import List, Sequence
+
 # ─── SETTINGS ────────────────────────────────────────────────────────────────
 ROOT = "."  # repo root (relative or absolute)
 INCLUDE_DIRS = ["src"]  # folders to search; ["src", "tests"] etc.
@@ -17,9 +20,6 @@ OUTPUT_FILE = "all_code"  # output filename (relative to ROOT)
 BANNER_CHAR = "─"  # what the banner line is made of
 BANNER_WIDTH = 80  # how wide the banner line is
 # ─────────────────────────────────────────────────────────────────────────────
-
-from pathlib import Path
-from typing import List, Sequence
 
 
 def _gather_files(
