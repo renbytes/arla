@@ -211,6 +211,30 @@ class AffectComponent(Component):
         return True, []
 
 
+class CompetenceComponent(Component):
+    """
+    Stores an objective record of an agent's actions to track skill development.
+    """
+
+    def __init__(self) -> None:
+        self.action_counts: Dict[str, int] = defaultdict(int)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"action_counts": self.action_counts}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if not isinstance(self.action_counts, defaultdict):
+            errors.append(f"action_counts is not a defaultdict but a {type(self.action_counts)}")
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        if not isinstance(self.action_counts, defaultdict):
+            self.action_counts = defaultdict(int)
+            return True
+        return False
+
+
 class EpisodeComponent(Component):
     """Stores narrative arcs (episodes) chunked from the agent's experiences."""
 
