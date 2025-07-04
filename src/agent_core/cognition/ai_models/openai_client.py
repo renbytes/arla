@@ -9,9 +9,9 @@ from openai import OpenAI, OpenAIError
 
 load_dotenv()
 
-# FIX: Change the client to be a lazily-initialized global variable.
+# Change the client to be a lazily-initialized global variable.
 # This prevents the client from being created at import time, which solves the test collection error.
-_client: Optional[OpenAI] = None
+_client: OpenAI | None = None
 
 
 def get_client() -> OpenAI:
@@ -21,10 +21,10 @@ def get_client() -> OpenAI:
     """
     global _client
     if _client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise OpenAIError(
-                "The OPENAI_API_KEY environment variable is not set. Please set it in your .env file or environment."
+                "The OPENAI_API_KEY environment variable is not set. Set it or pass api_key=… when creating the client."
             )
         _client = OpenAI(api_key=api_key)
     return _client

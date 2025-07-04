@@ -1,18 +1,15 @@
 # src/agent_core/core/ecs/component.py
 
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from agent_core.cognition.identity.domain_identity import (
-    MultiDomainIdentity,
-)
 from agent_core.core.ecs.base import CognitiveComponent
 
-# These types will be defined in other libraries (like agent-engine) or the
-# final simulation application. We use forward references to avoid circular dependencies.
+# This block is the key to breaking the circular dependency.
+# It allows type hints to work without creating a runtime import.
 if TYPE_CHECKING:
     from agent_core.core.schemas import (
         Belief,
@@ -20,6 +17,21 @@ if TYPE_CHECKING:
         CounterfactualEpisode,
         RelationalSchema,
     )
+
+
+# Define an interface to break the circular dependency with agent-engine.
+class MultiDomainIdentityInterface(ABC):
+    @abstractmethod
+    def get_global_identity_embedding(self) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_identity_coherence(self) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_identity_stability(self) -> float:
+        raise NotImplementedError
 
 
 class ComponentValidationError(Exception):
@@ -88,8 +100,8 @@ class MemoryComponent(Component):
 class IdentityComponent(Component):
     """Stores the agent's multi-domain identity."""
 
-    def __init__(self, embedding_dim: int) -> None:
-        self.multi_domain_identity = MultiDomainIdentity(embedding_dim)
+    def __init__(self, multi_domain_identity: "MultiDomainIdentityInterface") -> None:
+        self.multi_domain_identity = multi_domain_identity
         self.embedding: np.ndarray = self.multi_domain_identity.get_global_identity_embedding()
         self.salient_traits_cache: Dict[str, float] = {}
         self.learned_concepts: Dict[str, np.ndarray] = {}
@@ -259,19 +271,6 @@ class ValueSystemComponent(Component):
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         return True, []
-
-
-class CompetenceComponent(Component):
-    """Stores an objective record of an agent's actions to track skill."""
-
-    def __init__(self) -> None:
-        self.action_counts: Dict[str, int] = defaultdict(int)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {"action_counts": self.action_counts}
-
-    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        return isinstance(self.action_counts, defaultdict), []
 
 
 # --------------------------------------------------------------------------
