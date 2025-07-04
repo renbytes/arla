@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
 To ensure code quality and correctness, you can run the included unit tests and static type checker.
 
-1. **Run Unit Tests:** From the root of the project directory, run `pytest`:
+1. **Run Unit Tests:** From the root of the project directory, run:
 
 ```bash
 pytest

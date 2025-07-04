@@ -21,7 +21,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-asyncio", # For testing asynchronous code
+    "pytest-asyncio",
     "ruff",
     "mypy",
     "pip-tools",
