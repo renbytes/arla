@@ -29,8 +29,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff mypy pytest pytest-mock safety  # Explicitly install testing tools
+          # This single command installs the package itself in editable mode
+          # and all dependencies listed in pyproject.toml, including dev tools.
+          pip install -e ".[dev]"
 
       # 4. Lint with Ruff (checks for style and errors)
       - name: Lint with Ruff
