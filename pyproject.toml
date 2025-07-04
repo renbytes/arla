@@ -23,7 +23,8 @@ dev = [
     "pytest",
     "pytest-asyncio", # For testing asynchronous code
     "ruff",
-    "mypy"
+    "mypy",
+    "pip-tools",
 ]
 
 [project.urls]
