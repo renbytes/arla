@@ -4,18 +4,22 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, List
 
 
+# A more specific type for event handlers
+EventHandler = Callable[[Dict[str, Any]], None]
+
+
 class EventBus:
     """A simple event bus for decoupling communication between systems."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self._subscribers: Dict[str, List[Callable]] = defaultdict(list)
+    def __init__(self, config: Dict[str, Any]) -> None:
+        self._subscribers: Dict[str, List[EventHandler]] = defaultdict(list)
         self.debug_logging = config.get("enable_debug_logging", False)
 
-    def subscribe(self, event_type: str, handler: Callable):
+    def subscribe(self, event_type: str, handler: EventHandler) -> None:
         """Subscribes a handler function to an event type."""
         self._subscribers[event_type].append(handler)
 
-    def publish(self, event_type: str, event_data: Dict[str, Any]):
+    def publish(self, event_type: str, event_data: Dict[str, Any]) -> None:
         """Publishes an event to all subscribed handlers."""
         if self.debug_logging:
             print(f"DEBUG: Publishing event '{event_type}' with data keys: {list(event_data.keys())}")

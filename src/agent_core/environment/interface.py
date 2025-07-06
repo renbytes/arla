@@ -5,7 +5,7 @@ allowing for different world structures (e.g., 2D Grid, Graph, etc.).
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Set, Tuple, Any  # Added Any for SpatialIndex placeholder
+from typing import Dict, List, Optional, Set, Tuple, Any  # Added Any for SpatialIndex placeholder
 
 
 # Placeholder for SpatialIndex if it's not a separate, shared component.
@@ -19,16 +19,18 @@ class SpatialIndex:
     Concrete implementations would live in the application layer.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def add_entity(self, entity_id: str, position: Tuple[int, int]):
+    def add_entity(self, entity_id: str, position: Tuple[int, int]) -> None:
         pass
 
-    def remove_entity(self, entity_id: str):
+    def remove_entity(self, entity_id: str) -> None:
         pass
 
-    def update_entity_position(self, entity_id: str, old_pos: Optional[Tuple[int, int]], new_pos: Tuple[int, int]):
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Tuple[int, int]], new_pos: Tuple[int, int]
+    ) -> None:
         pass
 
     def get_entities_at_position(self, position: Tuple[int, int]) -> Set[str]:
@@ -83,11 +85,16 @@ class EnvironmentInterface(ABC):
     @abstractmethod
     def update_entity_position(
         self, entity_id: str, old_pos: Optional[Any], new_pos: Any
-    ):  # Position type can be abstract
+    ) -> None:  # Position type can be abstract
         """Update an entity's position in any underlying spatial data structures."""
         pass
 
     @abstractmethod
-    def remove_entity(self, entity_id: str):
+    def remove_entity(self, entity_id: str) -> None:
         """Remove an entity from any underlying spatial data structures."""
         pass
+
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the environment's state to a dictionary."""
+        raise NotImplementedError

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.base import CognitiveComponent
 
 # This block is the key to breaking the circular dependency.
@@ -31,6 +32,14 @@ class MultiDomainIdentityInterface(ABC):
 
     @abstractmethod
     def get_identity_stability(self) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_domain_identity(self, **kwargs: Any) -> Any:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_domain_embedding(self, domain: Any) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -83,6 +92,7 @@ class MemoryComponent(Component):
         self.causal_graph: Dict[Tuple[Any, ...], Dict[Tuple[Any, ...], float]] = defaultdict(lambda: defaultdict(float))
         self.last_llm_reflection_summary: str = ""
         self.counterfactual_memories: List["CounterfactualEpisode"] = []
+        self.previous_state_node: Optional[Tuple[Any, ...]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -265,7 +275,7 @@ class BeliefSystemComponent(Component):
 class SocialMemoryComponent(Component):
     """Stores relational schemas about other agents."""
 
-    def __init__(self, schema_embedding_dim: int, device) -> None:
+    def __init__(self, schema_embedding_dim: int, device: Any) -> None:
         self.schemas: Dict[str, "RelationalSchema"] = {}
         self.schema_embedding_dim = schema_embedding_dim
         self.device = device
@@ -370,7 +380,10 @@ class ActionPlanComponent(Component):
     """A placeholder for the agent's chosen action for the current tick."""
 
     def __init__(
-        self, action_type: Optional[Any] = None, intent: Optional[Any] = None, params: Optional[Dict[str, Any]] = None
+        self,
+        action_type: Optional[Any] = None,
+        intent: Optional[Intent] = None,
+        params: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.action_type = action_type
         self.intent = intent

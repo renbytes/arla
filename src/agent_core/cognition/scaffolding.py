@@ -1,6 +1,6 @@
 # src/agent_core/cognition/scaffolding.py
 
-from typing import Any, Dict
+from typing import Any, Coroutine, Dict
 
 # We keep the query_llm import here, but the client itself will be initialized lazily.
 from agent_core.cognition.ai_models.openai_client import query_llm
@@ -9,12 +9,15 @@ from agent_core.cognition.ai_models.openai_client import query_llm
 # NOTE: This will have a dependency on the `agent-engine` in the future,
 # which will provide the DB logger and async runner. For now, we mock them.
 class MockDbLogger:
-    def log_scaffold_interaction(self, **kwargs):
-        pass
+    def log_scaffold_interaction(self, **kwargs: Any) -> Coroutine[Any, Any, None]:
+        async def dummy_coro() -> None:
+            pass
+
+        return dummy_coro()
 
 
 class MockAsyncRunner:
-    def run_async(self, coro):
+    def run_async(self, coro: Coroutine[Any, Any, None]) -> None:
         pass
 
 
@@ -28,7 +31,7 @@ class CognitiveScaffold:
     This class handles prompt construction, querying, and comprehensive logging.
     """
 
-    def __init__(self, simulation_id: str, config: Dict[str, Any]):
+    def __init__(self, simulation_id: str, config: Dict[str, Any]) -> None:
         # In the final version, db_logger would be injected.
         self.db_logger = db_logger_instance
         self.simulation_id = simulation_id

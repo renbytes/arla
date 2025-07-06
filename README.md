@@ -44,7 +44,7 @@ To install the necessary dependencies for local development and testing, run:
 
 ```bash
 # Navigate to the agent-core project root
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 To run the unit tests:
