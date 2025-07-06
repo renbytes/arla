@@ -151,3 +151,7 @@ cython_debug/
 
 # macOS
 .DS_Store
+
+# Project Specific
+all_code*
+all_code
