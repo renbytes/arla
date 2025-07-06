@@ -2,7 +2,7 @@
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import List, Protocol, Any
+from typing import Protocol, Sequence
 
 
 class SystemProtocol(Protocol):
@@ -14,7 +14,7 @@ class SystemProtocol(Protocol):
     from another library (like agent-engine).
     """
 
-    async def update(self, current_tick: int, **kwargs: Any) -> None: ...
+    async def update(self, current_tick: int) -> None: ...
 
     def __repr__(self) -> str: ...
 
@@ -25,7 +25,7 @@ class SystemRunner(ABC):
     """
 
     @abstractmethod
-    async def run(self, systems: List[SystemProtocol], current_tick: int) -> None:
+    async def run(self, systems: Sequence[SystemProtocol], current_tick: int) -> None:
         """
         Executes the update logic for a list of systems.
 
@@ -44,7 +44,7 @@ class SerialSystemRunner(SystemRunner):
     execution is critical and concurrency is not desired.
     """
 
-    async def run(self, systems: List[SystemProtocol], current_tick: int) -> None:
+    async def run(self, systems: Sequence[SystemProtocol], current_tick: int) -> None:
         """
         Iterates through the systems and awaits their update method one by one.
         """
@@ -71,7 +71,7 @@ class AsyncSystemRunner(SystemRunner):
     independently without strict ordering dependencies.
     """
 
-    async def run(self, systems: List[SystemProtocol], current_tick: int) -> None:
+    async def run(self, systems: Sequence[SystemProtocol], current_tick: int) -> None:
         """
         Creates a task for each system's update method and runs them concurrently.
         """
