@@ -113,3 +113,9 @@ def test_load_raises_value_error_for_invalid_schema(store: FileStateStore):
     # Act & Assert
     with pytest.raises(ValueError, match="Data validation error"):
         store.load()
+
+
+def test_load_file_not_found(tmp_path: Path):
+    store = FileStateStore(tmp_path / "non_existent.json")
+    with pytest.raises(FileNotFoundError):
+        store.load()
