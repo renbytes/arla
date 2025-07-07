@@ -135,3 +135,7 @@ testpaths = [
     "agent-sim/tests",
 ]
 asyncio_mode = "auto"
+addopts = "--tb=short -v"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

@@ -71,7 +71,13 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         """
         current_domain = self.domains[domain]
 
-        consistency_score = self._assess_consistency(new_traits, current_domain.embedding, current_domain.confidence)
+        # Normalize the incoming new_traits vector to ensure we are working with unit vectors.
+        # This makes the distance comparison in the test valid.
+        norm_new_traits = self._normalize_embedding(new_traits)
+
+        consistency_score = self._assess_consistency(
+            norm_new_traits, current_domain.embedding, current_domain.confidence
+        )
         validation_score = self._assess_social_validation(context, domain)
         resistance = self._calculate_resistance(current_domain, consistency_score, validation_score)
 
@@ -83,7 +89,8 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
             update_strength = self._calculate_update_strength(
                 consistency_score, validation_score, resistance, current_domain.confidence
             )
-            identity_delta = new_traits - current_domain.embedding
+            # Use the normalized traits for the delta calculation
+            identity_delta = norm_new_traits - current_domain.embedding
             constrained_delta = identity_delta * update_strength * (1 - resistance)
 
             current_domain.embedding = current_domain.embedding + constrained_delta

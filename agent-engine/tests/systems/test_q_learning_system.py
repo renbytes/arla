@@ -96,8 +96,7 @@ def q_learning_system(mock_registry, mock_simulation_state, mock_state_encoder, 
 
 
 # --- Test Cases ---
-
-
+@pytest.mark.asyncio
 async def test_update_caches_state_features(q_learning_system, mock_simulation_state, mock_state_encoder):
     """
     Tests that the passive update method correctly caches the current state for learning agents.

@@ -30,3 +30,4 @@ all_code*
 all_code
 *.egg-info/
 agent-engine/sim_snapshots/
+**/**/*.egg-info/**

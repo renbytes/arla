@@ -120,7 +120,7 @@ class IdentitySystem(System):
         Uses a structured prompt to have the LLM infer traits for each identity domain,
         extracting the necessary 'narrative' from the context object.
         """
-        narrative = context.get("narrative", "")
+        narrative = context.get("llm_final_account", "")
         if not narrative:
             return {}
 

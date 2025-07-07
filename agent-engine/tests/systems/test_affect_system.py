@@ -190,6 +190,7 @@ def test_emotion_discovery_is_triggered(mock_discover, affect_system, mock_simul
     mock_discover.assert_called_once()
 
 
+@pytest.mark.asyncio
 async def test_passive_dissonance_decay(affect_system, mock_simulation_state):
     """
     Tests the passive update method that decays cognitive dissonance.

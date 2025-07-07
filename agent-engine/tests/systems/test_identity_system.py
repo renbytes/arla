@@ -103,11 +103,13 @@ def test_on_reflection_completed_updates_identity(
     WHEN on_reflection_completed is called
     THEN the system should query the LLM and update the agent's identity domains.
     """
-    # ARRANGE: The event now contains a generic `context` dictionary
+    # ARRANGE: The mock context must now include 'llm_final_account'
+    # to accurately simulate the event produced by ReflectionSystem.
     event_data: Dict[str, Any] = {
         "entity_id": "agent1",
         "context": {
             "narrative": "I worked with others to build a shelter.",
+            "llm_final_account": "Reflecting on my actions, I see I am becoming a cooperative and skilled builder.",
             "social_feedback": {"positive_social_responses": 0.5},
         },
         "tick": 100,
@@ -119,9 +121,9 @@ def test_on_reflection_completed_updates_identity(
     identity_system.on_reflection_completed(event_data)
 
     # ASSERT
-    # 1. The LLM was queried to infer traits from the narrative.
+    # 1. The LLM was queried to infer traits from the synthesized reflection.
     mock_cognitive_scaffold.query.assert_called_once()
-    assert "I worked with others to build a shelter." in mock_cognitive_scaffold.query.call_args[1]["prompt"]
+    assert "cooperative and skilled builder" in mock_cognitive_scaffold.query.call_args[1]["prompt"]
 
     # 2. update_domain_identity was called for the domains found in the LLM response.
     calls = id_comp_instance.multi_domain_identity.update_domain_identity.call_args_list
@@ -149,7 +151,8 @@ def test_on_reflection_completed_missing_component(identity_system: IdentitySyst
     mock_simulation_state.entities["agent_no_id_comp"] = {}
     event_data = {
         "entity_id": "agent_no_id_comp",
-        "context": {"narrative": "..."},
+        "context": {"narrative": "...",
+        "llm_final_account": "some reflection"},
         "tick": 100,
     }
     id_comp = mock_simulation_state.entities["agent1"][IdentityComponent]

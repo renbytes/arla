@@ -161,8 +161,8 @@ class ReflectionSystem(System):
             return context
 
         llm_prompt = f"""
-            Based ONLY on this context:
-            {narrative}\nProvide a concise, first-person reflection on who I am becoming,
+            Based ONLY on this context: {narrative}
+            Provide a concise, first-person reflection on who I am becoming,
             what I value, and what I have learned.
         """
 
@@ -211,7 +211,7 @@ class ReflectionSystem(System):
         llm_prompt = f"""
             Concisely summarize the theme of these events in 2-3 words
             (e.g., 'Territorial Dispute', 'Successful Hunt', 'Failed Exploration'):
-            {"; ".join(event_summaries)}.
+            {'; '.join(event_summaries)}.
         """
 
         theme_raw = self.cognitive_scaffold.query(

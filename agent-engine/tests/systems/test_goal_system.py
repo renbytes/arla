@@ -80,32 +80,36 @@ def mock_openai_key(mocker):
 
 
 @pytest.fixture
-# FIX: Patch the function where it is LOOKED UP, which is in the goal_system module.
-# This is the correct way to prevent the network call.
-@patch("agent_engine.systems.goal_system.get_embedding_with_cache")
-@patch("agent_engine.systems.goal_system.KMeans")
 def goal_system(
-    mock_kmeans, mock_get_embedding, mock_simulation_state, mock_cognitive_scaffold, mock_event_bus, mock_openai_key
+    mock_simulation_state,
+    mock_cognitive_scaffold,
+    mock_event_bus,
+    mock_openai_key,
 ):
     """Provides an initialized GoalSystem with all dependencies mocked."""
-    # Mock the embedding function to return predictable vectors
-    mock_get_embedding.return_value = np.random.rand(4).astype(np.float32)
+    # Mock all the OpenAI and KMeans functionality to prevent network calls
+    with (
+        patch("agent_engine.systems.goal_system.get_embedding_with_cache") as mock_get_embedding,
+        patch("agent_engine.systems.goal_system.KMeans") as mock_kmeans,
+    ):
+        # Configure the embedding mock to return predictable vectors
+        mock_get_embedding.return_value = np.random.rand(4).astype(np.float32)
 
-    # Mock the KMeans clustering algorithm
-    mock_kmeans_instance = MagicMock()
-    mock_kmeans_instance.n_clusters = 1
-    mock_kmeans_instance.labels_ = np.zeros(5)  # All memories in one cluster
-    mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
+        # Mock the KMeans clustering algorithm
+        mock_kmeans_instance = MagicMock()
+        mock_kmeans_instance.n_clusters = 1
+        mock_kmeans_instance.labels_ = np.zeros(5)  # All memories in one cluster
+        mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
 
-    # The system uses the event bus from the simulation state
-    mock_simulation_state.event_bus = mock_event_bus
+        # The system uses the event bus from the simulation state
+        mock_simulation_state.event_bus = mock_event_bus
 
-    system = GoalSystem(
-        simulation_state=mock_simulation_state,
-        config={"goal_invention_min_successes": 5, "llm": {}},
-        cognitive_scaffold=mock_cognitive_scaffold,
-    )
-    return system
+        system = GoalSystem(
+            simulation_state=mock_simulation_state,
+            config={"goal_invention_min_successes": 5, "llm": {}},
+            cognitive_scaffold=mock_cognitive_scaffold,
+        )
+        yield system
 
 
 # --- Test Cases ---
@@ -167,8 +171,13 @@ def test_select_best_goal(goal_system, mock_simulation_state):
 
     narrative = "My goal is to achieve the existing goal."
 
-    # Act
-    best_goal = goal_system._select_best_goal("agent1", components, narrative)
+    # Mock the embedding function to return a specific context embedding
+    with patch("agent_engine.systems.goal_system.get_embedding_with_cache") as mock_embed:
+        # Return an embedding similar to the "existing_goal"
+        mock_embed.return_value = np.array([0.1, 0.2, 0.3, 0.4])
+
+        # Act
+        best_goal = goal_system._select_best_goal("agent1", components, narrative)
 
     # Assert
     # The "existing_goal" should be selected because its embedding will be more

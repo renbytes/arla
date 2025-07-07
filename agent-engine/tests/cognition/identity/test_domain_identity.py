@@ -11,7 +11,6 @@ from agent_engine.cognition.identity.domain_identity import (
     SocialValidationCollector,
 )
 
-
 # --- Fixtures ---
 
 
@@ -107,26 +106,32 @@ def test_update_domain_identity_successful_update(identity):
     # Arrange
     domain_to_update = IdentityDomain.COMPETENCE
     new_traits = np.array([0, 1, 0, 1], dtype=np.float32)
-    social_feedback = {"positive_social_responses": 0.9, "social_approval_rating": 0.8}
+    context = {"social_feedback": {"positive_social_responses": 0.9, "social_approval_rating": 0.8}}
     original_embedding = identity.get_domain_embedding(domain_to_update).copy()
 
     # Act
     updated, _, _ = identity.update_domain_identity(
         domain=domain_to_update,
         new_traits=new_traits,
-        social_feedback=social_feedback,
+        context=context,
         current_tick=10,
     )
 
     # Assert
     assert updated is True
     new_embedding = identity.get_domain_embedding(domain_to_update)
-    # The embedding should have changed from the original
     assert not np.array_equal(original_embedding, new_embedding)
-    # The new embedding should be closer to the new_traits vector
-    original_dist = np.linalg.norm(original_embedding - new_traits)
-    new_dist = np.linalg.norm(new_embedding - new_traits)
-    assert new_dist < original_dist
+
+    # Change the assertion to check for increased cosine similarity,
+    # which is the correct metric for normalized directional vectors.
+    def cosine_similarity(v1, v2):
+        return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+
+    original_sim = cosine_similarity(original_embedding, new_traits)
+    new_sim = cosine_similarity(new_embedding, new_traits)
+
+    # The new similarity should be greater than the original one.
+    assert new_sim > original_sim
 
 
 def test_update_domain_identity_resisted_update(identity):
@@ -140,14 +145,14 @@ def test_update_domain_identity_resisted_update(identity):
 
     # New traits are very different from existing identity
     new_traits = -identity.get_domain_embedding(domain_to_update)
-    social_feedback = {"negative_social_responses": 0.8}  # Negative feedback
+    context = {"social_feedback": {"negative_social_responses": 0.8}}  # Negative feedback
     original_embedding = identity.get_domain_embedding(domain_to_update).copy()
 
     # Act
     updated, _, _ = identity.update_domain_identity(
         domain=domain_to_update,
         new_traits=new_traits,
-        social_feedback=social_feedback,
+        context=context,  # Fix: Use 'context' instead of 'social_feedback'
         current_tick=10,
     )
 

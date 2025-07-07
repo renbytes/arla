@@ -111,6 +111,7 @@ def test_on_action_executed_creates_causal_link(causal_graph_system, mock_simula
     assert mem_comp.previous_state_node == expected_current_state_node
 
 
+@pytest.mark.asyncio
 async def test_update_decays_link_strength(causal_graph_system, mock_simulation_state):
     """
     Tests that the passive update correctly decays the strength of existing causal links.
@@ -132,6 +133,7 @@ async def test_update_decays_link_strength(causal_graph_system, mock_simulation_
     assert decayed_weight == pytest.approx(initial_weight * 0.9)
 
 
+@pytest.mark.asyncio
 async def test_update_prunes_weak_links(causal_graph_system, mock_simulation_state):
     """
     Tests that very weak links are removed entirely after decay.

@@ -108,9 +108,9 @@ class GoalSystem(System):
             )
             prompt = f"""
                 The following actions were successful:
-                    {sample_summaries}.
-                What is a concise, 2-3 word, high-level goal
-                that describes this pattern of success?
+                {sample_summaries}.
+                What is a concise, 2-3 word,
+                high-level goal that describes this pattern of success?
                 (e.g., 'Assert Dominance', 'Secure Territory', 'Forge Alliances').
             """
 

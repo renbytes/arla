@@ -1,4 +1,4 @@
-# tests/cognition/reflection/test_validation.py
+# tests/cognition/reflection/test_validation.py - Fixed version
 
 import math
 import pytest
@@ -9,7 +9,6 @@ import os
 # Subject under test
 from agent_engine.cognition.reflection.validation import RuleValidator, calculate_confidence_score
 from agent_engine.cognition.reflection.episode import Episode
-
 
 # --- Fixtures ---
 
@@ -39,27 +38,28 @@ def mock_openai_key(mocker):
 
 
 @pytest.fixture
-@patch("agent_engine.cognition.reflection.validation.get_embedding_with_cache")
-def rule_validator(mock_get_embedding, sample_episode, mock_cognitive_scaffold, mock_openai_key):
+def rule_validator(sample_episode, mock_cognitive_scaffold, mock_openai_key):
     """Provides an initialized RuleValidator with mocked dependencies."""
 
-    # Configure the mock embedding function to return different vectors for different inputs
-    def embedding_side_effect(text, *args, **kwargs):
-        if "happy" in text:
-            return np.array([1.0, 0.9, 0.8, 0.7])  # Reflection embedding
-        else:
-            return np.array([1.0, 0.88, 0.82, 0.71])  # Factual summary embedding (very similar)
+    # Mock the embedding function to prevent network calls
+    with patch("agent_engine.cognition.reflection.validation.get_embedding_with_cache") as mock_get_embedding:
+        # Configure the mock embedding function to return different vectors for different inputs
+        def embedding_side_effect(text, *args, **kwargs):
+            if "happy" in text.lower():
+                return np.array([1.0, 0.9, 0.8, 0.7])  # Reflection embedding
+            else:
+                return np.array([1.0, 0.88, 0.82, 0.71])  # Factual summary embedding (very similar)
 
-    mock_get_embedding.side_effect = embedding_side_effect
+        mock_get_embedding.side_effect = embedding_side_effect
 
-    validator = RuleValidator(
-        episode=sample_episode,
-        config={"agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}}},
-        cognitive_scaffold=mock_cognitive_scaffold,
-        agent_id="agent1",
-        current_tick=100,
-    )
-    return validator
+        validator = RuleValidator(
+            episode=sample_episode,
+            config={"agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}}},
+            cognitive_scaffold=mock_cognitive_scaffold,
+            agent_id="agent1",
+            current_tick=100,
+        )
+        yield validator
 
 
 # --- Test Cases for RuleValidator ---
@@ -87,13 +87,14 @@ def test_check_factual_alignment_high_similarity(rule_validator):
     assert alignment_score > 0.95
 
 
-@patch("agent_engine.cognition.reflection.validation.get_embedding_with_cache", return_value=None)
-def test_check_factual_alignment_embedding_failure(mock_get_embedding, rule_validator):
+def test_check_factual_alignment_embedding_failure(rule_validator):
     """
     Tests that the function handles failures from the embedding service gracefully.
     """
-    alignment_score = rule_validator.check_factual_alignment("An inference.")
-    assert alignment_score == 0.0
+    # Mock the embedding function to return None (simulating failure)
+    with patch("agent_engine.cognition.reflection.validation.get_embedding_with_cache", return_value=None):
+        alignment_score = rule_validator.check_factual_alignment("An inference.")
+        assert alignment_score == 0.0
 
 
 def test_check_factual_alignment_empty_inference(rule_validator):

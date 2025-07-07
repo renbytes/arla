@@ -33,29 +33,41 @@ def mock_dependencies():
 
 
 @pytest.fixture
-@patch("agent_engine.simulation.engine.SystemManager")
-@patch("agent_engine.simulation.engine.SimulationState")
-@patch("agent_engine.simulation.engine.CognitiveScaffold")
-@patch("agent_engine.simulation.engine.EventBus")
-def sim_manager(mock_event_bus, mock_scaffold, mock_sim_state, mock_system_manager, mock_config, mock_dependencies):
+def sim_manager(mock_config, mock_dependencies):
     """Provides an initialized SimulationManager with all dependencies mocked."""
 
-    # Configure the mock SimulationState to have one active entity
-    active_entity_components = {TimeBudgetComponent: TimeBudgetComponent(100)}
-    mock_sim_state.return_value.entities = {"agent1": active_entity_components}
+    with (
+        patch("agent_engine.simulation.engine.SystemManager") as mock_system_manager_class,
+        patch("agent_engine.simulation.engine.SimulationState") as mock_sim_state_class,
+        patch("agent_engine.simulation.engine.CognitiveScaffold") as mock_scaffold_class,
+        patch("agent_engine.simulation.engine.EventBus") as mock_event_bus_class,
+    ):
+        # Configure the mock SimulationState
+        mock_sim_state = mock_sim_state_class.return_value
+        active_entity_components = {TimeBudgetComponent: TimeBudgetComponent(100)}
+        mock_sim_state.entities = {"agent1": active_entity_components}
 
-    # Configure the mock SystemManager's update_all method to be awaitable
-    mock_system_manager.return_value.update_all = AsyncMock()
+        # Configure the mock SystemManager with proper async method
+        mock_system_manager = mock_system_manager_class.return_value
+        mock_system_manager.update_all = AsyncMock()  # This is the key fix
 
-    # Configure the mock DecisionSelector to return an action plan
-    mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
+        # Configure the mock EventBus
+        mock_event_bus = mock_event_bus_class.return_value
 
-    # Configure the environment mock's to_dict() method
-    # Tell the mock to return an empty dictionary when to_dict() is called.
-    mock_dependencies["environment"].to_dict.return_value = {}
+        # Configure the mock DecisionSelector to return an action plan
+        mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
 
-    manager = SimulationManager(config=mock_config, **mock_dependencies)
-    return manager
+        # Configure the environment mock's to_dict() method
+        mock_dependencies["environment"].to_dict.return_value = {}
+
+        # Create the manager
+        manager = SimulationManager(config=mock_config, **mock_dependencies)
+
+        # Store references to mocks on the manager for test assertions
+        manager.system_manager = mock_system_manager
+        manager.event_bus = mock_event_bus
+
+        yield manager
 
 
 # --- Test Cases ---
@@ -72,6 +84,7 @@ def test_initialization(sim_manager, mock_dependencies):
     assert sim_manager.system_manager is not None
 
 
+@pytest.mark.asyncio
 async def test_run_loop_executes_correct_number_of_steps(sim_manager):
     """
     Tests that the main run loop iterates for the number of steps specified in the config.
@@ -84,10 +97,12 @@ async def test_run_loop_executes_correct_number_of_steps(sim_manager):
     # should be called exactly 3 times.
     assert sim_manager.system_manager.update_all.call_count == 3
     # Check that the calls were for ticks 0, 1, and 2
-    ticks = [call.kwargs["current_tick"] for call in sim_manager.system_manager.update_all.call_args_list]
+    calls = sim_manager.system_manager.update_all.call_args_list
+    ticks = [call.kwargs["current_tick"] for call in calls]
     assert ticks == [0, 1, 2]
 
 
+@pytest.mark.asyncio
 async def test_run_loop_processes_entity_turn(sim_manager, mock_dependencies):
     """
     Tests that the logic for processing a single entity's turn is called correctly.
@@ -102,10 +117,13 @@ async def test_run_loop_processes_entity_turn(sim_manager, mock_dependencies):
 
     # Check that the 'action_chosen' event was published each time
     assert sim_manager.event_bus.publish.call_count == 3
-    event_name = sim_manager.event_bus.publish.call_args[0][0]
+    # Get the first call to check the event name
+    first_call_args = sim_manager.event_bus.publish.call_args_list[0]
+    event_name = first_call_args[0][0]
     assert event_name == "action_chosen"
 
 
+@pytest.mark.asyncio
 async def test_run_loop_stops_when_no_active_entities(sim_manager):
     """
     Tests that the simulation ends early if all entities become inactive.
