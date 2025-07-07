@@ -1,0 +1,48 @@
+[project]
+name = "agent-engine"
+version = "0.1.0"
+description = "The world-agnostic simulation and cognitive systems for the agent platform."
+authors = [{ name = "Your Name", email = "your@email.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "torch",
+    "matplotlib",
+    "omegaconf",
+    "agent-core @ git+https://github.com/renbytes/agent-core@main",
+    "scikit-learn"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "ruff",
+    "mypy",
+    "pip-tools",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+exclude = ["^src/agent_engine/tests/"]
+
+# Overrides to ignore missing imports for libraries that don't have stubs
+[[tool.mypy.overrides]]
+module = [
+    "numpy.*",
+    "sklearn.*",
+    "matplotlib.*",
+    "omegaconf.*",
+    "openai.*",
+    "python_dotenv.*",
+    "agent_engine.conftest",
+    "agent_engine.systems.components",
+    "agent_engine.simulation.simulation_state",
+]
+ignore_missing_imports = true
+ignore_errors = true

@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: agent-engine
+Version: 0.1.0
+Summary: The world-agnostic simulation and cognitive systems for the agent platform.
+Author-email: Your Name <your@email.com>
+Requires-Python: >=3.11
+Requires-Dist: numpy
+Requires-Dist: torch
+Requires-Dist: matplotlib
+Requires-Dist: omegaconf
+Requires-Dist: agent-core@ file:../agent-core
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: pip-tools; extra == "dev"
