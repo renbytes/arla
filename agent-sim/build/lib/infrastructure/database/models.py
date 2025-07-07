@@ -32,9 +32,10 @@ class Experiment(Base):
 
     __tablename__ = "experiments"
 
-    # --- Use Mapped and mapped_column for all columns ---
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String, unique=True, index=True)
+    # This column will store the name of the simulation package, e.g., 'soul_sim'.
+    simulation_package: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String, default="created")

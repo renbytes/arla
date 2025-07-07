@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 src/agent_engine/__init__.py
+src/agent_engine/conftest.py
 src/agent_engine/py.typed
 src/agent_engine.egg-info/PKG-INFO
 src/agent_engine.egg-info/SOURCES.txt
@@ -34,17 +35,5 @@ src/agent_engine/systems/goal_system.py
 src/agent_engine/systems/identity_system.py
 src/agent_engine/systems/q_learning_system.py
 src/agent_engine/systems/reflection_system.py
-src/agent_engine/tests/__init__.py
-src/agent_engine/tests/cognition/__init__.py
-src/agent_engine/tests/cognition/test_scaffolding.py
-src/agent_engine/tests/cognition/emotions/__init__.py
-src/agent_engine/tests/cognition/emotions/test_affect_base.py
-src/agent_engine/tests/cognition/emotions/test_affect_learning.py
-src/agent_engine/tests/cognition/emotions/test_appraisal_theory.py
-src/agent_engine/tests/cognition/emotions/test_model.py
-src/agent_engine/tests/cognition/identity/__init__.py
-src/agent_engine/tests/cognition/identity/test_domain_identity.py
-src/agent_engine/tests/systems/__init__.py
-src/agent_engine/tests/systems/test_identity_system.py
 src/agent_engine/utils/config_utils.py
 src/agent_engine/utils/math_utils.py

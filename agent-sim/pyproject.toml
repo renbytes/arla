@@ -10,8 +10,6 @@ authors = [{ name = "Your Name", email = "your@email.com" }]
 dependencies = [
     # Local, editable installs for the core and engine libraries.
     # Assumes agent-core and agent-engine directories are at the same level as agent-sim.
-    "agent-core @ file:../agent-core",
-    "agent-engine @ file:../agent-engine",
 
     # --- Infrastructure & Orchestration ---
     "celery[redis]==5.3.4",

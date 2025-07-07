@@ -51,10 +51,10 @@ class AsyncDatabaseManager:
             event = Event(simulation_id=simulation_id, tick=tick, agent_id=agent_id, action_type=action_type, success=success, reward=reward, message=message, details=details)
             session.add(event)
 
-    async def create_experiment(self, experiment_id: str, name: str, config: Dict[str, Any], total_runs: int):
+    async def create_experiment(self, experiment_id: str, name: str, config: Dict[str, Any], total_runs: int, simulation_package: str):
         """Create a new experiment record asynchronously."""
         async with self.get_session() as session:
-            experiment = Experiment(id=experiment_id, name=name, config=config, total_runs=total_runs, status="created")
+            experiment = Experiment(id=experiment_id, name=name, config=config, total_runs=total_runs, simulation_package=simulation_package, status="created")
             session.add(experiment)
 
     async def create_simulation_run(self, run_id: str, experiment_id: str, scenario_name: str, config: Dict[str, Any], task_id: str):

@@ -8,7 +8,7 @@ Requires-Dist: numpy
 Requires-Dist: torch
 Requires-Dist: matplotlib
 Requires-Dist: omegaconf
-Requires-Dist: agent-core@ file:../agent-core
+Requires-Dist: scikit-learn
 Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: pytest-mock; extra == "dev"

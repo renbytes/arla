@@ -1,0 +1,33 @@
+# arla-project/pyproject.toml
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arla-monorepo-workspace"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.11"
+
+# This section tells pip that all your local packages are required
+# dependencies of the workspace. It will install them all in editable mode.
+dependencies = [
+    "agent-core @ file:./agent-core",
+    "agent-engine @ file:./agent-engine",
+    "agent-concurrent @ file:./agent-concurrent",
+    "agent-persist @ file:./agent-persist",
+    "agent-sim @ file:./agent-sim",
+]
+
+# Consolidate all development dependencies here
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+    "pip-tools",
+    "pre-commit",
+]

@@ -2,7 +2,7 @@ numpy
 torch
 matplotlib
 omegaconf
-agent-core@ file:../agent-core
+scikit-learn
 
 [dev]
 pytest

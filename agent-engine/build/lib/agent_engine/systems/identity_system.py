@@ -9,14 +9,14 @@ import numpy as np
 
 # Imports from agent_core
 from agent_core.cognition.ai_models.openai_client import get_embedding_with_cache
-from agent_core.cognition.identity.domain_identity import (
-    IdentityDomain,
-    SocialValidationCollector,
-)
 from agent_core.core.ecs.component import Component, IdentityComponent, SocialMemoryComponent
 from agent_core.core.ecs.event_bus import EventBus
 
 # Imports from agent_engine
+from agent_engine.cognition.identity.domain_identity import (
+    IdentityDomain,
+    SocialValidationCollector,
+)
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
 from agent_engine.utils.config_utils import get_config_value
@@ -123,20 +123,21 @@ class IdentitySystem(System):
     ) -> Dict[IdentityDomain, Dict[str, float]]:
         """Uses a structured prompt to have the LLM infer traits for each identity domain."""
         domain_definitions = "\n".join([f"- {d.value.upper()}: ..." for d in IdentityDomain])
-        llm_prompt = f"""Analyze the narrative below and identify 1-2 key traits for EACH domain. Assign each trait a score from 0.0 to 1.0.
+        llm_prompt = f"""Analyze the narrative below and identify 1-2 key traits for EACH domain.
+            Assign each trait a score from 0.0 to 1.0.
 
-Narrative: "{narrative}"
+            Narrative: "{narrative}"
 
-Domains:
-{domain_definitions}
+            Domains:
+            {domain_definitions}
 
-Format your response EXACTLY as follows:
-SOCIAL:
-- trait_name: score
-COMPETENCE:
-- trait_name: score
-...
-"""
+            Format your response EXACTLY as follows:
+            SOCIAL:
+            - trait_name: score
+            COMPETENCE:
+            - trait_name: score
+            ...
+            """
         try:
             raw_response = self.cognitive_scaffold.query(
                 agent_id=entity_id,
