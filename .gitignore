@@ -31,4 +31,7 @@ all_code
 **/*.egg-info/
 agent-engine/sim_snapshots/
 *.egg-info/
+*.egg-info/
 */*/*.egg-info/
+**/**/*.egg-info/
+agent-sim/src/agent_sim.egg-info/**
