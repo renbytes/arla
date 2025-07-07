@@ -211,7 +211,7 @@ class ReflectionSystem(System):
         llm_prompt = f"""
             Concisely summarize the theme of these events in 2-3 words
             (e.g., 'Territorial Dispute', 'Successful Hunt', 'Failed Exploration'):
-            {'; '.join(event_summaries)}.
+            {"; ".join(event_summaries)}.
         """
 
         theme_raw = self.cognitive_scaffold.query(

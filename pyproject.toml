@@ -82,21 +82,15 @@ exclude = [
 ]
 
 [tool.mypy]
-# This is the key setting to ignore test directories.
-# It uses a regular expression to exclude any path that contains a 'tests/' folder.
+# The 'mypy_path' key has been removed. It's not needed.
 exclude = [
     "tests/",
     "agent-sim/",
 ]
-# Enforce the Python version to check against.
 python_version = "3.11"
-# Disallow functions that don't have return type annotations.
 disallow_untyped_defs = true
-# A stricter check that warns about untyped code within functions.
 warn_return_any = true
-# Help keep the config clean by warning about unused sections.
 warn_unused_configs = true
-
 
 # The pythonpath points to all the different 'src' directories
 mypy_path = [
