@@ -1,0 +1,29 @@
+[project]
+name = "agent-core"
+version = "0.1.0"
+description = "Affective Reflective Learning Architecture - Core Components and Interfaces"
+authors = [{ name = "Your Name", email = "your@email.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "openai",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "ruff",
+    "mypy",
+    "pip-tools",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+exclude = ["^src/agent_core/tests/"]
