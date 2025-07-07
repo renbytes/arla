@@ -6,7 +6,6 @@ Manages an agent's goal creation, selection, and refinement.
 from typing import Any, Dict, List, Optional, Type, cast
 
 import numpy as np
-from sklearn.cluster import KMeans
 
 # Imports from agent_core
 from agent_core.cognition.ai_models.openai_client import get_embedding_with_cache
@@ -19,6 +18,7 @@ from agent_core.core.ecs.component import (
     MemoryComponent,
 )
 from agent_core.core.ecs.event_bus import EventBus
+from sklearn.cluster import KMeans
 
 # Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
@@ -106,7 +106,13 @@ class GoalSystem(System):
             sample_summaries = "; ".join(
                 np.random.choice(np.array(summaries)[cluster_indices], size=min(3, len(cluster_indices)), replace=False)
             )
-            prompt = f"The following actions were successful: {sample_summaries}.\nWhat is a concise, 2-3 word, high-level goal that describes this pattern of success? (e.g., 'Assert Dominance', 'Secure Territory', 'Forge Alliances')."
+            prompt = f"""
+                The following actions were successful:
+                    {sample_summaries}.
+                What is a concise, 2-3 word, high-level goal
+                that describes this pattern of success?
+                (e.g., 'Assert Dominance', 'Secure Territory', 'Forge Alliances').
+            """
 
             try:
                 goal_name = (
@@ -151,7 +157,11 @@ class GoalSystem(System):
             return None
 
         emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
-        context = f"My situation: {narrative}. My traits: {identity_comp.salient_traits_cache}. My emotion: {emotion_comp.current_emotion_category}."
+        context = f"""
+            My situation: {narrative}.
+            My traits: {identity_comp.salient_traits_cache}.
+            My emotion: {emotion_comp.current_emotion_category}.
+        """
 
         ctx_emb = get_embedding_with_cache(context, emb_dim, self.config.get("llm", {}))
         if ctx_emb is None:
@@ -186,6 +196,6 @@ class GoalSystem(System):
         # Cast to float to satisfy mypy, as numpy ops can return np.float64
         return float((ctx_sim * 2.0) + (success_rate * 1.5) + (id_sim * 1.0))
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """This system is purely event-driven and has no per-tick logic."""
         pass

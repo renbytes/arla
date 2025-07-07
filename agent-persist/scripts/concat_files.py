@@ -41,9 +41,7 @@ def _gather_files(
 
             if any(part in exclude for part in rel.parts):
                 continue
-            if path.is_file() and (
-                not include_exts or path.suffix.lower() in include_exts
-            ):
+            if path.is_file() and (not include_exts or path.suffix.lower() in include_exts):
                 files.append(path)
 
     return sorted(files, key=lambda p: p.relative_to(root).as_posix())

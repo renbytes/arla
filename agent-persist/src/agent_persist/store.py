@@ -3,7 +3,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Union, cast
 
 from pydantic import ValidationError
 
@@ -96,17 +96,20 @@ class FileStateStore(StateStore):
         try:
             json_text = self.file_path.read_text(encoding="utf-8")
 
-            # Use Pydantic's model_validate_json for robust parsing and validation
-            snapshot = SimulationSnapshot.model_validate_json(json_text)
+            snapshot = cast(SimulationSnapshot, SimulationSnapshot.model_validate_json(json_text))
             print(f"Successfully loaded snapshot from {self.file_path}")
             return snapshot
 
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error decoding JSON from {self.file_path}: {e}")
+            raise ValueError(f"Error decoding JSON from {self.file_path}: {e}") from e
         except ValidationError as e:
-            raise ValueError(
-                f"Data validation error when loading snapshot from {self.file_path}: {e}"
-            )
+            raise ValueError(f"Data validation error when loading snapshot from {self.file_path}: {e}") from e
         except IOError as e:
             print(f"Error: Could not read snapshot from {self.file_path}. Reason: {e}")
-            raise
+            # Explicitly re-raise the caught exception variable 'e'.
+            raise e
+
+        # Add a raise here to prove to mypy that the function cannot
+        # complete without returning a value or raising an exception.
+        # This line should be logically unreachable.
+        raise RuntimeError("Unreachable code in FileStateStore.load")

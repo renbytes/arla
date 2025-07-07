@@ -9,14 +9,11 @@ import numpy as np
 
 # Imports from agent_core
 from agent_core.cognition.ai_models.openai_client import get_embedding_with_cache
-from agent_core.core.ecs.component import Component, IdentityComponent, SocialMemoryComponent
+from agent_core.core.ecs.component import Component, IdentityComponent
 from agent_core.core.ecs.event_bus import EventBus
 
 # Imports from agent_engine
-from agent_engine.cognition.identity.domain_identity import (
-    IdentityDomain,
-    SocialValidationCollector,
-)
+from agent_engine.cognition.identity.domain_identity import IdentityDomain
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
 from agent_engine.utils.config_utils import get_config_value
@@ -26,7 +23,7 @@ from agent_engine.utils.math_utils import safe_normalize_vector
 class IdentitySystem(System):
     """
     Updates an agent's multi-domain identity based on narrative reflections.
-    This system is event-driven and implements the identity update model.
+    This system is event-driven, world-agnostic, and implements the identity update model.
     """
 
     REQUIRED_COMPONENTS: List[Type[Component]] = []  # Event-driven
@@ -45,48 +42,45 @@ class IdentitySystem(System):
         self.event_bus: EventBus = event_bus
 
         self.event_bus.subscribe("reflection_completed", self.on_reflection_completed)
-        self.social_validator = SocialValidationCollector()
 
     def on_reflection_completed(self, event_data: Dict[str, Any]) -> None:
         """
         Event handler that orchestrates the full identity update cycle upon
-        receiving a completed reflection from an agent.
+        receiving a completed reflection. It receives a generic context object
+        and passes it down the chain.
         """
         entity_id = event_data["entity_id"]
-        narrative = event_data["llm_final_account"]
+        context = event_data.get("context", {})
         current_tick = event_data.get("tick", 0)
 
         components = self.simulation_state.entities.get(entity_id, {})
         identity_comp = components.get(IdentityComponent)
-        social_memory_comp = components.get(SocialMemoryComponent)
 
         if not isinstance(identity_comp, IdentityComponent):
             return
 
-        inferred_traits = self._infer_domain_traits_from_narrative(entity_id, narrative, current_tick)
+        inferred_traits = self._infer_domain_traits_from_context(entity_id, context, current_tick)
         if not inferred_traits:
             return
 
-        social_schemas = social_memory_comp.schemas if isinstance(social_memory_comp, SocialMemoryComponent) else {}
-        social_feedback = self.social_validator.collect_social_feedback(entity_id, {}, social_schemas, current_tick)
-
         self._apply_identity_updates(
-            identity_comp,
-            inferred_traits,
-            social_feedback,
+            identity_comp=identity_comp,
+            inferred_traits_by_domain=inferred_traits,
+            context=context,
             tick=current_tick,
-            narrative=narrative,
         )
 
     def _apply_identity_updates(
         self,
         identity_comp: IdentityComponent,
         inferred_traits_by_domain: Dict[IdentityDomain, Dict[str, float]],
-        social_feedback: Dict[str, float],
+        context: Dict[str, Any],
         tick: int,
-        narrative: str,
     ) -> None:
-        """Calls the update method on the IdentityComponent for each domain."""
+        """
+        Calculates a new trait embedding and calls the update method on the
+        IdentityComponent's model, passing the generic context through.
+        """
         llm_config = self.config.get("llm", {})
         embedding_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
         all_inferred_traits_cache = {}
@@ -109,19 +103,27 @@ class IdentitySystem(System):
             if target_embedding is None:
                 continue
 
+            # Pass the generic context dictionary directly to the identity model
             identity_comp.multi_domain_identity.update_domain_identity(
                 domain=domain,
                 new_traits=target_embedding,
-                social_feedback=social_feedback,
+                context=context,
                 current_tick=tick,
-                narrative_context=narrative,
             )
+
         identity_comp.salient_traits_cache = all_inferred_traits_cache
 
-    def _infer_domain_traits_from_narrative(
-        self, entity_id: str, narrative: str, current_tick: int
+    def _infer_domain_traits_from_context(
+        self, entity_id: str, context: Dict[str, Any], current_tick: int
     ) -> Dict[IdentityDomain, Dict[str, float]]:
-        """Uses a structured prompt to have the LLM infer traits for each identity domain."""
+        """
+        Uses a structured prompt to have the LLM infer traits for each identity domain,
+        extracting the necessary 'narrative' from the context object.
+        """
+        narrative = context.get("narrative", "")
+        if not narrative:
+            return {}
+
         domain_definitions = "\n".join([f"- {d.value.upper()}: ..." for d in IdentityDomain])
         llm_prompt = f"""Analyze the narrative below and identify 1-2 key traits for EACH domain.
             Assign each trait a score from 0.0 to 1.0.
@@ -176,6 +178,6 @@ class IdentitySystem(System):
                     continue
         return domain_traits
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass

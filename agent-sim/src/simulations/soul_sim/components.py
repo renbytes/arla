@@ -11,6 +11,7 @@ import numpy as np
 
 # Imports from the core library, defining the base class and interfaces
 from agent_core.core.ecs.component import Component
+
 if TYPE_CHECKING:
     from agent_core.environment.interface import EnvironmentInterface
 

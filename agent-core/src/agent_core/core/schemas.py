@@ -26,7 +26,10 @@ class CounterfactualEpisode:
     pass
 
 
+@dataclass
 class RelationalSchema:
     """A class representing a subjective view of another agent."""
 
-    pass
+    other_agent_id: str
+    impression_valence: float = 0.0
+    interaction_count: int = 0

@@ -1,10 +1,11 @@
 """Concrete implementations of the provider interfaces needed by ARLA."""
+
+from agent_core.environment.controllability_provider_interface import (
+    ControllabilityProviderInterface,
+)
 from agent_core.environment.state_node_encoder_interface import StateNodeEncoderInterface
 from agent_core.environment.vitality_metrics_provider_interface import (
     VitalityMetricsProviderInterface,
-)
-from agent_core.environment.controllability_provider_interface import (
-    ControllabilityProviderInterface,
 )
 
 

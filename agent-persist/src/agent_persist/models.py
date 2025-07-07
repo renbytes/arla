@@ -1,6 +1,7 @@
 # src/agent_persist/models.py
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -12,12 +13,8 @@ class ComponentSnapshot(BaseModel):
     to capture the state of any component type.
     """
 
-    component_type: str = Field(
-        ..., description="The full class name of the component."
-    )
-    data: Dict[str, Any] = Field(
-        ..., description="The serialized data from the component's to_dict() method."
-    )
+    component_type: str = Field(..., description="The full class name of the component.")
+    data: Dict[str, Any] = Field(..., description="The serialized data from the component's to_dict() method.")
 
 
 class AgentSnapshot(BaseModel):
@@ -26,9 +23,7 @@ class AgentSnapshot(BaseModel):
     """
 
     agent_id: str = Field(..., description="The unique identifier for the agent.")
-    components: List[ComponentSnapshot] = Field(
-        ..., description="A list of all components attached to the agent."
-    )
+    components: List[ComponentSnapshot] = Field(..., description="A list of all components attached to the agent.")
 
 
 class SimulationSnapshot(BaseModel):
@@ -36,20 +31,12 @@ class SimulationSnapshot(BaseModel):
     The top-level data model representing a complete snapshot of the simulation state.
     """
 
-    simulation_id: str = Field(
-        ..., description="The unique identifier for the simulation run."
-    )
-    current_tick: int = Field(
-        ..., description="The simulation tick at which the snapshot was taken."
-    )
-    agents: List[AgentSnapshot] = Field(
-        ..., description="A list of all agents and their states in the simulation."
-    )
+    simulation_id: str = Field(..., description="The unique identifier for the simulation run.")
+    current_tick: int = Field(..., description="The simulation tick at which the snapshot was taken.")
+    agents: List[AgentSnapshot] = Field(..., description="A list of all agents and their states in the simulation.")
 
     # Optional field for storing environment-specific data
-    environment_state: Optional[Dict[str, Any]] = Field(
-        None, description="A dictionary for any world-specific state."
-    )
+    environment_state: Optional[Dict[str, Any]] = Field(None, description="A dictionary for any world-specific state.")
 
     class Config:
         """Pydantic configuration options."""

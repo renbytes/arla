@@ -2,6 +2,7 @@
 """
 Handles direct communication between agents.
 """
+
 from typing import Any, Dict, List, Optional, Type
 
 from agent_core.agents.actions.base_action import ActionOutcome, Intent
@@ -20,6 +21,7 @@ class SocialInteractionSystem(System):
     """
     Processes communication actions, enabling information exchange between agents.
     """
+
     REQUIRED_COMPONENTS: List[Type[Component]] = []  # Event-driven
 
     def __init__(self, *args, **kwargs):
@@ -39,7 +41,9 @@ class SocialInteractionSystem(System):
         # --- 1. Validate Interaction ---
         failure_reason = self._validate_interaction(entity_id, target_id)
         if failure_reason:
-            outcome = ActionOutcome(False, failure_reason, -0.01, {"status": "communication_failed", "reason": failure_reason})
+            outcome = ActionOutcome(
+                False, failure_reason, -0.01, {"status": "communication_failed", "reason": failure_reason}
+            )
             self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
             return
 
@@ -55,7 +59,7 @@ class SocialInteractionSystem(System):
         details = {"status": "communicated", "target_agent_id": target_id, "intent": action_plan.intent.name}
         message = f"Communicated with {target_id}."
         outcome = ActionOutcome(True, message, base_reward, details)
-        
+
         self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
 
     def _validate_interaction(self, entity_id: str, target_id: str) -> Optional[str]:
@@ -77,7 +81,7 @@ class SocialInteractionSystem(System):
         target_time = target_comps.get(TimeBudgetComponent)
         if not isinstance(target_time, TimeBudgetComponent) or not target_time.is_active:
             return "Target is inactive."
-            
+
         return None
 
     def _exchange_information(self, entity_id: str, target_id: str):
@@ -85,7 +89,9 @@ class SocialInteractionSystem(System):
         comm_obs = self.simulation_state.get_component(entity_id, EnvironmentObservationComponent)
         target_obs = self.simulation_state.get_component(target_id, EnvironmentObservationComponent)
 
-        if isinstance(comm_obs, EnvironmentObservationComponent) and isinstance(target_obs, EnvironmentObservationComponent):
+        if isinstance(comm_obs, EnvironmentObservationComponent) and isinstance(
+            target_obs, EnvironmentObservationComponent
+        ):
             # A simple merge of location data. More complex logic could be added here.
             comm_obs.known_entity_locations.update(target_obs.known_entity_locations)
             target_obs.known_entity_locations.update(comm_obs.known_entity_locations)

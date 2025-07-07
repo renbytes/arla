@@ -1,10 +1,10 @@
 # src/agent_core/cognition/narrative_context_provider_interface.py
 from abc import ABC, abstractmethod
-from typing import Dict, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 if TYPE_CHECKING:
-    from agent_core.core.ecs.component import Component
     from agent_core.core.ecs.abstractions import SimulationState
+    from agent_core.core.ecs.component import Component
 
 
 class NarrativeContextProviderInterface(ABC):
@@ -28,7 +28,7 @@ class NarrativeContextProviderInterface(ABC):
         components: Dict[Type["Component"], "Component"],
         simulation_state: "SimulationState",
         current_tick: int,
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Constructs a detailed narrative context from an entity's components
         and the overall simulation state. This narrative is intended to be

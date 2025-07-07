@@ -36,9 +36,7 @@ def store(tmp_path: Path) -> FileStateStore:
 # --- Test Cases ---
 
 
-def test_save_creates_file_and_directories(
-    store: FileStateStore, snapshot_instance: SimulationSnapshot
-):
+def test_save_creates_file_and_directories(store: FileStateStore, snapshot_instance: SimulationSnapshot):
     """
     Tests that the save method correctly creates the file and any necessary
     parent directories.
@@ -51,9 +49,7 @@ def test_save_creates_file_and_directories(
     assert store.file_path.is_file()
 
 
-def test_save_and_load_successful_roundtrip(
-    store: FileStateStore, snapshot_instance: SimulationSnapshot
-):
+def test_save_and_load_successful_roundtrip(store: FileStateStore, snapshot_instance: SimulationSnapshot):
     """
     Tests that a snapshot can be saved and then loaded back, with the data
     remaining identical.

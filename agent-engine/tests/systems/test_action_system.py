@@ -137,7 +137,7 @@ def test_on_action_outcome_ready_calculates_reward_and_publishes(
     assert final_event_data["action_outcome"].reward == 15.0
 
 
-def test_update_method_is_empty(action_system, mock_simulation_state, mock_event_bus):
+async def test_update_method_is_empty(action_system, mock_simulation_state, mock_event_bus):
     """
     Confirms that the system's passive update method does nothing, as it is purely event-driven.
     """
@@ -146,7 +146,7 @@ def test_update_method_is_empty(action_system, mock_simulation_state, mock_event
     initial_state = mock_simulation_state.entities["agent1"][ActionOutcomeComponent].reward
 
     # Act
-    action_system.update(current_tick=100)
+    await action_system.update(current_tick=100)
 
     # Assert
     # The state should be unchanged by the update call

@@ -53,9 +53,7 @@ class SerialSystemRunner(SystemRunner):
             try:
                 await system.update(current_tick=current_tick)
             except Exception as e:
-                print(
-                    f"ERROR: System '{system!r}' failed during serial update at tick {current_tick}: {e}"
-                )
+                print(f"ERROR: System '{system!r}' failed during serial update at tick {current_tick}: {e}")
                 # In a serial runner, we might choose to stop or continue.
                 # For robustness, we'll log and continue.
                 import traceback
@@ -75,13 +73,8 @@ class AsyncSystemRunner(SystemRunner):
         """
         Creates a task for each system's update method and runs them concurrently.
         """
-        print(
-            f"--- Tick {current_tick}: Running {len(systems)} systems concurrently ---"
-        )
-        tasks = [
-            asyncio.create_task(system.update(current_tick=current_tick))
-            for system in systems
-        ]
+        print(f"--- Tick {current_tick}: Running {len(systems)} systems concurrently ---")
+        tasks = [asyncio.create_task(system.update(current_tick=current_tick)) for system in systems]
 
         # Use asyncio.gather with return_exceptions=True to ensure that one
         # failing system does not stop the others.
@@ -90,9 +83,7 @@ class AsyncSystemRunner(SystemRunner):
         # After all tasks have completed, check for and log any exceptions.
         for result, system in zip(results, systems):
             if isinstance(result, Exception):
-                print(
-                    f"ERROR: System '{system!r}' failed during concurrent update at tick {current_tick}: {result}"
-                )
+                print(f"ERROR: System '{system!r}' failed during concurrent update at tick {current_tick}: {result}")
                 import traceback
 
                 traceback.print_exception(type(result), result, result.__traceback__)

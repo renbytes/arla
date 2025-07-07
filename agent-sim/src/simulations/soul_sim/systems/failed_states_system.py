@@ -2,6 +2,7 @@
 """
 Tracks and decays "failed states" - locations where agents receive negative rewards.
 """
+
 from typing import Any, Dict, List, Type, cast
 
 from agent_core.agents.actions.base_action import ActionOutcome
@@ -18,6 +19,7 @@ class FailedStatesSystem(System):
     Tracks locations where agents experience negative outcomes to help them
     learn to avoid those areas.
     """
+
     # Defines the components this system operates on.
     REQUIRED_COMPONENTS: List[Type[Component]] = [FailedStatesComponent]
 
@@ -65,9 +67,9 @@ class FailedStatesSystem(System):
         # Get all entities that have a FailedStatesComponent
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
 
-        for entity_id, components in target_entities.items():
+        for _, components in target_entities.items():
             failed_states_comp = cast(FailedStatesComponent, components.get(FailedStatesComponent))
-            
+
             # Use a copy of keys for safe iteration while modifying the dictionary
             for state in list(failed_states_comp.tracker.keys()):
                 failed_states_comp.tracker[state] *= decay_rate

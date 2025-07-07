@@ -24,10 +24,11 @@ from agent_core.core.ecs.component import (
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
 
-# Imports from agent_engine
-from agent_engine.systems.components import QLearningComponent
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
+
+# Imports from agent_engine
+from agent_engine.systems.components import QLearningComponent
 
 
 class QLearningSystem(System):
@@ -63,7 +64,7 @@ class QLearningSystem(System):
         self.previous_states: Dict[str, np.ndarray] = {}
         self.state_encoder = state_encoder
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """
         Caches the current state features for each learning agent.
         """
@@ -71,7 +72,7 @@ class QLearningSystem(System):
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
-            if not time_comp or not time_comp.is_active:
+            if time_comp and time_comp.is_active:
                 current_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config)
                 self.previous_states[entity_id] = current_state_features
 

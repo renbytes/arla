@@ -11,8 +11,8 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import (
     ActionOutcomeComponent,
     ActionPlanComponent,
-    Component,
     CompetenceComponent,
+    Component,
 )
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
@@ -73,13 +73,24 @@ class ActionSystem(System):
         action_outcome = cast(ActionOutcome, event_data["action_outcome"])
         action_plan = cast(ActionPlanComponent, event_data["original_action_plan"])
 
+        # Ensure the action plan and its type are valid before proceeding.
+        if not action_plan or not isinstance(action_plan.action_type, ActionInterface):
+            return
+
         entity_components = self.simulation_state.entities.get(entity_id, {})
 
-        # --- MODIFIED: Use the injected reward calculator ---
+        # 1. Define a default value
+        intent_name = "UNKNOWN"
+
+        # 2. Use an 'if' block to narrow the type
+        if action_plan.intent is not None:
+            intent_name = action_plan.intent.name
+
+        # Use the injected reward calculator
         final_reward, breakdown = self.reward_calculator.calculate_final_reward(
             base_reward=action_outcome.base_reward,
             action_type=action_plan.action_type,
-            action_intent=action_plan.intent.name if action_plan.intent else "UNKNOWN",
+            action_intent=intent_name,
             outcome_details=action_outcome.details,
             entity_components=entity_components,
         )
@@ -99,6 +110,8 @@ class ActionSystem(System):
                 "current_tick": event_data["current_tick"],
             },
         )
+
+        # This line is now safe because of the guard clause at the top
         print(f"   Entity {entity_id} executed {action_plan.action_type.name}. Final Reward: {final_reward:.3f}")
 
     def _update_entity_components(self, entity_id: str, outcome: ActionOutcome, plan: ActionPlanComponent) -> None:
@@ -116,6 +129,6 @@ class ActionSystem(System):
             aoc.reward = outcome.reward
             aoc.details = outcome.details
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass

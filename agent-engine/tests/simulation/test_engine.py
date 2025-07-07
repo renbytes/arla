@@ -1,6 +1,6 @@
 # tests/simulation/test_engine.py
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from omegaconf import OmegaConf
 
@@ -44,8 +44,15 @@ def sim_manager(mock_event_bus, mock_scaffold, mock_sim_state, mock_system_manag
     active_entity_components = {TimeBudgetComponent: TimeBudgetComponent(100)}
     mock_sim_state.return_value.entities = {"agent1": active_entity_components}
 
+    # Configure the mock SystemManager's update_all method to be awaitable
+    mock_system_manager.return_value.update_all = AsyncMock()
+
     # Configure the mock DecisionSelector to return an action plan
     mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
+
+    # Configure the environment mock's to_dict() method
+    # Tell the mock to return an empty dictionary when to_dict() is called.
+    mock_dependencies["environment"].to_dict.return_value = {}
 
     manager = SimulationManager(config=mock_config, **mock_dependencies)
     return manager
@@ -65,12 +72,12 @@ def test_initialization(sim_manager, mock_dependencies):
     assert sim_manager.system_manager is not None
 
 
-def test_run_loop_executes_correct_number_of_steps(sim_manager):
+async def test_run_loop_executes_correct_number_of_steps(sim_manager):
     """
     Tests that the main run loop iterates for the number of steps specified in the config.
     """
     # Act
-    sim_manager.run()
+    await sim_manager.run()
 
     # Assert
     # The manager is configured for 3 steps. The system manager's update method
@@ -81,12 +88,12 @@ def test_run_loop_executes_correct_number_of_steps(sim_manager):
     assert ticks == [0, 1, 2]
 
 
-def test_run_loop_processes_entity_turn(sim_manager, mock_dependencies):
+async def test_run_loop_processes_entity_turn(sim_manager, mock_dependencies):
     """
     Tests that the logic for processing a single entity's turn is called correctly.
     """
     # Act
-    sim_manager.run()
+    await sim_manager.run()
 
     # Assert
     # For each of the 3 steps, the core decision-making pipeline should be called.
@@ -99,7 +106,7 @@ def test_run_loop_processes_entity_turn(sim_manager, mock_dependencies):
     assert event_name == "action_chosen"
 
 
-def test_run_loop_stops_when_no_active_entities(sim_manager):
+async def test_run_loop_stops_when_no_active_entities(sim_manager):
     """
     Tests that the simulation ends early if all entities become inactive.
     """
@@ -110,7 +117,7 @@ def test_run_loop_stops_when_no_active_entities(sim_manager):
     sim_manager.simulation_state.entities = {"agent1": inactive_entity_components}
 
     # Act
-    sim_manager.run()
+    await sim_manager.run()
 
     # Assert
     # The loop should break on the first step, so no updates should be called.

@@ -99,9 +99,7 @@ FILES: dict[str, str | bytes] = {
         """
     ).lstrip(),
     # Empty notebook skeleton
-    "notebooks/analysis.ipynb": json.dumps(
-        {"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}, indent=2
-    )
+    "notebooks/analysis.ipynb": json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}, indent=2)
     + "\n",
     # --- source tree ---
     "src/__init__.py": "",

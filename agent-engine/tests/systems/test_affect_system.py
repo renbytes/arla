@@ -190,7 +190,7 @@ def test_emotion_discovery_is_triggered(mock_discover, affect_system, mock_simul
     mock_discover.assert_called_once()
 
 
-def test_passive_dissonance_decay(affect_system, mock_simulation_state):
+async def test_passive_dissonance_decay(affect_system, mock_simulation_state):
     """
     Tests the passive update method that decays cognitive dissonance.
     """
@@ -200,7 +200,7 @@ def test_passive_dissonance_decay(affect_system, mock_simulation_state):
 
     # Act
     # FIX: Use a tick value that will pass the `(current_tick + 1) % 10 == 0` check.
-    affect_system.update(current_tick=9)  # Passive update
+    await affect_system.update(current_tick=9)  # Passive update
 
     # Assert
     assert affect_comp.cognitive_dissonance < 0.5

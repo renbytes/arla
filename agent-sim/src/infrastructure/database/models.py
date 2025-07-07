@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import DECIMAL, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
@@ -43,7 +42,9 @@ class Experiment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    simulation_runs: Mapped[List["SimulationRun"]] = relationship("SimulationRun", back_populates="experiment", cascade="all, delete-orphan")
+    simulation_runs: Mapped[List["SimulationRun"]] = relationship(
+        "SimulationRun", back_populates="experiment", cascade="all, delete-orphan"
+    )
 
 
 class SimulationRun(Base):

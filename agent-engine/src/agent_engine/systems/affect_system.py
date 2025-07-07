@@ -101,7 +101,7 @@ class AffectSystem(System):
         goal_comp = cast(GoalComponent, components[GoalComponent])
 
         prediction_error = action_outcome.reward - getattr(affect_comp, "prev_reward", 0.0)
-        setattr(affect_comp, "prev_reward", action_outcome.reward)
+        affect_comp.prev_reward = action_outcome.reward
         affect_comp.prediction_delta_magnitude = abs(prediction_error)
         affect_comp.predictive_delta_smooth = 0.8 * affect_comp.predictive_delta_smooth + 0.2 * abs(prediction_error)
 
@@ -193,7 +193,7 @@ class AffectSystem(System):
         # Simplified for now, but `env` is available via `self.simulation_state.environment`
         return {}
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """Applies passive decay to cognitive dissonance for all relevant entities."""
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
         for components in target_entities.values():

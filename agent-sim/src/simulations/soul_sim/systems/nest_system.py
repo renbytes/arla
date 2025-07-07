@@ -2,7 +2,8 @@
 """
 Handles the creation of nests, which can provide benefits to agents.
 """
-from typing import Any, Dict, List, Optional, Type
+
+from typing import Any, Dict, List, Type
 
 from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import Component
@@ -17,6 +18,7 @@ class NestSystem(System):
     Processes nest creation actions, checking for required resources and
     updating the agent's nest locations.
     """
+
     REQUIRED_COMPONENTS: List[Type[Component]] = []  # Event-driven
 
     def __init__(self, *args, **kwargs):
@@ -44,13 +46,13 @@ class NestSystem(System):
         if inv_comp.current_resources >= nest_cost:
             inv_comp.current_resources -= nest_cost
             nest_comp.locations.append(pos_comp.position)
-            
+
             base_reward = self.config.get("learning", {}).get("rewards", {}).get("nest_creation_bonus", 5.0)
             success = True
             message = f"Successfully built a nest at {pos_comp.position}."
             details = {"status": "nest_built", "location": pos_comp.position, "total_nests": len(nest_comp.locations)}
         else:
-            base_reward = -0.1 # Penalty for trying to build without resources
+            base_reward = -0.1  # Penalty for trying to build without resources
             success = False
             message = "Failed to build nest: not enough resources."
             details = {"status": "failed_insufficient_resources"}

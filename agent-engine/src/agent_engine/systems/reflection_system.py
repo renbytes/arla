@@ -4,7 +4,8 @@ Manages agent metacognition, including chunking experiences into episodes,
 synthesizing narratives, and triggering identity and goal updates.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
+import asyncio
+from typing import Any, Dict, List, Optional, Type, cast
 
 # Imports from agent_core
 from agent_core.cognition.narrative_context_provider_interface import (
@@ -20,10 +21,9 @@ from agent_core.core.ecs.component import (
     MemoryComponent,
     SocialMemoryComponent,
     TimeBudgetComponent,
+    ValidationComponent,
     ValueSystemComponent,
 )
-
-from agent_core.core.ecs.component import ValidationComponent
 from agent_core.core.ecs.event_bus import EventBus
 
 # Imports from agent_engine
@@ -79,13 +79,15 @@ class ReflectionSystem(System):
 
     def on_reflection_requested(self, event_data: Dict[str, Any]) -> None:
         """Handles an explicit request for reflection from another system."""
-        self.update_for_entity(
-            entity_id=event_data["entity_id"],
-            current_tick=event_data["current_tick"],
-            is_final_reflection=event_data.get("is_final_reflection", False),
+        asyncio.create_task(
+            self.update_for_entity(
+                entity_id=event_data["entity_id"],
+                current_tick=event_data["current_tick"],
+                is_final_reflection=event_data.get("is_final_reflection", False),
+            )
         )
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """Periodically triggers the reflection process for active agents."""
         reflection_interval = self.config.get("learning", {}).get("memory", {}).get("reflection_interval", 50)
         if not (current_tick > 0 and current_tick % reflection_interval == 0):
@@ -95,15 +97,15 @@ class ReflectionSystem(System):
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
             if time_comp and time_comp.is_active:
-                self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection=False)
+                await self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection=False)
 
-    def update_for_entity(self, entity_id: str, current_tick: int, is_final_reflection: bool) -> None:
+    async def update_for_entity(self, entity_id: str, current_tick: int, is_final_reflection: bool) -> None:
         """Allows forcing a reflection cycle for a specific entity."""
         components = self.simulation_state.entities.get(entity_id)
         if components:
-            self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection)
+            await self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection)
 
-    def _run_reflection_cycle(
+    async def _run_reflection_cycle(
         self,
         entity_id: str,
         components: Dict[Type[Component], Component],
@@ -116,17 +118,14 @@ class ReflectionSystem(System):
             return
 
         self._chunk_and_process_episodes(entity_id, components, current_tick)
-        final_account, narrative_context = self._synthesize_reflection(entity_id, current_tick, components)
+        final_context = self._synthesize_reflection(entity_id, current_tick, components)
 
-        if final_account:
-            self._validate_and_publish_outcomes(entity_id, current_tick, final_account, narrative_context)
+        if final_context:
+            self._validate_and_publish_outcomes(entity_id, current_tick, final_context)
 
     def _all_required_components_present(self, components: Dict[Type[Component], Component]) -> bool:
         """Checks if all components required by the system are present for an entity."""
-        for comp_type in self.REQUIRED_COMPONENTS:
-            if comp_type not in components:
-                return False
-        return True
+        return all(comp_type in components for comp_type in self.REQUIRED_COMPONENTS)
 
     def _chunk_and_process_episodes(
         self,
@@ -143,48 +142,55 @@ class ReflectionSystem(System):
         if buffered_events:
             new_episode = self._chunk_events_into_episode(entity_id, buffered_events, current_tick)
             if new_episode:
-                # NOTE: Ignoring arg-type error. The local agent_engine.Episode
-                # is incompatible with the agent_core.Episode expected by the
-                # EpisodeComponent. This points to a larger design issue.
                 episode_comp.episodes.append(new_episode)
                 self.event_buffer[entity_id] = []
 
     def _synthesize_reflection(
         self, entity_id: str, tick: int, components: Dict[Type[Component], Component]
-    ) -> Tuple[Optional[str], str]:
-        """Constructs the narrative, queries the LLM, and logs the interaction."""
-        narrative_context = self.narrative_context_provider.get_narrative_context(
+    ) -> Dict[str, Any]:
+        """Constructs the world-specific context using the provider and queries the LLM."""
+        context = self.narrative_context_provider.get_narrative_context(
             entity_id=entity_id,
             components=components,
             simulation_state=self.simulation_state,
             current_tick=tick,
         )
-        llm_prompt = f"Based ONLY on this context: {narrative_context}\nProvide a concise, first-person reflection. Synthesize who I am becoming, what I value, and what I have learned."
+
+        narrative = context.get("narrative", "")
+        if not narrative:
+            return context
+
+        llm_prompt = f"""
+            Based ONLY on this context:
+            {narrative}\nProvide a concise, first-person reflection on who I am becoming,
+            what I value, and what I have learned.
+        """
 
         final_account = self.cognitive_scaffold.query(
             agent_id=entity_id, purpose="reflection_synthesis", prompt=llm_prompt, current_tick=tick
         )
 
-        mem_comp = cast(MemoryComponent, components.get(MemoryComponent))
-        if mem_comp:
-            mem_comp.last_llm_reflection_summary = final_account
+        context["llm_final_account"] = final_account
+        return context
 
-        return final_account, narrative_context
-
-    def _validate_and_publish_outcomes(self, entity_id: str, tick: int, account: str, context: str) -> None:
+    def _validate_and_publish_outcomes(self, entity_id: str, tick: int, context: Dict[str, Any]) -> None:
         """Validates the reflection and publishes resulting events."""
         confidence = 0.8  # Simplified for now
+        final_account = context.get("llm_final_account", "")
 
+        # Event for systems that need the validated text
         self.event_bus.publish(
             "reflection_validated",
-            {"entity_id": entity_id, "reflection_text": account, "confidence": confidence, "current_tick": tick},
+            {"entity_id": entity_id, "reflection_text": final_account, "confidence": confidence, "current_tick": tick},
         )
+        # Event for systems that need the narrative to update goals
         self.event_bus.publish(
-            "update_goals_event", {"entity_id": entity_id, "narrative": account, "current_tick": tick}
+            "update_goals_event", {"entity_id": entity_id, "narrative": final_account, "current_tick": tick}
         )
+        # Event for systems that need the full context (like IdentitySystem)
         self.event_bus.publish(
             "reflection_completed",
-            {"tick": tick, "entity_id": entity_id, "llm_final_account": account, "narrative_context": context},
+            {"tick": tick, "entity_id": entity_id, "context": context},
         )
 
     def _chunk_events_into_episode(self, entity_id: str, events: List[Dict[str, Any]], tick: int) -> Optional[Episode]:
@@ -193,20 +199,25 @@ class ReflectionSystem(System):
             return None
 
         start_tick = events[0]["current_tick"]
-        event_summaries = "; ".join(
-            [f"Tick {e['current_tick']}: action {e['action_plan'].action_type.name}" for e in events]
-        )
-        llm_prompt = f"Theme for these events: {event_summaries}."
+        event_summaries = []
+        for e in events:
+            action_plan = e.get("action_plan")
+            if action_plan and hasattr(action_plan, "action_type") and hasattr(action_plan.action_type, "name"):
+                event_summaries.append(f"Tick {e['current_tick']}: action {action_plan.action_type.name}")
+
+        if not event_summaries:
+            return None
+
+        llm_prompt = f"""
+            Concisely summarize the theme of these events in 2-3 words
+            (e.g., 'Territorial Dispute', 'Successful Hunt', 'Failed Exploration'):
+            {'; '.join(event_summaries)}.
+        """
 
         theme_raw = self.cognitive_scaffold.query(
             agent_id=entity_id, purpose="episode_theming", prompt=llm_prompt, current_tick=tick
         )
         theme = theme_raw.strip().replace('"', "") if theme_raw else "unknown_theme"
 
-        processed_events = []
-        for e in events:
-            action_outcome = e.get("action_outcome")
-            details = getattr(action_outcome, "details", {})
-            processed_events.append(details if isinstance(details, dict) else {})
-
+        processed_events = [e.get("action_outcome", {}).get("details", {}) for e in events]
         return Episode(start_tick=start_tick, end_tick=tick, theme=theme, events=processed_events)

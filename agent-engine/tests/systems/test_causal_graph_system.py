@@ -111,7 +111,7 @@ def test_on_action_executed_creates_causal_link(causal_graph_system, mock_simula
     assert mem_comp.previous_state_node == expected_current_state_node
 
 
-def test_update_decays_link_strength(causal_graph_system, mock_simulation_state):
+async def test_update_decays_link_strength(causal_graph_system, mock_simulation_state):
     """
     Tests that the passive update correctly decays the strength of existing causal links.
     """
@@ -124,7 +124,7 @@ def test_update_decays_link_strength(causal_graph_system, mock_simulation_state)
 
     # Act
     # Call update with a tick that triggers the decay logic
-    causal_graph_system.update(current_tick=9)
+    await causal_graph_system.update(current_tick=9)
 
     # Assert
     decayed_weight = mem_comp.causal_graph[cause_node][effect_node]
@@ -132,7 +132,7 @@ def test_update_decays_link_strength(causal_graph_system, mock_simulation_state)
     assert decayed_weight == pytest.approx(initial_weight * 0.9)
 
 
-def test_update_prunes_weak_links(causal_graph_system, mock_simulation_state):
+async def test_update_prunes_weak_links(causal_graph_system, mock_simulation_state):
     """
     Tests that very weak links are removed entirely after decay.
     """
@@ -144,7 +144,7 @@ def test_update_prunes_weak_links(causal_graph_system, mock_simulation_state):
     mem_comp.causal_graph = {cause_node: {effect_node: weak_weight}}
 
     # Act
-    causal_graph_system.update(current_tick=19)
+    await causal_graph_system.update(current_tick=19)
 
     # Assert
     # The entire entry for the cause node should be removed if it has no more effects

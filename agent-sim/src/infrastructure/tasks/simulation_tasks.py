@@ -6,10 +6,9 @@ from typing import Any, Dict, Optional, cast
 
 import mlflow  # type: ignore
 from celery import current_task  # type: ignore
+from config.schemas import AppConfig
 from omegaconf import DictConfig, OmegaConf  # type: ignore
 from pydantic import ValidationError  # type: ignore
-
-from config.schemas import AppConfig
 from src.agents.actions.base_action import Action
 from src.core.simulation.engine import SimulationManager
 from src.data.async_database_manager import AsyncDatabaseManager
@@ -130,7 +129,13 @@ def run_simulation_task(
 
 
 @app.task(bind=True, name="tasks.run_experiment", queue="experiments")
-def run_experiment_task(self, scenario_paths: list, runs_per_scenario: int, base_config: Dict[str, Any], experiment_name: Optional[str] = None) -> Dict[str, Any]:
+def run_experiment_task(
+    self,
+    scenario_paths: list,
+    runs_per_scenario: int,
+    base_config: Dict[str, Any],
+    experiment_name: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Submit multiple simulation tasks for a complete experiment.
     """

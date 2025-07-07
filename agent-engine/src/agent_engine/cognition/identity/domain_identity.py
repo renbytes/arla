@@ -2,9 +2,10 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, cast
 
 import numpy as np
+from agent_core.core.ecs.component import MultiDomainIdentityInterface
 
 if TYPE_CHECKING:
     # This will be defined in the agent-engine or the final simulation application
@@ -33,8 +34,12 @@ class DomainIdentity:
     last_updated: int  # When was this last changed?
 
 
-class MultiDomainIdentity:
-    """Psychologically-grounded multi-domain identity system"""
+class MultiDomainIdentity(MultiDomainIdentityInterface):
+    """Psychologically-grounded multi-domain identity system
+
+    Note:
+        embedding_dim is defaulted to `1536` as that's the standard dim set by OpenAI.
+    """
 
     def __init__(self, embedding_dim: int = 1536):
         self.embedding_dim = embedding_dim
@@ -57,9 +62,8 @@ class MultiDomainIdentity:
         self,
         domain: IdentityDomain,
         new_traits: np.ndarray,
-        social_feedback: Dict[str, float],
+        context: Dict[str, Any],
         current_tick: int,
-        narrative_context: str = "",
     ) -> Tuple[bool, float, Dict[str, float]]:
         """
         Update identity in a specific domain with psychological constraints
@@ -68,7 +72,7 @@ class MultiDomainIdentity:
         current_domain = self.domains[domain]
 
         consistency_score = self._assess_consistency(new_traits, current_domain.embedding, current_domain.confidence)
-        validation_score = self._assess_social_validation(new_traits, social_feedback, domain, narrative_context)
+        validation_score = self._assess_social_validation(context, domain)
         resistance = self._calculate_resistance(current_domain, consistency_score, validation_score)
 
         update_threshold = 0.3 + (current_domain.stability * 0.4)
@@ -121,10 +125,9 @@ class MultiDomainIdentity:
         confidence_modulated = consistency ** (1 + current_confidence)
         return float(np.clip(confidence_modulated, 0.0, 1.0))
 
-    def _assess_social_validation(
-        self, new_traits: np.ndarray, social_feedback: Dict[str, float], domain: IdentityDomain, narrative_context: str
-    ) -> float:
+    def _assess_social_validation(self, context: Dict[str, Any], domain: IdentityDomain) -> float:
         """Assess social validation for identity claims."""
+        social_feedback = context.get("social_feedback", {})
         if not social_feedback:
             return 0.3
 
@@ -173,7 +176,8 @@ class MultiDomainIdentity:
         norm = np.linalg.norm(embedding)
         if norm == 0:
             return embedding
-        return embedding / norm
+
+        return cast(np.ndarray, embedding / norm)
 
     def get_domain_embedding(self, domain: IdentityDomain) -> np.ndarray:
         """Get embedding for a specific identity domain."""
@@ -191,7 +195,8 @@ class MultiDomainIdentity:
 
         if total_weight == 0:
             return np.zeros(self.embedding_dim)
-        return weighted_sum / total_weight
+
+        return cast(np.ndarray, weighted_sum / total_weight)
 
     def get_identity_coherence(self) -> float:
         """Measure how coherent the identity is across domains."""

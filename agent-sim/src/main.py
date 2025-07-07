@@ -5,17 +5,18 @@ Example usage with Hydra:
     python src/main.py scenario_path=simulation/scenarios/default.json
 
     # Override parameters from the command line
-    python src/main.py scenario_path=simulation/scenarios/cognitive_ablation.json simulation.steps=50 agent.start_health=1000
+    python src/main.py scenario_path=simulation/scenarios/cognitive_ablation.json \
+    simulation.steps=50 agent.start_health=1000
 """
 
 import os
 from typing import Any, Dict  # Import Dict and Any for type hinting
 
 import hydra  # type: ignore
+from config.schemas import AppConfig
 from omegaconf import DictConfig, OmegaConf  # type: ignore
 from pydantic import ValidationError  # type: ignore
 
-from config.schemas import AppConfig
 from src.agents.actions.base_action import Action
 from src.core.simulation.engine import SimulationManager
 
@@ -66,7 +67,10 @@ def main(config: DictConfig) -> None:
     scenario_path = config_dict.get("scenario_path")
     if not scenario_path or not os.path.exists(scenario_path):
         print(f"ERROR: Scenario path not provided or not found: {scenario_path}")
-        print("Please provide it on the command line, e.g., python src/main.py scenario_path=simulation/scenarios/default.json")
+        print(
+            """Please provide it on the command line, e.g.,
+            python src/main.py scenario_path=simulation/scenarios/default.json"""
+        )
         return
 
     print("\n--- Starting simulation ---")

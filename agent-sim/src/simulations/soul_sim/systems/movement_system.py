@@ -2,6 +2,7 @@
 """
 Handles all entity movement, including standard moves and fleeing.
 """
+
 from typing import Any, Dict, List, Tuple, Type
 
 from agent_core.agents.actions.base_action import ActionOutcome
@@ -12,17 +13,19 @@ from agent_engine.simulation.system import System
 from ..components import PositionComponent
 
 
-def _apply_move_logic(
-    current_pos: Tuple[int, int], direction: int, grid_size: Tuple[int, int]
-) -> Tuple[int, int]:
+def _apply_move_logic(current_pos: Tuple[int, int], direction: int, grid_size: Tuple[int, int]) -> Tuple[int, int]:
     """Calculates the new position based on a directional integer."""
     new_pos = list(current_pos)
     grid_height, grid_width = grid_size
 
-    if direction == 0: new_pos[0] -= 1  # Up
-    elif direction == 1: new_pos[0] += 1  # Down
-    elif direction == 2: new_pos[1] -= 1  # Left
-    elif direction == 3: new_pos[1] += 1  # Right
+    if direction == 0:
+        new_pos[0] -= 1  # Up
+    elif direction == 1:
+        new_pos[0] += 1  # Down
+    elif direction == 2:
+        new_pos[1] -= 1  # Left
+    elif direction == 3:
+        new_pos[1] += 1  # Right
 
     # Clamp the new position to be within the grid boundaries
     new_pos[0] = max(0, min(new_pos[0], grid_height - 1))
@@ -34,6 +37,7 @@ class MovementSystem(System):
     """
     Processes move and flee actions, updates entity positions, and tracks exploration.
     """
+
     REQUIRED_COMPONENTS: List[Type[Component]] = []  # Event-driven
 
     def __init__(self, *args, **kwargs):
@@ -54,7 +58,7 @@ class MovementSystem(System):
         """Shared logic for all movement-based actions."""
         entity_id = event_data["entity_id"]
         action_plan = event_data["action_plan"]
-        
+
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         if not isinstance(pos_comp, PositionComponent):
             # Cannot move without a position
@@ -70,13 +74,13 @@ class MovementSystem(System):
         if not env or not hasattr(env, "height") or not hasattr(env, "width"):
             # Environment not set up correctly
             return
-        
+
         new_pos = _apply_move_logic(old_pos, direction, (env.height, env.width))
-        
+
         # Update the component state
         pos_comp.position = new_pos
         pos_comp.history.append(new_pos)
-        
+
         is_new_tile = new_pos not in pos_comp.visited_positions
         if is_new_tile:
             pos_comp.visited_positions.add(new_pos)
@@ -92,12 +96,12 @@ class MovementSystem(System):
                 base_reward = self.config.get("learning", {}).get("rewards", {}).get("exploration_base_reward", 0.1)
         else:
             status = "movement_blocked"
-            base_reward = -0.02 # Small penalty for bumping into a wall
+            base_reward = -0.02  # Small penalty for bumping into a wall
 
         details = {"status": status, "old_pos": old_pos, "new_pos": new_pos, "explored_new_tile": is_new_tile}
         message = f"Moved from {old_pos} to {new_pos}." if success else "Movement blocked."
         outcome = ActionOutcome(success, message, base_reward, details)
-        
+
         self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
 
     def _publish_outcome(self, entity_id: str, plan: Any, outcome: ActionOutcome, tick: int):

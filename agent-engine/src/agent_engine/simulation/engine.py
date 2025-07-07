@@ -5,10 +5,10 @@ A world-agnostic simulation engine that orchestrates the main ECS loop.
 
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, cast
 
 import numpy as np
-from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent_core
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
@@ -17,10 +17,14 @@ from agent_core.cognition.scaffolding import CognitiveScaffold
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
-
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 
+# Imports from agent-persist
+from agent_persist.store import FileStateStore
+from omegaconf import DictConfig, OmegaConf
+
 # Imports from agent-engine
+from agent_engine.persistence.snapshot_manager import create_snapshot_from_state
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import SystemManager
 
@@ -45,6 +49,7 @@ class SimulationManager:
     ):
         self.config: Dict[str, Any] = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
         self.device = "cpu"  # Simplified for the engine
+        self.save_path = Path(config.get("persistence", {}).get("save_path", "./sim_snapshots"))
 
         # --- Injected Dependencies ---
         self.environment = environment
@@ -61,9 +66,6 @@ class SimulationManager:
         self.simulation_state = SimulationState(self.config, self.device)
         self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config)
 
-        # NOTE: Ignoring arg-type error. The concrete SimulationState is passed
-        # to SystemManager, which expects the abstract type. This is due to a
-        # missing inheritance relationship in the SimulationState class definition.
         self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
 
         self._initialize_state()
@@ -76,15 +78,17 @@ class SimulationManager:
         """A convenience method to register a system with the SystemManager."""
         self.system_manager.register_system(system_class, **kwargs)
 
-    def run(self) -> None:
-        """Executes the main ECS simulation loop."""
+    # Async:The main run loop is now async.
+    async def run(self) -> None:
+        """Executes the main ECS simulation loop asynchronously."""
         num_steps = self.config.get("simulation", {}).get("steps", 100)
         print(f"\nStarting simulation {self.simulation_id} for {num_steps} steps...")
 
         for step in range(num_steps):
             print(f"\n--- Simulation Step {step + 1}/{num_steps} ---")
+            self.simulation_state.current_tick = step
 
-            # Refactored list comprehension to a for-loop for better type narrowing
+            # --- 1. PROCESS ENTITY TURNS FIRST ---
             active_entities: List[str] = []
             for eid, comps in self.simulation_state.entities.items():
                 time_comp = comps.get(TimeBudgetComponent)
@@ -100,9 +104,35 @@ class SimulationManager:
             for entity_id in active_entities:
                 self._process_entity_turn(entity_id, step)
 
-            self.system_manager.update_all(current_tick=step)
+            # --- 2. UPDATE ALL SYSTEMS ONCE ---
+            # (The first call to update_all has been removed)
+            await self.system_manager.update_all(current_tick=step)
 
+            # --- 3. PERIODICALLY SAVE STATE ---
+            # Save state after systems have been updated for the tick
+            if step > 0 and step % 50 == 0:
+                self.save_state(step)
+
+        # --- 4. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES ---
         print("\nSimulation loop finished.")
+        self.save_state(num_steps)  # Final save
+
+    def save_state(self, tick: int) -> None:
+        """Saves the current simulation state to a file."""
+        print(f"--- Saving state at tick {tick} ---")
+        snapshot = create_snapshot_from_state(self.simulation_state)
+        filepath = self.save_path / self.simulation_id / f"snapshot_tick_{tick}.json"
+        store = FileStateStore(filepath)
+        store.save(snapshot)
+
+    def load_state(self, filepath: str) -> None:
+        """Loads a simulation state from a file."""
+        # This is the more complex part you'll implement later
+        print(f"--- Loading state from {filepath} ---")
+        # store = FileStateStore(filepath)
+        # snapshot = store.load()
+        # self.simulation_state = restore_state_from_snapshot(snapshot)
+        pass
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
         """Handles the decision-making and action-dispatching for a single entity."""
@@ -148,11 +178,8 @@ class SimulationManager:
         seed = self.config.get("simulation", {}).get("random_seed")
         if seed is not None:
             self.main_rng = np.random.default_rng(seed)
-            self.shuffle_rng = np.random.default_rng(seed + 1)
-            print(f"--- Simulation running with MASTER SEED: {seed} ---")
         else:
             self.main_rng = np.random.default_rng()
-            self.shuffle_rng = np.random.default_rng()
 
     def _initialize_state(self) -> None:
         """Initializes the simulation state with core services."""

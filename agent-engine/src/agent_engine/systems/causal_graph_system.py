@@ -137,7 +137,7 @@ class CausalGraphSystem(System):
         # this attribute is not formally declared on the MemoryComponent class.
         mem_comp.previous_state_node = current_state_node
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """Periodically decays the strength of all causal links in every agent's memory."""
         if (current_tick + 1) % 10 != 0:
             return

@@ -1,7 +1,7 @@
 # src/agent_engine/simulation/abstractions.py
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Type
 
 from agent_core.core.ecs.base import CognitiveComponent
 
@@ -10,6 +10,7 @@ from agent_core.core.ecs.base import CognitiveComponent
 if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
+
     from .simulation_state import SimulationState
 
 
@@ -36,7 +37,7 @@ class CognitiveSystem(ABC):
         self.event_bus: Optional["EventBus"] = simulation_state.event_bus
 
     @abstractmethod
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         """
         The main logic loop for the system, called once per simulation tick.
         """

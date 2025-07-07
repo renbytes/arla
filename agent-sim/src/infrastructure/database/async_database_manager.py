@@ -30,7 +30,9 @@ class AsyncDatabaseManager:
             raise ValueError("DATABASE_URL environment variable is not set")
 
         # Use NullPool to avoid connection reuse issues in multi-threaded environments
-        self.engine = create_async_engine(db_url, poolclass=NullPool, echo=False, future=True)  # This prevents connection sharing issues
+        self.engine = create_async_engine(
+            db_url, poolclass=NullPool, echo=False, future=True
+        )  # This prevents connection sharing issues
         self.session_factory = async_sessionmaker(bind=self.engine, class_=AsyncSession, expire_on_commit=False)
 
     @asynccontextmanager
@@ -45,22 +47,60 @@ class AsyncDatabaseManager:
                     await session.rollback()
                     raise e
 
-    async def log_event(self, simulation_id: str, tick: int, agent_id: str, action_type: str, success: bool, reward: float, message: str, details: Dict[str, Any]):
+    async def log_event(
+        self,
+        simulation_id: str,
+        tick: int,
+        agent_id: str,
+        action_type: str,
+        success: bool,
+        reward: float,
+        message: str,
+        details: Dict[str, Any],
+    ):
         """Log an action event asynchronously."""
         async with self.get_session() as session:
-            event = Event(simulation_id=simulation_id, tick=tick, agent_id=agent_id, action_type=action_type, success=success, reward=reward, message=message, details=details)
+            event = Event(
+                simulation_id=simulation_id,
+                tick=tick,
+                agent_id=agent_id,
+                action_type=action_type,
+                success=success,
+                reward=reward,
+                message=message,
+                details=details,
+            )
             session.add(event)
 
-    async def create_experiment(self, experiment_id: str, name: str, config: Dict[str, Any], total_runs: int, simulation_package: str):
+    async def create_experiment(
+        self, experiment_id: str, name: str, config: Dict[str, Any], total_runs: int, simulation_package: str
+    ):
         """Create a new experiment record asynchronously."""
         async with self.get_session() as session:
-            experiment = Experiment(id=experiment_id, name=name, config=config, total_runs=total_runs, simulation_package=simulation_package, status="created")
+            experiment = Experiment(
+                id=experiment_id,
+                name=name,
+                config=config,
+                total_runs=total_runs,
+                simulation_package=simulation_package,
+                status="created",
+            )
             session.add(experiment)
 
-    async def create_simulation_run(self, run_id: str, experiment_id: str, scenario_name: str, config: Dict[str, Any], task_id: str):
+    async def create_simulation_run(
+        self, run_id: str, experiment_id: str, scenario_name: str, config: Dict[str, Any], task_id: str
+    ):
         """Create a new simulation run record asynchronously."""
         async with self.get_session() as session:
-            run = SimulationRun(id=run_id, experiment_id=experiment_id, scenario_name=scenario_name, config=config, random_seed=config.get("random_seed"), task_id=task_id, status="queued")
+            run = SimulationRun(
+                id=run_id,
+                experiment_id=experiment_id,
+                scenario_name=scenario_name,
+                config=config,
+                random_seed=config.get("random_seed"),
+                task_id=task_id,
+                status="queued",
+            )
             session.add(run)
 
     async def log_agent_state(self, simulation_id: str, tick: int, agent_id: str, state_data: Dict[str, Any]):

@@ -3,10 +3,11 @@
 Manages all resource-related actions, including mining, collaboration,
 and resource respawning.
 """
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
-from agent_core.agents.actions.base_action import ActionOutcome, Intent
-from agent_core.core.ecs.component import Component, TimeBudgetComponent
+from typing import Any, Dict, List, Type, cast
+
+from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.core.ecs.component import Component
 from agent_engine.simulation.system import System
 
 # Import world-specific components from the current simulation package
@@ -17,6 +18,7 @@ class ResourceSystem(System):
     """
     Processes resource extraction actions and manages the lifecycle of resources.
     """
+
     REQUIRED_COMPONENTS: List[Type[Component]] = [ResourceComponent]
 
     def __init__(self, *args, **kwargs):
@@ -36,7 +38,7 @@ class ResourceSystem(System):
         # --- 1. Validate Target and Miner ---
         resource_comps = self.simulation_state.entities.get(resource_id, {})
         miner_comps = self.simulation_state.entities.get(entity_id, {})
-        
+
         res_comp = resource_comps.get(ResourceComponent)
         res_pos_comp = resource_comps.get(PositionComponent)
         miner_inv_comp = miner_comps.get(InventoryComponent)
@@ -52,16 +54,18 @@ class ResourceSystem(System):
         miner_pos_comp = cast(PositionComponent, miner_pos_comp)
 
         if res_comp.is_depleted or res_pos_comp.position != miner_pos_comp.position:
-            outcome = ActionOutcome(False, "Resource is depleted or not at the correct location.", -0.05, {"status": "invalid_mine_target"})
+            outcome = ActionOutcome(
+                False, "Resource is depleted or not at the correct location.", -0.05, {"status": "invalid_mine_target"}
+            )
             self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
             return
 
         # --- 2. Resolve Mining Action ---
         res_comp.current_health -= res_comp.mining_rate
         base_reward = res_comp.reward_per_mine_action
-        
+
         miner_inv_comp.current_resources += base_reward
-        
+
         was_depleted = res_comp.current_health <= 0
         if was_depleted:
             res_comp.is_depleted = True
@@ -69,13 +73,13 @@ class ResourceSystem(System):
             # Add the final yield bonus upon depletion
             base_reward += res_comp.resource_yield
             miner_inv_comp.current_resources += res_comp.resource_yield
-        
+
         # --- 3. Create and Publish Outcome ---
         status = "resource_depleted" if was_depleted else "mining_progress"
         message = f"Depleted resource {resource_id}!" if was_depleted else f"Mined resource {resource_id}."
         details = {"status": status, "resource_id": resource_id, "resource_type": res_comp.type}
         outcome = ActionOutcome(True, message, base_reward, details)
-        
+
         self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
 
     def update(self, current_tick: int):
@@ -89,7 +93,7 @@ class ResourceSystem(System):
         for res_id, comps in all_resources.items():
             res_comp = cast(ResourceComponent, comps.get(ResourceComponent))
             if res_comp.is_depleted:
-                res_comp.depleted_timer += 10 # Add the check interval
+                res_comp.depleted_timer += 10  # Add the check interval
                 if res_comp.depleted_timer >= res_comp.resource_respawn_time:
                     res_comp.is_depleted = False
                     res_comp.current_health = res_comp.initial_health

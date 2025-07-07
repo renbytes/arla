@@ -1,12 +1,13 @@
 """World bootstrap that wires providers into the agent-engine SimulationManager."""
+
 from pathlib import Path
-from omegaconf import OmegaConf
 
 # Stubs – replace with real imports from agent_engine and your providers
 from agent_engine.simulation.engine import SimulationManager
+from omegaconf import OmegaConf
+
 from simulations.soul_sim.providers import (
     GridControllabilityProvider,
-    GridStateNodeEncoder,
     GridVitalityProvider,
 )
 
@@ -19,7 +20,8 @@ def run_world(scenario_path: str | None = None) -> str:
     # 2. Create provider instances
     controllability = GridControllabilityProvider()
     vitality = GridVitalityProvider()
-    state_node_encoder = GridStateNodeEncoder()
+    # TODO: Add this back in
+    # state_node_encoder = GridStateNodeEncoder()
 
     # 3. Initialise SimulationManager (simplified)
     sim_mgr = SimulationManager(

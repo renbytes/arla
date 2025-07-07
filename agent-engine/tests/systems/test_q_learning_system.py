@@ -39,7 +39,7 @@ def mock_simulation_state():
     # Mock other required components
     # FIX: Set is_active to False to accommodate the inverted logic bug in the system's update method.
     time_budget_comp = TimeBudgetComponent(initial_time_budget=100)
-    time_budget_comp.is_active = False
+    time_budget_comp.is_active = True
 
     state.entities = {
         "agent1": {
@@ -98,12 +98,12 @@ def q_learning_system(mock_registry, mock_simulation_state, mock_state_encoder, 
 # --- Test Cases ---
 
 
-def test_update_caches_state_features(q_learning_system, mock_simulation_state, mock_state_encoder):
+async def test_update_caches_state_features(q_learning_system, mock_simulation_state, mock_state_encoder):
     """
     Tests that the passive update method correctly caches the current state for learning agents.
     """
     # Act
-    q_learning_system.update(current_tick=1)
+    await q_learning_system.update(current_tick=1)
 
     # Assert
     mock_state_encoder.encode_state.assert_called_once_with(mock_simulation_state, "agent1", q_learning_system.config)

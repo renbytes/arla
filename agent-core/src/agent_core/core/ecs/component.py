@@ -1,6 +1,6 @@
 # src/agent_core/core/ecs/component.py
 
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
@@ -14,8 +14,8 @@ from agent_core.core.ecs.base import CognitiveComponent
 if TYPE_CHECKING:
     from agent_core.core.schemas import (
         Belief,
-        Episode,
         CounterfactualEpisode,
+        Episode,
         RelationalSchema,
     )
 
@@ -35,7 +35,13 @@ class MultiDomainIdentityInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_domain_identity(self, **kwargs: Any) -> Any:
+    def update_domain_identity(
+        self,
+        domain: Any,
+        new_traits: np.ndarray,
+        context: Dict[str, Any],
+        current_tick: int,
+    ) -> Tuple[bool, float, Dict[str, float]]:
         raise NotImplementedError
 
     @abstractmethod
@@ -208,11 +214,13 @@ class AffectComponent(Component):
         self.predictive_delta_smooth: float = 0.5
         self.cognitive_dissonance: float = 0.0
         self.affective_experience_buffer: deque[Any] = deque(maxlen=affective_buffer_maxlen)
+        self.prev_reward: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "prediction_delta_magnitude": self.prediction_delta_magnitude,
             "cognitive_dissonance": self.cognitive_dissonance,
+            "prev_reward": self.prev_reward,
         }
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:

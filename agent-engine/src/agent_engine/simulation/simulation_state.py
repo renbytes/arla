@@ -6,11 +6,7 @@ Consolidates all simulation data, acting as the central state container.
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 import numpy as np
-from numpy.typing import NDArray
-
-# Imports from agent_core
-from agent_engine.cognition.identity.domain_identity import IdentityDomain
-from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_core.core.ecs.abstractions import AbstractSimulationState
 from agent_core.core.ecs.component import (
     AffectComponent,
     Component,
@@ -18,6 +14,10 @@ from agent_core.core.ecs.component import (
     GoalComponent,
     IdentityComponent,
 )
+from numpy.typing import NDArray
+
+# Imports from agent_core
+from agent_engine.cognition.identity.domain_identity import IdentityDomain
 from agent_engine.utils.config_utils import get_config_value
 
 # Forward references for type hinting to avoid circular imports
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
     from agent_core.environment.interface import EnvironmentInterface
+
     from agent_engine.simulation.system import SystemManager
 
 
@@ -37,14 +38,13 @@ class SimulationState(AbstractSimulationState):
         self.config = config
         self.device = device
         self.entities: Dict[str, Dict[Type[Component], Component]] = {}
-
         self.simulation_id: str = ""
         self.environment: Optional["EnvironmentInterface"] = None
-        # FIX: Use a private attribute for the event bus storage.
         self._event_bus: Optional["EventBus"] = None
         self.system_manager: Optional["SystemManager"] = None
         self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
         self.main_rng: Optional[np.random.Generator] = None
+        self.current_tick: int = 0
 
     # FIX: Implement the 'event_bus' as a property to satisfy the abstract base class.
     @property

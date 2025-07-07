@@ -2,14 +2,14 @@
 """
 Handles the rendering of the simulation state to image frames for visualization.
 """
+
 import os
-from typing import Any, Dict, List, Type, cast
+from typing import List, Type, cast
 
 import imageio.v2 as imageio
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
-
 from agent_core.core.ecs.component import Component, TimeBudgetComponent
 from agent_engine.simulation.system import System
 
@@ -26,6 +26,7 @@ class RenderSystem(System):
     """
     Renders the current grid state to a .png image for each simulation step.
     """
+
     REQUIRED_COMPONENTS: List[Type[Component]] = []  # Renders all entities
 
     def __init__(self, *args, **kwargs):
@@ -70,20 +71,31 @@ class RenderSystem(System):
     def _draw_resources(self, ax: plt.Axes):
         """Draws all resource nodes."""
         resource_colors = {"SINGLE_NODE": "green", "DOUBLE_NODE": "blue", "TRIPLE_NODE": "purple"}
-        for _, comps in self.simulation_state.get_entities_with_components([ResourceComponent, PositionComponent]).items():
+        for _, comps in self.simulation_state.get_entities_with_components(
+            [ResourceComponent, PositionComponent]
+        ).items():
             res_comp = cast(ResourceComponent, comps.get(ResourceComponent))
             pos_comp = cast(PositionComponent, comps.get(PositionComponent))
             if not res_comp.is_depleted:
                 color = resource_colors.get(res_comp.type, "gray")
                 alpha = res_comp.current_health / res_comp.initial_health if res_comp.initial_health > 0 else 0.0
-                rect = patches.Rectangle((pos_comp.position[1] - 0.25, pos_comp.position[0] - 0.25), 0.5, 0.5, facecolor=color, alpha=alpha, edgecolor="black", zorder=2)
+                rect = patches.Rectangle(
+                    (pos_comp.position[1] - 0.25, pos_comp.position[0] - 0.25),
+                    0.5,
+                    0.5,
+                    facecolor=color,
+                    alpha=alpha,
+                    edgecolor="black",
+                    zorder=2,
+                )
                 ax.add_patch(rect)
 
     def _draw_nests_and_farms(self, ax: plt.Axes):
         """Draws all nests and farms."""
         agent_entities = self.simulation_state.get_entities_with_components([TimeBudgetComponent])
         agent_ids = sorted(agent_entities.keys())
-        if not agent_ids: return
+        if not agent_ids:
+            return
         cmap = plt.get_cmap("hsv")
 
         for i, entity_id in enumerate(agent_ids):
@@ -91,16 +103,33 @@ class RenderSystem(System):
             components = agent_entities[entity_id]
             if isinstance(nest_comp := components.get(NestComponent), NestComponent):
                 for nest_pos in nest_comp.locations:
-                    ax.plot(nest_pos[1], nest_pos[0], marker="H", markersize=18, color=agent_color, markeredgecolor="black", zorder=4)
+                    ax.plot(
+                        nest_pos[1],
+                        nest_pos[0],
+                        marker="H",
+                        markersize=18,
+                        color=agent_color,
+                        markeredgecolor="black",
+                        zorder=4,
+                    )
             if isinstance(inv_comp := components.get(InventoryComponent), InventoryComponent) and inv_comp.farming_mode:
                 if inv_comp.farm_location:
-                    ax.plot(inv_comp.farm_location[1], inv_comp.farm_location[0], marker="s", markersize=15, color=agent_color, alpha=0.5, zorder=3)
+                    ax.plot(
+                        inv_comp.farm_location[1],
+                        inv_comp.farm_location[0],
+                        marker="s",
+                        markersize=15,
+                        color=agent_color,
+                        alpha=0.5,
+                        zorder=3,
+                    )
 
     def _draw_agents(self, ax: plt.Axes):
         """Draws all agents."""
         agent_entities = self.simulation_state.get_entities_with_components([TimeBudgetComponent, PositionComponent])
         agent_ids = sorted(agent_entities.keys())
-        if not agent_ids: return
+        if not agent_ids:
+            return
         cmap = plt.get_cmap("hsv")
 
         for i, entity_id in enumerate(agent_ids):
@@ -110,11 +139,37 @@ class RenderSystem(System):
             agent_color = cmap(i / len(agent_ids))
 
             if time_comp.is_active:
-                circle = patches.Circle((pos_comp.position[1], pos_comp.position[0]), 0.4, facecolor=agent_color, edgecolor="black", linewidth=1.5, zorder=5)
+                circle = patches.Circle(
+                    (pos_comp.position[1], pos_comp.position[0]),
+                    0.4,
+                    facecolor=agent_color,
+                    edgecolor="black",
+                    linewidth=1.5,
+                    zorder=5,
+                )
                 ax.add_patch(circle)
-                ax.text(pos_comp.position[1], pos_comp.position[0], entity_id[-2:], ha='center', va='center', color='white', fontsize=7, weight="bold")
+                ax.text(
+                    pos_comp.position[1],
+                    pos_comp.position[0],
+                    entity_id[-2:],
+                    ha="center",
+                    va="center",
+                    color="white",
+                    fontsize=7,
+                    weight="bold",
+                )
             else:
-                ax.text(pos_comp.position[1], pos_comp.position[0], "X", color="red", ha='center', va='center', fontsize=20, weight="bold", zorder=6)
+                ax.text(
+                    pos_comp.position[1],
+                    pos_comp.position[0],
+                    "X",
+                    color="red",
+                    ha="center",
+                    va="center",
+                    fontsize=20,
+                    weight="bold",
+                    zorder=6,
+                )
 
     def finalize(self):
         """Compiles the saved frames into a GIF at the end of the simulation."""
@@ -124,7 +179,7 @@ class RenderSystem(System):
 
         log_dir = self.config.get("simulation", {}).get("log_directory", "logs")
         gif_path = os.path.join(log_dir, "simulation_output.gif")
-        
+
         print(f"\nCreating simulation GIF from {len(self.frames_to_render)} frames...")
         try:
             images = [imageio.imread(filepath) for filepath in sorted(self.frames_to_render)]

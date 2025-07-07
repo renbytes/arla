@@ -13,7 +13,7 @@ from agent_engine.simulation.system import System, SystemManager
 class MockSystemA(System):
     """A mock system for testing order and calls."""
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         # This attribute is added dynamically for tracking calls
         self.update_called_at_tick = current_tick
 
@@ -21,14 +21,14 @@ class MockSystemA(System):
 class MockSystemB(System):
     """Another mock system for testing order."""
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         self.update_called_at_tick = current_tick
 
 
 class FailingSystem(System):
     """A mock system that is designed to raise an error."""
 
-    def update(self, current_tick: int) -> None:
+    async def update(self, current_tick: int) -> None:
         raise RuntimeError("This system is designed to fail.")
 
 
@@ -69,7 +69,7 @@ def test_register_system(system_manager):
     assert isinstance(system_manager._systems[0], MockSystemA)
 
 
-def test_update_all_calls_systems_in_order(system_manager):
+async def test_update_all_calls_systems_in_order(system_manager):
     """
     Tests that the update_all method calls the update method on each
     registered system in the order they were registered.
@@ -79,7 +79,7 @@ def test_update_all_calls_systems_in_order(system_manager):
     system_manager.register_system(MockSystemB)
 
     # Act
-    system_manager.update_all(current_tick=50)
+    await system_manager.update_all(current_tick=50)
 
     # Assert
     system_a = system_manager.get_system(MockSystemA)
@@ -95,7 +95,8 @@ def test_update_all_calls_systems_in_order(system_manager):
     assert system_b.update_called_at_tick == 50
 
 
-def test_update_all_continues_after_a_system_fails(system_manager, capsys):
+@pytest.mark.asyncio
+async def test_update_all_continues_after_a_system_fails(system_manager, capsys):
     """
     Tests that if one system fails during its update, the manager logs
     the error and continues to update subsequent systems.
@@ -106,7 +107,7 @@ def test_update_all_continues_after_a_system_fails(system_manager, capsys):
     system_manager.register_system(MockSystemB)
 
     # Act
-    system_manager.update_all(current_tick=99)
+    await system_manager.update_all(current_tick=99)
 
     # Assert
     # Check that the system after the failing one was still updated
@@ -116,9 +117,12 @@ def test_update_all_continues_after_a_system_fails(system_manager, capsys):
 
     # Check that an error message was printed to the console
     captured = capsys.readouterr()
-    # FIX: Combine stdout and stderr to check the full output.
     full_output = captured.out + captured.err
-    assert "ERROR: System 'FailingSystem' failed during update" in full_output
+
+    # Adjust the assertion string to match the runner's output.
+    # The runner uses the system's __repr__ which is 'FailingSystem System'.
+    expected_error_msg = "ERROR: System 'FailingSystem System' failed during concurrent update"
+    assert expected_error_msg in full_output
     assert "RuntimeError: This system is designed to fail." in full_output
 
 

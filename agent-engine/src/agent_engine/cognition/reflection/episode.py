@@ -3,9 +3,11 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from agent_core.core.schemas import Episode as CoreEpisode
+
 
 @dataclass
-class Episode:
+class Episode(CoreEpisode):
     """
     Represents a temporally and thematically coherent chunk of an agent's
     experience, used for creating narrative arcs for reflection.

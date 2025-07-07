@@ -1,11 +1,12 @@
 # src/agent_engine/policy/learned_utility.py
 
 from typing import cast
+
 import torch
 import torch.nn as nn
 
 
-class UtilityNetwork(nn.Module):  # type: ignore[misc]
+class UtilityNetwork(nn.Module):
     """
     A neural network that takes state features, internal state features,
     and action features, and outputs a scalar utility value.
