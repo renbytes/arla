@@ -28,10 +28,5 @@ htmlcov/
 # Project Specific
 all_code*
 all_code
-**/*.egg-info/
+*.egg-info/
 agent-engine/sim_snapshots/
-*.egg-info/
-*.egg-info/
-*/*/*.egg-info/
-**/**/*.egg-info/
-agent-sim/src/agent_sim.egg-info/**
