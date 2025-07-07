@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-sim"
+version = "0.1.0"
+description = "A modular, scalable framework for running multi-agent simulations."
+authors = [{ name = "Your Name", email = "your@email.com" }]
+dependencies = [
+    # Local, editable installs for the core and engine libraries.
+    # Assumes agent-core and agent-engine directories are at the same level as agent-sim.
+    "agent-core @ file:../agent-core",
+    "agent-engine @ file:../agent-engine",
+
+    # --- Infrastructure & Orchestration ---
+    "celery[redis]==5.3.4",
+    "redis>=4.3.0",
+    "flower>=2.0.0", # Optional: for Celery monitoring
+    "hydra-core>=1.3.2",
+    "omegaconf>=2.3.0",
+
+    # --- Database & Data Handling ---
+    "sqlalchemy>=2.0.0", # Updated to modern SQLAlchemy
+    "alembic>=1.8.0",
+    "asyncpg", # For PostgreSQL
+    "psycopg2-binary>=2.9.0", # For PostgreSQL
+    "pandas>=1.4.0",
+    "pydantic>=2.0.0", # Updated to Pydantic v2
+
+    # --- Analysis & ML ---
+    "mlflow",
+    "numpy>=1.21.0",
+    "scipy>=1.8.0",
+    "scikit-learn>=1.1.0",
+    "matplotlib>=3.5.0",
+    "seaborn",
+    "networkx",
+
+    # --- Utilities ---
+    "python-dotenv>=0.19.0",
+    "imageio>=2.19.0",
+    "uvicorn>=0.18.0", # For any potential web-based viewers/APIs
+    "fastapi>=0.85.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+    "ruff",
+    "mypy",
+    "pip-tools"
+]
+
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "W", "I", "N", "C90", "B"]
+ignore = ["B905"] # Allows using zip without strict=True
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv/",
+    ".pytest_cache/",
+    "notebooks/"
+]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+files = ["src"]
+ignore_missing_imports = true
+# Recommended strictness flags to enable gradually:
+# check_untyped_defs = true
+# disallow_untyped_defs = true
+# disallow_incomplete_defs = true
+# no_implicit_optional = true
+# warn_return_any = true

@@ -1,0 +1,15 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+# Virtualenv
+.venv/
+# IDE
+.idea/
+.vscode/
+# Jupyter
+*.ipynb_checkpoints/
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+# Local env & secrets
+.env
