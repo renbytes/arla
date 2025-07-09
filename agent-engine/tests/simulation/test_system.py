@@ -9,30 +9,39 @@ from agent_engine.simulation.system import System, SystemManager
 
 # --- Mocks and Fixtures ---
 
+
 class MockSystemA(System):
     """A mock system for testing order and calls."""
+
     async def update(self, current_tick: int) -> None:
         self.update_called_at_tick = current_tick
+
 
 class MockSystemB(System):
     """Another mock system for testing order."""
+
     async def update(self, current_tick: int) -> None:
         self.update_called_at_tick = current_tick
 
+
 class FailingSystem(System):
     """A mock system that is designed to raise an error."""
+
     async def update(self, current_tick: int) -> None:
         raise RuntimeError("This system is designed to fail.")
+
 
 @pytest.fixture
 def mock_simulation_state():
     """Mocks the SimulationState."""
     return MagicMock()
 
+
 @pytest.fixture
 def mock_cognitive_scaffold():
     """Mocks the CognitiveScaffold."""
     return MagicMock()
+
 
 @pytest.fixture
 def system_manager(mock_simulation_state, mock_cognitive_scaffold):
@@ -45,6 +54,7 @@ def system_manager(mock_simulation_state, mock_cognitive_scaffold):
 
 
 # --- Test Cases ---
+
 
 def test_register_system(system_manager):
     """Tests that a system can be registered and is stored internally."""

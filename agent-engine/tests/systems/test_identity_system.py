@@ -151,8 +151,7 @@ def test_on_reflection_completed_missing_component(identity_system: IdentitySyst
     mock_simulation_state.entities["agent_no_id_comp"] = {}
     event_data = {
         "entity_id": "agent_no_id_comp",
-        "context": {"narrative": "...",
-        "llm_final_account": "some reflection"},
+        "context": {"narrative": "...", "llm_final_account": "some reflection"},
         "tick": 100,
     }
     id_comp = mock_simulation_state.entities["agent1"][IdentityComponent]

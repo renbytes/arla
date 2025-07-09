@@ -1,0 +1,94 @@
+services:
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"  # Remove 127.0.0.1 binding
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agent_sim_db
+    ports:
+      - "5432:5432"  # Remove 127.0.0.1 binding
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d agent_sim_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-init:
+    build:
+      context: .
+      dockerfile: agent-sim/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    command: python -m agent_sim.infrastructure.database.init_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    environment:
+      - MLFLOW_HOST=0.0.0.0
+      - MLFLOW_PORT=5000
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y curl &&
+        echo 'Starting MLflow server on 0.0.0.0:5000' &&
+        mlflow server \
+          --backend-store-uri file:///mlruns \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --gunicorn-opts '--bind 0.0.0.0:5000'
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: agent-sim/Dockerfile
+    command: agentsim start-worker -Q "experiments,simulations" -c 4
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./mlruns:/app/mlruns  # Add mlruns volume for celery worker
+    environment:
+      - PYTHONPATH=/app
+      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Set MLflow URI
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+      mlflow:
+        condition: service_healthy  # Wait for MLflow to be healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

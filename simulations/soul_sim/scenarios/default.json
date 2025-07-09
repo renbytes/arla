@@ -1,0 +1,40 @@
+{
+  "name": "single_agent_test",
+  "description": "A minimal scenario to test the full agent lifecycle.",
+  "resources": {
+    "resource_list": [
+      {
+        "pos": [10, 10],
+        "params": {
+          "resource_type": "SINGLE_NODE",
+          "initial_health": 100.0,
+          "min_agents": 1,
+          "max_agents": 3,
+          "mining_rate": 10.0,
+          "reward_per_mine": 2.0,
+          "resource_yield": 5.0,
+          "respawn_time": 50
+        }
+      },
+      {
+        "pos": [20, 20],
+        "params": {
+          "resource_type": "DOUBLE_NODE",
+          "initial_health": 200.0,
+          "min_agents": 2,
+          "max_agents": 4,
+          "mining_rate": 15.0,
+          "reward_per_mine": 4.0,
+          "resource_yield": 10.0,
+          "respawn_time": 100
+        }
+      }
+    ]
+  },
+  "groups": [
+    {
+      "type": "full_agent",
+      "count": 10
+    }
+  ]
+}

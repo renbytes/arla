@@ -14,9 +14,11 @@ dependencies = [
     "redis",
     "mlflow",
     "sqlalchemy",
-    "asyncpg", # Or "aiosqlite" for SQLite
+    "asyncpg",
     "imageio",
     "matplotlib",
+    "typer[all]",
+    "rich",
 
     # Local monorepo packages
     "agent-core",
@@ -24,6 +26,11 @@ dependencies = [
     "agent-concurrent",
     "agent-persist"
 ]
+
+# --- Script Entry Point ---
+# This makes CLI runnable after installation.
+[project.scripts]
+agentsim = "agent_sim.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

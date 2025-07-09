@@ -1,12 +1,7 @@
 numpy
-torch
-matplotlib
 omegaconf
+torch
 scikit-learn
-
-[dev]
-pytest
-pytest-mock
-ruff
-mypy
-pip-tools
+agent-core
+agent-concurrent
+agent-persist

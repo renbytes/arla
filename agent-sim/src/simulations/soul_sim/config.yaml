@@ -1,6 +1,0 @@
-simulation:
-  steps: 100
-  random_seed: 42
-learning:
-  memory:
-    reflection_interval: 50

@@ -18,6 +18,8 @@ src/agent_engine/cognition/identity/domain_identity.py
 src/agent_engine/cognition/reflection/counterfactual.py
 src/agent_engine/cognition/reflection/episode.py
 src/agent_engine/cognition/reflection/validation.py
+src/agent_engine/persistence/__init__.py
+src/agent_engine/persistence/snapshot_manager.py
 src/agent_engine/policy/__init__.py
 src/agent_engine/policy/learned_utility.py
 src/agent_engine/policy/reward_calculator.py

@@ -1,0 +1,76 @@
+# test_ablation.yml
+
+# The overall name for this group of experiments in MLflow
+experiment_name: "Ablation Study - Cognitive Architecture"
+
+# Path to the base configuration file, relative to the project root
+base_config_path: "simulations/soul_sim/config/base_config.yml"
+
+# The Python package where your simulation's entry point is located
+simulation_package: "simulations.soul_sim"
+
+# A list of scenarios to run for EACH variation
+scenarios:
+  - "simulations/soul_sim/scenarios/default.json"
+
+# Number of times to run each scenario for each variation
+runs_per_scenario: 5
+
+# --- Ablation Variations ---
+# Each item here is a separate experimental condition.
+# Using proper nested structure to ensure correct config merging.
+variations:
+  - name: "Full Architecture"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: true
+            enable_identity_inference: true
+            enable_goal_modulation: true
+            enable_emotion_clustering: true
+            enable_social_memory: true
+
+  - name: "No Reflection"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: false
+            enable_identity_inference: true
+            enable_goal_modulation: true
+            enable_emotion_clustering: true
+            enable_social_memory: true
+
+  - name: "No Identity"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: true
+            enable_identity_inference: false
+            enable_goal_modulation: true
+            enable_emotion_clustering: true
+            enable_social_memory: true
+
+  - name: "No Goals"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: true
+            enable_identity_inference: true
+            enable_goal_modulation: false
+            enable_emotion_clustering: true
+            enable_social_memory: true
+
+  - name: "Minimal Cognition"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: false
+            enable_identity_inference: false
+            enable_goal_modulation: false
+            enable_emotion_clustering: false
+            enable_social_memory: false

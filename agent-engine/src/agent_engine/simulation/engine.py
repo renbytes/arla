@@ -70,9 +70,7 @@ class SimulationManager:
 
         self._initialize_state()
 
-        print("Engine: Delegating to scenario loader to populate world...")
-        self.scenario_loader.load()
-        print("Engine: Scenario loading complete.")
+        print("Engine: Manager initialized. World will be populated by the scenario loader.")
 
     def register_system(self, system_class: Type[Any], **kwargs: Any) -> None:
         """A convenience method to register a system with the SystemManager."""
