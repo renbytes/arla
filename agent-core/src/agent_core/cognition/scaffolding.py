@@ -18,7 +18,10 @@ class MockDbLogger:
 
 class MockAsyncRunner:
     def run_async(self, coro: Coroutine[Any, Any, None]) -> None:
-        pass
+        # Instead of doing nothing, we close the coroutine.
+        # This cleanly disposes of it and prevents the "never awaited"
+        # RuntimeWarning during tests or runs using the mock.
+        coro.close()
 
 
 db_logger_instance = MockDbLogger()

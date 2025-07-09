@@ -43,6 +43,15 @@ class HealthComponent(Component):
         self.initial_health = initial_health
         self.current_health: float = initial_health
 
+    # Add the 'normalized' property.
+    @property
+    def normalized(self) -> float:
+        """Returns the health as a value between 0.0 and 1.0."""
+        if self.initial_health <= 0:
+            return 0.0
+        # Clip the value to ensure it never goes above 1.0, even if health is gained.
+        return np.clip(self.current_health / self.initial_health, 0.0, 1.0)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "current_health": self.current_health,

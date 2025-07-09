@@ -215,12 +215,14 @@ class ScenarioLoader(ScenarioLoaderInterface):
             "action_feature_dim": 5,
             "q_learning_alpha": get_config_value(self.config, "learning.q_learning.alpha", 0.001),
             "lifespan_std_dev_percent": get_config_value(self.config, "agent.foundational.lifespan_std_dev_percent", 0.1),
+            # FIX 1: Add the missing schema_embedding_dim from the config.
             "schema_embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.schema_embedding_dim", 128),
         }
 
-        # Add a multi-domain identity instance
+        # FIX 2: Add a multi-domain identity instance, which IdentityComponent requires.
         try:
             from agent_engine.cognition.identity.domain_identity import MultiDomainIdentity
+            # This creates the object that will be injected into the IdentityComponent constructor.
             kwargs["multi_domain_identity"] = MultiDomainIdentity(embedding_dim=kwargs["embedding_dim"])
             print("[DEBUG] Created MultiDomainIdentity instance")
         except Exception as e:

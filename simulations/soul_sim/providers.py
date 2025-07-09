@@ -179,7 +179,7 @@ class SoulSimStateEncoder(StateEncoderInterface):
 
         features.append(health_comp.normalized if health_comp else 0.0)
         features.append(time_comp.current_time_budget / time_comp.max_time_budget if time_comp else 0.0)
-        features.append(inventory_comp.resources / 100.0 if inventory_comp else 0.0) # Normalize by a reasonable max
+        features.append(inventory_comp.current_resources / 100.0 if inventory_comp else 0.0) # Normalize by a reasonable max
 
         # Environment-related features (example)
         # In a real implementation, you would query the environment for nearby entities.
@@ -205,7 +205,8 @@ class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
 
         # Normalize resources based on a config value, e.g., max expected resources
         max_res = 100.0
-        resources_norm = (inventory_comp.resources / max_res) if inventory_comp else 0.0
+        # Changed 'resources' to 'current_resources'
+        resources_norm = (inventory_comp.current_resources / max_res) if inventory_comp else 0.0
 
         return {
             "health_norm": np.clip(health_norm, 0, 1),
@@ -225,7 +226,8 @@ class SoulSimControllabilityProvider(ControllabilityProviderInterface):
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
 
         health_factor = health_comp.normalized if health_comp else 0.5
-        resource_factor = np.clip(inventory_comp.resources / 50.0, 0, 1) if inventory_comp else 0.5
+        # Changed 'resources' to 'current_resources'
+        resource_factor = np.clip(inventory_comp.current_resources / 50.0, 0, 1) if inventory_comp else 0.5
 
         # If the agent has recently failed at actions, controllability is lower
         failed_states_comp = cast(FailedStatesComponent, components.get(FailedStatesComponent))
@@ -252,7 +254,7 @@ class SoulSimStateNodeEncoder(StateNodeEncoderInterface):
 
         # Example of environmental context
         location_type = "wilderness"
-        # In a real scenario, you would check if pos_comp.pos is inside a "base" or "nest" area.
+        # In a real scenario, you would check if pos_comp.position is inside a "base" or "nest" area.
 
         return ("STATE", health_status, location_type)
 
@@ -269,17 +271,16 @@ class SoulSimNarrativeContextProvider(NarrativeContextProviderInterface):
         pos_comp = cast(PositionComponent, components.get(PositionComponent))
 
         narrative = (
-            f"I am currently at position {pos_comp.pos}. "
+            f"I am currently at position {pos_comp.position}. "
             f"My health is at {health_comp.current_health:.0f}, "
-            f"and I have {inventory_comp.resources:.0f} resources. "
+            f"and I have {inventory_comp.current_resources:.0f} resources. "
         )
 
         # In a real implementation, you would add summaries of recent events,
         # social interactions, and goal status.
-
         # The provider returns a dictionary, which will be passed to other systems
         return {
             "narrative": narrative,
+            "resource_level": inventory_comp.current_resources,
             "health_level": health_comp.normalized,
-            "resource_level": inventory_comp.resources,
         }
