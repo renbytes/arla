@@ -121,10 +121,10 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
 
 
 class SoulSimRewardCalculator(RewardCalculatorInterface):
-    """
-    Calculates the final, subjective reward for an agent by applying multipliers
-    from its internal value system to the base reward from an action's outcome.
-    """
+    """Calculates final, subjective rewards for actions in the soul_sim world."""
+
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config.get("learning", {}).get("rewards", {})
 
     def calculate_final_reward(
         self,
@@ -134,27 +134,43 @@ class SoulSimRewardCalculator(RewardCalculatorInterface):
         outcome_details: Dict[str, Any],
         entity_components: Dict[Type[Component], Component],
     ) -> Tuple[float, Dict[str, Any]]:
-        """Applies subjective bonuses and penalties to the base reward."""
-        final_reward = base_reward
-        breakdown = {"base": base_reward}
+        action_id = getattr(action_type, "action_id", "unknown")
 
-        value_comp = cast(ValueSystemComponent, entity_components.get(ValueSystemComponent))
-        if not value_comp:
-            return final_reward, breakdown
+        # Start with the base reward
+        current_reward = base_reward
+        breakdown: Dict[str, Any] = {"base": base_reward}
 
-        # Apply multiplier for collaboration
-        if action_intent == "COOPERATE":
-            bonus = base_reward * (value_comp.collaboration_multiplier - 1.0)
-            final_reward += bonus
-            breakdown["collaboration_bonus"] = bonus
+        # 1. Add objective world bonuses FIRST
+        bonus = 0.0
+        if outcome_details.get("status") == "defeated_entity":
+            bonus = self.config.get("combat_victory", 10.0)
+        elif outcome_details.get("explored_new_tile", False):
+            bonus = self.config.get("exploration_bonus", 0.5)
 
-        # Apply multiplier for combat victories
-        if "victory" in outcome_details.get("status", ""):
-             bonus = base_reward * (value_comp.combat_victory_multiplier - 1.0)
-             final_reward += bonus
-             breakdown["combat_bonus"] = bonus
+        if bonus != 0.0:
+            current_reward += bonus
+            breakdown["bonus"] = bonus
 
-        return final_reward, breakdown
+        # 2. Apply the agent's subjective value multiplier LAST
+        # TODO: decouple this from agent-core, which should not be so coupled with world-specific details
+        if isinstance(vs := entity_components.get(ValueSystemComponent), ValueSystemComponent):
+            multiplier = 1.0
+            if action_id == "combat":
+                multiplier = vs.combat_victory_multiplier
+            elif action_id == "extract":
+                multiplier = vs.resource_yield_multiplier
+            elif action_id == "move":
+                multiplier = vs.exploration_multiplier
+            elif action_id == "communicate" and action_intent == "COOPERATE":
+                multiplier = vs.collaboration_multiplier
+
+            if multiplier != 1.0:
+                current_reward *= multiplier
+                breakdown["value_multiplier"] = multiplier
+
+        breakdown["final"] = current_reward
+
+        return current_reward, breakdown
 
 
 class SoulSimStateEncoder(StateEncoderInterface):

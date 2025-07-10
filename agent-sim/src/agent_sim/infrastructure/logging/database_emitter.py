@@ -3,19 +3,21 @@
 import uuid
 from typing import Any, Dict
 
-from agent_engine.logging.metrics_exporter_interface import MetricsExporterInterface
+from agent_engine.logging.exporter_interface import ExporterInterface
 from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.models import Metric
 
 
-class DatabaseEmitter(MetricsExporterInterface):
+class DatabaseEmitter(ExporterInterface):
     """An emitter that logs all data to a relational database."""
 
     def __init__(self, db_manager: AsyncDatabaseManager, simulation_id: uuid.UUID):
         self.db_manager = db_manager
         self.simulation_id = simulation_id
+        self.valid_metric_columns = {c.name for c in Metric.__table__.columns}
 
     async def log_event(self, event_data: Dict[str, Any]) -> None:
-        action_plan = event_data.get("action_plan_component")
+        action_plan = event_data.get("action_plan")
         action_outcome = event_data.get("action_outcome")
         if not action_plan or not action_outcome:
             return
@@ -32,15 +34,19 @@ class DatabaseEmitter(MetricsExporterInterface):
         )
 
     async def export_metrics(self, tick: int, metrics: Dict[str, Any]) -> None:
-        """
-        Filters the incoming metrics dictionary to only include keys that
-        match columns in the 'metrics' database table, then logs them.
-        """
-        # Filter the unified metrics dictionary for what the DB table can accept
+        """Filters metrics and logs them to the database."""
         db_metrics = {key: value for key, value in metrics.items() if key in self.valid_metric_columns}
-
         if db_metrics:
             await self.db_manager.log_metrics(simulation_id=self.simulation_id, tick=tick, metrics_data=db_metrics)
+
+    async def log_agent_state(self, tick: int, agent_id: str, components_data: Dict[str, Any]) -> None:
+        """Logs agent state data to the database."""
+        await self.db_manager.log_agent_state(
+            simulation_id=self.simulation_id,
+            tick=tick,
+            agent_id=agent_id,
+            components_data=components_data,
+        )
 
     async def log_learning_curve(self, tick: int, agent_id: str, q_loss: float) -> None:
         await self.db_manager.log_learning_curve(

@@ -13,6 +13,7 @@ from agent_core.core.ecs.component import (
     ActionPlanComponent,
     CompetenceComponent,
     Component,
+    TimeBudgetComponent,
 )
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
@@ -126,6 +127,13 @@ class ActionSystem(System):
             aoc.success = outcome.success
             aoc.reward = outcome.reward
             aoc.details = outcome.details
+
+        if isinstance(
+            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent), TimeBudgetComponent
+        ):
+            if isinstance(plan.action_type, ActionInterface):
+                action_cost = plan.action_type.get_base_cost(self.simulation_state)
+                time_comp.current_time_budget -= action_cost
 
     async def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""

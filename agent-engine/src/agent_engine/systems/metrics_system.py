@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, List
 
+from agent_engine.logging.exporter_interface import ExporterInterface
 from agent_engine.logging.metrics_calculator_interface import MetricsCalculatorInterface
-from agent_engine.logging.metrics_exporter_interface import MetricsExporterInterface
 from agent_engine.simulation.system import System
 
 
@@ -21,7 +21,7 @@ class MetricsSystem(System):
         config: Dict[str, Any],
         cognitive_scaffold: Any,
         calculators: List[MetricsCalculatorInterface],
-        exporters: List[MetricsExporterInterface],
+        exporters: List[ExporterInterface],
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
         self.calculators = calculators

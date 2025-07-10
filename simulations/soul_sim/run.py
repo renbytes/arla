@@ -96,7 +96,7 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     providers = {
         "action_generator": SoulSimActionGenerator(),
         "decision_selector": SoulSimDecisionSelector(),
-        "reward_calculator": SoulSimRewardCalculator(),
+        "reward_calculator": SoulSimRewardCalculator(config=config_dict),
         "state_encoder": SoulSimStateEncoder(),
         "narrative_context_provider": SoulSimNarrativeContextProvider(),
         "controllability_provider": SoulSimControllabilityProvider(),
@@ -146,13 +146,16 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     manager.register_system(MovementSystem)
     manager.register_system(ResourceSystem)
     manager.register_system(CombatSystem)
-    manager.register_system(LoggingSystem, emitter=database_emitter)
     manager.register_system(DecaySystem)
     manager.register_system(FailedStatesSystem)
     manager.register_system(NestSystem)
     manager.register_system(SocialInteractionSystem)
     manager.register_system(
-         MetricsSystem,
+        LoggingSystem,
+        exporters=[database_emitter, mlflow_exporter]
+    )
+    manager.register_system(
+        MetricsSystem,
         calculators=[vitals_calculator],
         exporters=[database_emitter, mlflow_exporter]
     )
