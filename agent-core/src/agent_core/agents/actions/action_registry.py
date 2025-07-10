@@ -4,6 +4,7 @@ Defines the ActionRegistry, a singleton object that discovers and manages
 all available actions in the simulation.
 """
 
+import importlib
 from typing import Dict, List, Type
 
 from agent_core.agents.actions.action_interface import ActionInterface
@@ -18,6 +19,26 @@ class ActionRegistry:
         self._actions: Dict[str, Type[ActionInterface]] = {}
         print("ActionRegistry initialized.")
 
+    def load_actions_from_paths(self, module_paths: List[str]) -> None:
+        """
+        Dynamically imports Python modules from a list of string paths.
+
+        This is the core of the plugin system. Importing a module that
+        contains an @action_registry.register decorator will cause that
+        action to be registered.
+
+        Args:
+            module_paths: A list of module paths, e.g.,
+                          ["simulations.soul_sim.actions.move_action"].
+        """
+        print(f"Dynamically loading actions from: {module_paths}")
+        for path in module_paths:
+            try:
+                importlib.import_module(path)
+                print(f"  Successfully loaded action module: {path}")
+            except ImportError as e:
+                print(f"WARNING: Could not import action module at '{path}'. Error: {e}")
+
     def register(self, action_class: Type[ActionInterface]) -> Type[ActionInterface]:
         """
         A decorator to register any class that implements the ActionInterface.
@@ -25,9 +46,6 @@ class ActionRegistry:
         if not issubclass(action_class, ActionInterface):
             raise TypeError(f"Class {action_class.__name__} must implement ActionInterface to be registered.")
 
-        # FIX: Instantiate the class to correctly access the property values.
-        # Accessing the property on the class (e.g., action_class.action_id)
-        # returns the property object itself, not its string value.
         try:
             instance = action_class()
             action_id = instance.action_id
@@ -35,7 +53,7 @@ class ActionRegistry:
         except Exception as e:
             raise TypeError(
                 f"Could not instantiate action class {action_class.__name__} to read properties. Error: {e}"
-            )
+            ) from e
 
         if not isinstance(action_id, str) or not action_id:
             raise TypeError(f"Action class {action_class.__name__} has an invalid 'action_id' property.")

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
     from agent_core.environment.interface import EnvironmentInterface
+    from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
 
     from agent_engine.simulation.system import SystemManager
 
@@ -45,14 +46,13 @@ class SimulationState(AbstractSimulationState):
         self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
         self.main_rng: Optional[np.random.Generator] = None
         self.current_tick: int = 0
+        self.db_logger: Optional["AsyncDatabaseManager"] = None
 
-    # FIX: Implement the 'event_bus' as a property to satisfy the abstract base class.
     @property
     def event_bus(self) -> Optional["EventBus"]:
         """Provides access to the simulation's event bus."""
         return self._event_bus
 
-    # FIX: Add a setter for the property so it can be assigned from the engine.
     @event_bus.setter
     def event_bus(self, value: Optional["EventBus"]) -> None:
         self._event_bus = value

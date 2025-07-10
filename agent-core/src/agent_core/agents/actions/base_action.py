@@ -78,9 +78,9 @@ class Action(ActionInterface):
         """
         A helper method to ensure all action modules are imported,
         which triggers their registration with the action_registry.
+        This method is now a placeholder, as loading is handled by the
+        specific simulation's entry point.
         """
-        # In a real application, you would import your action modules here.
-        # For example: from simulations.soul_sim.actions import MoveAction, CombatAction
-        # Since your actions are not defined yet, this can be empty for now.
-        print("Action registry initialized (placeholder).")
+        # This is intentionally left empty. The simulation runner is
+        # now responsible for dynamically loading action modules.
         pass

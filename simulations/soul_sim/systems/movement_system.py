@@ -57,7 +57,7 @@ class MovementSystem(System):
     def _handle_movement(self, event_data: Dict[str, Any], is_flee: bool):
         """Shared logic for all movement-based actions."""
         entity_id = event_data["entity_id"]
-        action_plan = event_data["action_plan"]
+        action_plan = event_data["action_plan_component"]
 
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         if not isinstance(pos_comp, PositionComponent):

@@ -29,7 +29,7 @@ class ResourceSystem(System):
     def on_execute_extract(self, event_data: Dict[str, Any]):
         """Handles a resource extraction action event."""
         entity_id = event_data["entity_id"]
-        action_plan = event_data["action_plan"]
+        action_plan = event_data["action_plan_component"]
         resource_id = action_plan.params.get("resource_id")
 
         if not isinstance(resource_id, str):

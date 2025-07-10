@@ -1,18 +1,33 @@
 import asyncio
 from typing import Any, Dict
+import uuid
 
 from omegaconf import DictConfig, OmegaConf
 
 # Generic imports from the monorepo
 from agent_core.agents.actions.base_action import Action
+from agent_core.agents.actions.action_registry import action_registry
+
 from agent_engine.simulation.engine import SimulationManager
 from agent_engine.systems.action_system import ActionSystem
 from agent_engine.systems.affect_system import AffectSystem
 from agent_engine.systems.causal_graph_system import CausalGraphSystem
 from agent_engine.systems.goal_system import GoalSystem
 from agent_engine.systems.identity_system import IdentitySystem
+from agent_engine.systems.metrics_system import MetricsSystem
 from agent_engine.systems.q_learning_system import QLearningSystem
 from agent_engine.systems.reflection_system import ReflectionSystem
+from agent_engine.systems.logging_system import LoggingSystem
+
+from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.logging.database_emitter import DatabaseEmitter
+from agent_sim.infrastructure.logging.mlflow_exporter import MLflowExporter
+
+from simulations.soul_sim.metrics.vitals_calculator import VitalsAndEconomyCalculator
+from simulations.soul_sim.systems.decay_system import DecaySystem
+from simulations.soul_sim.systems.failed_states_system import FailedStatesSystem
+from simulations.soul_sim.systems.nest_system import NestSystem
+from simulations.soul_sim.systems.social_interaction_system import SocialInteractionSystem
 
 # Imports specific to this simulation (soul-sim)
 from .config.schemas import SoulSimAppConfig
@@ -50,6 +65,7 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     # 1. Create the final, validated configuration
     base_config = OmegaConf.load("simulations/soul_sim/config/base_config.yml")
     final_config: DictConfig = OmegaConf.merge(base_config, config_overrides)
+    config_dict = OmegaConf.to_container(final_config, resolve=True)
 
     try:
         config_dict = OmegaConf.to_container(final_config, resolve=True)
@@ -63,7 +79,12 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
         raise
 
     # 2. Initialize world-specific singletons and providers
-    Action.initialize_action_registry()
+    action_paths = config_dict.get("action_modules", [])
+    action_registry.load_actions_from_paths(action_paths)
+
+    db_manager = AsyncDatabaseManager()
+    database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
+    mlflow_exporter = MLflowExporter()
 
     env_config = OmegaConf.to_container(final_config.environment, resolve=True)
     grid_size = env_config.get('grid_world_size', [50, 50])
@@ -83,6 +104,8 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
         "vitality_metrics_provider": SoulSimVitalityMetricsProvider(),
     }
 
+    vitals_calculator = VitalsAndEconomyCalculator()
+
     # 3. Create the SimulationManager. It will create the SimulationState internally.
     manager = SimulationManager(
         config=final_config,
@@ -90,6 +113,7 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
         scenario_loader=scenario_loader_instance,
         action_generator=providers["action_generator"],
         decision_selector=providers["decision_selector"],
+        db_logger=db_manager,
         run_id=run_id,
         task_id=task_id,
         experiment_id=experiment_id,
@@ -122,6 +146,16 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     manager.register_system(MovementSystem)
     manager.register_system(ResourceSystem)
     manager.register_system(CombatSystem)
+    manager.register_system(LoggingSystem, emitter=database_emitter)
+    manager.register_system(DecaySystem)
+    manager.register_system(FailedStatesSystem)
+    manager.register_system(NestSystem)
+    manager.register_system(SocialInteractionSystem)
+    manager.register_system(
+         MetricsSystem,
+        calculators=[vitals_calculator],
+        exporters=[database_emitter, mlflow_exporter]
+    )
 
     # 6. Run the simulation
     print(f"--- [{task_id}] Starting simulation loop for run: {run_id} ---")

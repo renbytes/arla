@@ -29,7 +29,7 @@ class NestSystem(System):
     def on_execute_nest_action(self, event_data: Dict[str, Any]):
         """Handles a nest creation action event."""
         entity_id = event_data["entity_id"]
-        action_plan = event_data["action_plan"]
+        action_plan = event_data["action_plan_component"]
 
         # --- 1. Get required components ---
         inv_comp = self.simulation_state.get_component(entity_id, InventoryComponent)

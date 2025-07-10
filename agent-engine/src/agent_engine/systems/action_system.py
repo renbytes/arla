@@ -34,9 +34,7 @@ class ActionSystem(System):
         simulation_state: SimulationState,
         config: Dict[str, Any],
         cognitive_scaffold: Any,
-        # --- MODIFIED: Inject the reward calculator ---
         reward_calculator: RewardCalculatorInterface,
-        # ----------------------------------------------
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
 

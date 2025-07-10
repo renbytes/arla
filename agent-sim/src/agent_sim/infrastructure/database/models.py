@@ -43,7 +43,8 @@ class Experiment(Base):
     __tablename__ = "experiments"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String, unique=True, index=True)
+    mlflow_experiment_id: Mapped[str] = mapped_column(String, index=True, nullable=True)
+    name: Mapped[str] = mapped_column(String, index=True)
     # This column will store the name of the simulation package, e.g., 'soul_sim'.
     simulation_package: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -63,7 +64,7 @@ class SimulationRun(Base):
 
     __tablename__ = "simulation_runs"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     experiment_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("experiments.id"), index=True)
     task_id: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True)
     scenario_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -83,26 +84,10 @@ class AgentState(Base):
     __tablename__ = "agent_states"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    simulation_id: Mapped[str] = mapped_column(String, ForeignKey("simulation_runs.id"), index=True)
+    simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
     agent_id: Mapped[str] = mapped_column(String, index=True)
-    health: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    time_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    resources: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    pos_x: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    pos_y: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    valence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    arousal: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    current_goal: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    cognitive_dissonance: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    risk_tolerance: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    identity_coherence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    identity_stability: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    social_validation_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    identity_domains_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    value_multipliers: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    identity_embedding: Mapped[Optional[List[float]]] = mapped_column(JSONB, nullable=True)
-    social_memory: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    components_data: Mapped[Dict[str, Any]] = mapped_column(JSONB)
 
     __table_args__ = (UniqueConstraint("simulation_id", "tick", "agent_id", name="uq_agent_state_tick"),)
 
@@ -113,7 +98,7 @@ class Event(Base):
     __tablename__ = "events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    simulation_id: Mapped[str] = mapped_column(String, ForeignKey("simulation_runs.id"), index=True)
+    simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
     agent_id: Mapped[str] = mapped_column(String, index=True)
     action_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -129,7 +114,7 @@ class ScaffoldInteraction(Base):
     __tablename__ = "scaffold_interactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    simulation_id: Mapped[str] = mapped_column(String(255), ForeignKey("simulation_runs.id"), index=True)
+    simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     agent_id: Mapped[str] = mapped_column(String(255), index=True)
@@ -148,7 +133,7 @@ class Metric(Base):
     __tablename__ = "metrics"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    simulation_id: Mapped[str] = mapped_column(String, ForeignKey("simulation_runs.id"), index=True)
+    simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
     active_agents: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     avg_reward: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -165,19 +150,19 @@ class LearningCurve(Base):
     __tablename__ = "learning_curves"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    simulation_id: Mapped[str] = mapped_column(String, ForeignKey("simulation_runs.id"), index=True)
+    simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
     agent_id: Mapped[str] = mapped_column(String, index=True)
     q_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 
 # --- Asynchronous Database Setup ---
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///data/agent_sim.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://admin:password@postgres:5432/agent_sim_db")
 async_engine = create_async_engine(DATABASE_URL)
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False, class_=AsyncSession)
 
 
-async def create_tables():
+async def create_tables() -> None:
     """
     Creates all the tables defined in this file in the database asynchronously.
     This function is idempotent; it won't re-create existing tables.

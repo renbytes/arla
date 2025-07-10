@@ -201,7 +201,8 @@ class ReflectionSystem(System):
         start_tick = events[0]["current_tick"]
         event_summaries = []
         for e in events:
-            action_plan = e.get("action_plan")
+            # The key is 'action_plan_component', not 'action_plan'
+            action_plan = e.get("action_plan_component")
             if action_plan and hasattr(action_plan, "action_type") and hasattr(action_plan.action_type, "name"):
                 event_summaries.append(f"Tick {e['current_tick']}: action {action_plan.action_type.name}")
 
@@ -219,5 +220,7 @@ class ReflectionSystem(System):
         )
         theme = theme_raw.strip().replace('"', "") if theme_raw else "unknown_theme"
 
-        processed_events = [e.get("action_outcome", {}).get("details", {}) for e in events]
+        # Access the .details attribute directly instead of using .get().
+        # Use a safe list comprehension to handle cases where an outcome might be missing.
+        processed_events = [outcome.details for e in events if (outcome := e.get("action_outcome")) is not None]
         return Episode(start_tick=start_tick, end_tick=tick, theme=theme, events=processed_events)

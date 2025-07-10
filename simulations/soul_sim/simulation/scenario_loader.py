@@ -12,6 +12,7 @@ from agent_core.core.ecs.component import Component
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.utils.config_utils import get_config_value
+from agent_engine.cognition.identity.domain_identity import IdentityDomain
 
 # Simulation-specific component imports
 from simulations.soul_sim.components import PositionComponent, ResourceComponent
@@ -199,6 +200,13 @@ class ScenarioLoader(ScenarioLoaderInterface):
         """Gathers all possible constructor arguments for any component."""
         if not self.simulation_state: return {}
 
+        main_embedding_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
+        num_domains = len(IdentityDomain)
+
+        # This calculation MUST match the vector construction in SimulationState.get_internal_state_features_for_entity
+        # It's composed of: (affect/emotion vector) + (goal embedding) + (N * identity domain embeddings) + (flags)
+        calculated_internal_dim = 4 + main_embedding_dim + (num_domains * main_embedding_dim) + 3
+
         kwargs = {
             "config": self.config,
             "device": self.simulation_state.device,
@@ -209,17 +217,19 @@ class ScenarioLoader(ScenarioLoaderInterface):
             "initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources", 10.0),
             "attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power", 10.0),
             "affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen", 100),
+            "lifespan_std_dev_percent": get_config_value(self.config, "agent.foundational.lifespan_std_dev_percent", 0.1),
+            "schema_embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.schema_embedding_dim", 128),
             "embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536),
             "state_feature_dim": 20,
             "internal_state_dim": 20,
             "action_feature_dim": 5,
+            "state_feature_dim": get_config_value(self.config, "learning.q_learning.state_feature_dim", 16),
+            "internal_state_dim": calculated_internal_dim,
+            "action_feature_dim": get_config_value(self.config, "learning.q_learning.action_feature_dim", 5),
             "q_learning_alpha": get_config_value(self.config, "learning.q_learning.alpha", 0.001),
-            "lifespan_std_dev_percent": get_config_value(self.config, "agent.foundational.lifespan_std_dev_percent", 0.1),
-            # FIX 1: Add the missing schema_embedding_dim from the config.
-            "schema_embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.schema_embedding_dim", 128),
         }
 
-        # FIX 2: Add a multi-domain identity instance, which IdentityComponent requires.
+        # Add a multi-domain identity instance, which IdentityComponent requires.
         try:
             from agent_engine.cognition.identity.domain_identity import MultiDomainIdentity
             # This creates the object that will be injected into the IdentityComponent constructor.

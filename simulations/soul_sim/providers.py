@@ -13,7 +13,7 @@ from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.cognition.narrative_context_provider_interface import NarrativeContextProviderInterface
 from agent_core.core.ecs.abstractions import SimulationState
-from agent_core.core.ecs.component import ActionPlanComponent, Component, TimeBudgetComponent, ValueSystemComponent
+from agent_core.core.ecs.component import ActionPlanComponent, AffectComponent, Component, EmotionComponent, GoalComponent, IdentityComponent, TimeBudgetComponent, ValueSystemComponent
 from agent_core.environment.controllability_provider_interface import ControllabilityProviderInterface
 from agent_core.environment.state_node_encoder_interface import StateNodeEncoderInterface
 from agent_core.environment.vitality_metrics_provider_interface import VitalityMetricsProviderInterface

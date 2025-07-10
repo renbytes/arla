@@ -1,11 +1,25 @@
-# src/agent_core/core/ecs/event_bus.py
+# agent-core/src/agent_core/core/ecs/event_bus.py
 
+import asyncio
+import inspect
+import traceback
 from collections import defaultdict
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Coroutine, Dict, List, Union, cast
+
+# FIX: Update the EventHandler type to accept both sync and async functions.
+EventHandler = Union[
+    Callable[[Dict[str, Any]], None],
+    Callable[[Dict[str, Any]], Coroutine[Any, Any, None]],
+]
 
 
-# A more specific type for event handlers
-EventHandler = Callable[[Dict[str, Any]], None]
+def _handle_task_exception(task: asyncio.Task) -> None:
+    try:
+        task.result()
+    except Exception:
+        print("--- ERROR IN ASYNC EVENT HANDLER ---")
+        traceback.print_exc()
+        print("------------------------------------")
 
 
 class EventBus:
@@ -22,17 +36,18 @@ class EventBus:
     def publish(self, event_type: str, event_data: Dict[str, Any]) -> None:
         """Publishes an event to all subscribed handlers."""
         if self.debug_logging:
-            print(f"DEBUG: Publishing event '{event_type}' with data keys: {list(event_data.keys())}")
+            print(f"DEBUG: Publishing event '{event_type}'")
 
-        for i, handler in enumerate(self._subscribers[event_type]):
+        for handler in self._subscribers[event_type]:
             try:
-                if self.debug_logging:
-                    print(f"DEBUG: Calling handler {i}: {handler.__name__} for event '{event_type}'")
-                handler(event_data)
-                if self.debug_logging:
-                    print(f"DEBUG: Handler {i} completed successfully")
+                if inspect.iscoroutinefunction(handler):
+                    task = asyncio.create_task(handler(event_data))
+                    task.add_done_callback(_handle_task_exception)
+                else:
+                    # We need to cast here because mypy can't infer that
+                    # if it's not a coroutine, it must be the sync callable.
+                    sync_handler = cast(Callable[[Dict[str, Any]], None], handler)
+                    sync_handler(event_data)
             except Exception as e:
-                print(f"ERROR: Handler {i} ({handler.__name__}) failed for event '{event_type}': {e}")
-                import traceback
-
+                print(f"ERROR: Handler {getattr(handler, '__name__', 'unknown')} failed for event '{event_type}': {e}")
                 traceback.print_exc()

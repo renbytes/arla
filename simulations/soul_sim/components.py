@@ -4,7 +4,7 @@ Defines the concrete, world-specific components for the 'soul_sim' simulation.
 These components represent the physical and tangible aspects of entities in this world.
 """
 
-from collections import deque
+from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -203,3 +203,90 @@ class FailedStatesComponent(Component):
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         return True, []
+
+
+class TimeBudgetComponent(Component):
+    def __init__(self, initial_time_budget: float, lifespan_std_dev_percent: float) -> None:
+        self.initial_time_budget = initial_time_budget
+        self.max_time_budget = initial_time_budget * 2
+        self.current_time_budget: float = initial_time_budget
+        self.is_active: bool = True
+        self.times_died: int = 0
+        self.action_counts: Dict[str, int] = defaultdict(int)
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if self.initial_time_budget <= 0:
+            errors.append(f"initial_time_budget must be > 0, got {self.initial_time_budget}")
+        if self.current_time_budget < 0:
+            errors.append(f"current_time_budget cannot be negative, got {self.current_time_budget}")
+        if self.max_time_budget <= 0:
+            errors.append(f"max_time_budget must be > 0, got {self.max_time_budget}")
+        if self.is_active and self.current_time_budget <= 0:
+            errors.append(f"Entity marked active but has no time budget ({self.current_time_budget})")
+        if not self.is_active and self.current_time_budget > 0:
+            errors.append(f"Entity marked inactive but has time budget ({self.current_time_budget})")
+        if self.current_time_budget > self.max_time_budget * 1.1:
+            errors.append(f"current_time_budget ({self.current_time_budget}) exceeds max ({self.max_time_budget})")
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        fixed: bool = False
+        if self.current_time_budget < 0:
+            self.current_time_budget = 0
+            self.is_active = False
+            fixed = True
+        if self.is_active and self.current_time_budget <= 0:
+            self.is_active = False
+            fixed = True
+        if not self.is_active and self.current_time_budget > 0 and self.current_time_budget < self.initial_time_budget * 0.1:
+            self.current_time_budget = 0
+            fixed = True
+        if self.current_time_budget > self.max_time_budget:
+            self.current_time_budget = self.max_time_budget
+            fixed = True
+        return fixed
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "initial_time_budget": self.initial_time_budget,
+            "current_time_budget": self.current_time_budget,
+            "is_active": self.is_active,
+            "times_died": self.times_died,
+            "action_counts": self.action_counts,
+        }
+
+
+class AffectComponent(Component):
+    def __init__(self, affective_buffer_maxlen: int) -> None:
+        self.prediction_delta_magnitude: float = 0.0
+        self.prev_reward: float = 0.0
+        self.predictive_delta_smooth: float = 0.5
+        self.affective_experience_buffer: deque[Any] = deque(maxlen=affective_buffer_maxlen)
+        self.learned_emotion_clusters: Dict[str, Any] = {}
+        self.cognitive_dissonance: float = 0.0
+        self.dissonance_history: deque[float] = deque(maxlen=100)
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if np.isnan(self.cognitive_dissonance) or np.isinf(self.cognitive_dissonance):
+            errors.append(f"cognitive_dissonance has invalid value: {self.cognitive_dissonance}")
+        if not isinstance(self.dissonance_history, deque):
+            errors.append("dissonance_history is not a deque")
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        fixed: bool = False
+        if np.isnan(self.cognitive_dissonance) or np.isinf(self.cognitive_dissonance):
+            self.cognitive_dissonance = 0.0
+            fixed = True
+        if not isinstance(self.dissonance_history, deque):
+            self.dissonance_history = deque(maxlen=100)
+            fixed = True
+        return fixed
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "prediction_delta_magnitude": self.prediction_delta_magnitude,
+            "cognitive_dissonance": self.cognitive_dissonance,
+        }

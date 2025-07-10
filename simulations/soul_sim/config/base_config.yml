@@ -5,6 +5,26 @@
 # nesting like 'params'.                                                       #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
+action_modules:
+  - "simulations.soul_sim.actions.move_action"
+  - "simulations.soul_sim.actions.extract_action"
+  - "simulations.soul_sim.actions.combat_action"
+  - "simulations.soul_sim.actions.communicate_action"
+  - "simulations.soul_sim.actions.flee_action"
+  - "simulations.soul_sim.actions.nest_action"
+  - "simulations.soul_sim.actions.reflect_action"
+
+logging:
+  components_to_log:
+    - "agent_core.core.ecs.component.TimeBudgetComponent"
+    - "simulations.soul_sim.components.HealthComponent"
+    - "simulations.soul_sim.components.InventoryComponent"
+    - "simulations.soul_sim.components.PositionComponent"
+    - "agent_core.core.ecs.component.EmotionComponent"
+    - "agent_core.core.ecs.component.GoalComponent"
+    - "agent_core.core.ecs.component.ValueSystemComponent"
+    - "agent_core.core.ecs.component.IdentityComponent"
+
 simulation:
   steps: 500
   log_directory: "data/logs"
@@ -139,6 +159,8 @@ learning:
     min_epsilon: 0.05
     alpha: 0.001
     gamma: 0.99
+    state_feature_dim: 16
+    action_feature_dim: 13
   rewards:
     base_reward: 0.0
     move_reward_base: -0.1

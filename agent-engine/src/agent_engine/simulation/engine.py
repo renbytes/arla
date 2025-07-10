@@ -18,9 +18,8 @@ from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
-
-# Imports from agent-persist
 from agent_persist.store import FileStateStore
+from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
 from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent-engine
@@ -43,6 +42,7 @@ class SimulationManager:
         scenario_loader: ScenarioLoaderInterface,
         action_generator: ActionGeneratorInterface,
         decision_selector: DecisionSelectorInterface,
+        db_logger: AsyncDatabaseManager,
         task_id: str = "local_run",
         experiment_id: Optional[str] = None,
         run_id: Optional[str] = None,
@@ -50,13 +50,13 @@ class SimulationManager:
         self.config: Dict[str, Any] = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
         self.device = "cpu"  # Simplified for the engine
         self.save_path = Path(config.get("persistence", {}).get("save_path", "./sim_snapshots"))
+        self.db_logger = db_logger
 
         # --- Injected Dependencies ---
         self.environment = environment
         self.scenario_loader = scenario_loader
         self.action_generator = action_generator
         self.decision_selector = decision_selector
-        # ---
 
         self._setup_simulation_ids(run_id, task_id, experiment_id)
         self._setup_rng()
@@ -64,7 +64,7 @@ class SimulationManager:
         # Initialize core services and state
         self.event_bus = EventBus(self.config)
         self.simulation_state = SimulationState(self.config, self.device)
-        self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config)
+        self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config, db_logger=self.db_logger)
 
         self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
 
@@ -187,3 +187,4 @@ class SimulationManager:
         self.simulation_state.system_manager = self.system_manager
         self.simulation_state.cognitive_scaffold = self.cognitive_scaffold
         self.simulation_state.main_rng = self.main_rng
+        self.simulation_state.db_logger = self.db_logger

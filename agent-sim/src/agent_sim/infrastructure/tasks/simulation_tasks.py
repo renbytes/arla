@@ -1,5 +1,6 @@
+# FILE: agent-sim/src/agent_sim/infrastructure/tasks/simulation_tasks.py
+
 import importlib
-import json
 import os
 import sys
 import traceback
@@ -8,6 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, NoReturn
 
 import mlflow
+from agent_sim.infrastructure.data.async_runner import async_runner
+from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
 from agent_sim.infrastructure.tasks.celery_app import app
 from celery import Task
 
@@ -15,14 +18,19 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.paren
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def _handle_simulation_exception(exc: Exception, task: Task, task_id: str) -> NoReturn:
-    """Logs failure to MLflow and decides whether to retry the task."""
-    error_msg = f"Simulation failed: {str(exc)}\n{traceback.format_exc()}"
+def _handle_simulation_exception(exc: Exception, task: Task, task_id: str, run_id_str: str) -> NoReturn:
+    """Logs failure to MLflow and DB, and decides whether to retry the task."""
+    error_msg = f"Simulation failed for run {run_id_str}: {str(exc)}\n{traceback.format_exc()}"
     print(f"[{task_id}] ERROR: {error_msg}")
-    mlflow.set_tag("status", "failed")
-    mlflow.log_param("error", error_msg)
 
-    # Retry on transient errors like DB connection issues
+    if mlflow.active_run():
+        mlflow.set_tag("status", "failed")
+        mlflow.log_param("error", error_msg)
+
+    db_manager = AsyncDatabaseManager()
+    # Convert string ID to UUID object for the database call
+    async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id_str), "failed", error_msg))
+
     if any(keyword in str(exc).lower() for keyword in ["database is locked", "timeout", "connection"]):
         print(f"[{task_id}] Retrying due to transient error...")
         raise task.retry(exc=exc, countdown=60, max_retries=3)
@@ -35,50 +43,41 @@ def run_simulation_task(
     self: Task,
     config_overrides: Dict[str, Any],
     simulation_package: str,
-    run_id: str,
+    run_id: str,  # This will now be received as a string
     experiment_id: str,
     experiment_name: str,
 ) -> Dict[str, Any]:
-    """
-    Generic task that dynamically loads and runs a specific simulation package.
-    This task is AGNOSTIC to the simulation's internal logic or schemas.
-    """
+    """Worker task that runs a single simulation and logs to a pre-existing run."""
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
     task_id = self.request.id or "local-task"
+    db_manager = AsyncDatabaseManager()
 
     print(f"[{task_id}] Received job for run '{run_id}'")
-    print(f"[{task_id}] Target simulation package: '{simulation_package}'")
 
-    if experiment_name:
-        mlflow.set_experiment(experiment_name)
+    # Convert string ID to UUID object for the database call
+    async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id), "running"))
 
-    with mlflow.start_run(run_name=run_id, experiment_id=experiment_id):
+    # This call now works because run_id is a string
+    with mlflow.start_run(run_id=run_id):
         try:
-            # Log parameters and tags to MLflow
-            scenario_path = config_overrides.get("scenario_path", "N/A")
-            mlflow.log_params(config_overrides)
+            mlflow.set_tag("status", "running")
             mlflow.set_tag("celery_task_id", task_id)
-            mlflow.set_tag("simulation_package", simulation_package)
-            mlflow.set_tag("scenario", os.path.basename(scenario_path).replace(".json", ""))
 
-            # Update Celery task state
-            self.update_state(state="PROGRESS", meta={"status": "Loading simulation package", "progress": 5})
+            self.update_state(state="PROGRESS", meta={"status": "Running simulation", "progress": 10})
 
-            print("--- FINAL CONFIGURATION BEING PASSED TO SIMULATION ---")
-            print(json.dumps(config_overrides, indent=2))
-
-            # Dynamically import and run the specific simulation's entry point
+            # Pass the string run_id to the simulation
             sim_module = importlib.import_module(f"{simulation_package}.run")
             sim_module.start_simulation(run_id, task_id, experiment_id, config_overrides)
 
             self.update_state(state="SUCCESS", meta={"status": "Completed", "progress": 100})
             mlflow.set_tag("status", "completed")
+            # Convert string ID to UUID object for the database call
+            async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id), "completed"))
             print(f"[{task_id}] Successfully completed simulation run: {run_id}")
             return {"run_id": run_id, "status": "completed"}
 
         except Exception as exc:
-            # The helper function will log to MLflow and re-raise the exception
-            _handle_simulation_exception(exc, self, task_id)
+            _handle_simulation_exception(exc, self, task_id, run_id)
 
 
 @app.task(bind=True, name="tasks.run_experiment", queue="experiments")
@@ -90,54 +89,68 @@ def run_experiment_task(
     simulation_package: str,
     experiment_name: str,
 ) -> Dict[str, Any]:
-    """Submits multiple simulation tasks for a complete experiment."""
+    """Orchestrator task that creates DB/MLflow records and submits worker tasks."""
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+    db_manager = AsyncDatabaseManager()
 
-    # Create an MLflow experiment to group the runs
     try:
-        experiment = mlflow.get_experiment_by_name(experiment_name)
-        if experiment:
-            experiment_id = experiment.experiment_id
-        else:
-            experiment_id = mlflow.create_experiment(name=experiment_name)
-        print(f"Using MLflow experiment: '{experiment_name}' (ID: {experiment_id})")
+        mlflow_experiment = mlflow.get_experiment_by_name(experiment_name)
+        mlflow_exp_id = (
+            mlflow_experiment.experiment_id if mlflow_experiment else mlflow.create_experiment(name=experiment_name)
+        )
+
+        db_experiment_uuid = async_runner.run_async(
+            db_manager.create_experiment(
+                name=experiment_name,
+                config=base_config,
+                total_runs=len(scenario_paths) * runs_per_scenario,
+                simulation_package=simulation_package,
+                mlflow_experiment_id=mlflow_exp_id,
+            )
+        )
     except Exception as e:
-        print(f"[bold red]FATAL: Could not create or get MLflow experiment. Error: {e}[/bold red]")
+        print(f"[bold red]FATAL: Could not create/get MLflow/DB experiment. Error: {e}[/bold red]")
         raise
 
     job_ids = []
     for scenario_path in scenario_paths:
         for run_num in range(runs_per_scenario):
-            # Create a unique run ID and apply run-specific config overrides
-            run_id = f"{os.path.basename(scenario_path).replace('.json', '')}-{run_num:03d}-{uuid.uuid4().hex[:4]}"
-            config_overrides = base_config.copy()
-            config_overrides["scenario_path"] = scenario_path
+            run_name = f"{os.path.basename(scenario_path).replace('.json', '')}-{run_num:03d}-{uuid.uuid4().hex[:4]}"
+            config_overrides = {**base_config, "scenario_path": scenario_path}
+            config_overrides.setdefault("simulation", {})["random_seed"] = (
+                config_overrides["simulation"].get("random_seed", 1) + run_num
+            )
 
-            # Ensure each run in a set has a different seed for statistical variance
-            if "simulation" not in config_overrides:
-                config_overrides["simulation"] = {}
-            base_seed = config_overrides["simulation"].get("random_seed", 1)
-            config_overrides["simulation"]["random_seed"] = base_seed + run_num
+            # 1. Let MLflow create the run and give us its string UUID
+            with mlflow.start_run(experiment_id=mlflow_exp_id, run_name=run_name) as run:
+                mlflow_run_id_str = run.info.run_id
+                mlflow.set_tag("status", "queued")
 
-            # Submit the specific simulation task
+            # 2. Submit the Celery task, passing the string ID
             job = (
                 run_simulation_task.s(
-                    config_overrides=config_overrides,
-                    simulation_package=simulation_package,
-                    run_id=run_id,
-                    experiment_id=experiment_id,
-                    experiment_name=experiment_name,
+                    config_overrides, simulation_package, mlflow_run_id_str, mlflow_exp_id, experiment_name
                 )
                 .set(queue="simulations")
                 .delay()
             )
 
+            # 3. Create our DB record, converting the string to a UUID object for the database
+            async_runner.run_async(
+                db_manager.create_simulation_run(
+                    run_id=uuid.UUID(mlflow_run_id_str),
+                    experiment_id=db_experiment_uuid,
+                    task_id=job.id,
+                    scenario_name=os.path.basename(scenario_path).replace(".json", ""),
+                    config=config_overrides,
+                )
+            )
+
             job_ids.append(job.id)
-            print(f"  Submitted job {job.id} for run '{run_id}'")
+            print(f"  Submitted job {job.id} for run '{mlflow_run_id_str}'")
 
     return {
-        "mlflow_experiment_id": experiment_id,
-        "mlflow_experiment_name": experiment_name,
+        "mlflow_experiment_id": mlflow_exp_id,
         "total_jobs_submitted": len(job_ids),
         "celery_task_ids": job_ids,
     }
