@@ -12,16 +12,6 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-# Get the absolute path to the 'agent-sim' directory
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-# Get the absolute path to the source directory within 'agent-sim'
-SOURCE_PATH = os.path.join(PROJECT_ROOT, "src")
-
-# Prepend the source path to sys.path to ensure local modules are found first
-if SOURCE_PATH not in sys.path:
-    sys.path.insert(0, SOURCE_PATH)
-
 
 # ────────────────────────────────────────────────────────────────────────────────
 # 1.  Embedding stub  (ℝ⁴  unit-norm)
