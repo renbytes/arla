@@ -1,25 +1,14 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-added-large-files
-
-repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.3
     hooks:
-    # This hook lints for bugs and unused imports, and auto-fixes them.
     -   id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-    # This hook does all the formatting, replacing Black.
+        args:
+        - --fix
+        - --exit-non-zero-on-fix
     -   id: ruff-format
-
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.10.0'
+    rev: v1.16.1
     hooks:
     -   id: mypy
-        # TODO add back '|agent-sim/src'
         files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src)/
