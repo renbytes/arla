@@ -13,11 +13,12 @@ repos:
         name: mypy
         entry: mypy
         language: system
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src)/
+        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
         args: [
             agent-core/src,
             agent-engine/src, 
             agent-concurrent/src,
-            agent-persist/src
+            agent-persist/src,
+            agent-sim/src
         ]
         pass_filenames: false
