@@ -40,8 +40,8 @@ jobs:
 
       - name: Type check with Mypy
         run: |
-          # Tell mypy which packages to check.
-          mypy agent-core/src agent-engine/src agent-concurrent/src agent-persist/src agent-sim/src
+          # Only check packages that have Python files and aren't excluded
+          mypy agent-core/src agent-engine/src agent-concurrent/src agent-persist/src
 
       - name: Run tests with Pytest
         run: |
