@@ -6,19 +6,36 @@ from agent_core.core.ecs.component import (
 )
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
 from agent_engine.utils.math_utils import safe_divide
-from simulations.soul_sim.components import CombatComponent, HealthComponent, InventoryComponent, PositionComponent, ResourceComponent
+
+from simulations.soul_sim.components import (
+    CombatComponent,
+    HealthComponent,
+    InventoryComponent,
+    PositionComponent,
+    ResourceComponent,
+)
 
 
 class SoulSimStateEncoder(StateEncoderInterface):
     """Encodes the soul_sim world state into a numerical vector."""
 
     def encode_state(
-        self, simulation_state: Any, entity_id: str, config: Dict[str, Any], target_entity_id: Optional[str] = None
+        self,
+        simulation_state: Any,
+        entity_id: str,
+        config: Dict[str, Any],
+        target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """Creates a feature vector from soul-sim's specific components."""
         components = simulation_state.entities.get(entity_id, {})
         pos_comp, time_comp, health_comp, inv_comp = (
-            components.get(c) for c in [PositionComponent, TimeBudgetComponent, HealthComponent, InventoryComponent]
+            components.get(c)
+            for c in [
+                PositionComponent,
+                TimeBudgetComponent,
+                HealthComponent,
+                InventoryComponent,
+            ]
         )
         if not all([pos_comp, time_comp, health_comp, inv_comp]):
             return np.zeros(16, dtype=np.float32)
@@ -37,9 +54,9 @@ class SoulSimStateEncoder(StateEncoderInterface):
 
         # --- Nearest Resource Features ---
         resource_features = [0.0] * 4  # [dist, health, type1, type2]
-        closest_res_dist = float('inf')
+        closest_res_dist = float("inf")
         all_resources = simulation_state.get_entities_with_components([ResourceComponent, PositionComponent])
-        for res_id, res_comps in all_resources.items():
+        for _res_id, res_comps in all_resources.items():
             res_pos_comp = res_comps.get(PositionComponent)
             dist = env.distance(pos_comp.position, res_pos_comp.position)
             if dist < closest_res_dist:
@@ -53,8 +70,8 @@ class SoulSimStateEncoder(StateEncoderInterface):
                 ]
 
         # --- Nearest Agent Features ---
-        other_agent_features = [0.0] * 4 # [dist, health, attack, is_target]
-        closest_agent_dist = float('inf')
+        other_agent_features = [0.0] * 4  # [dist, health, attack, is_target]
+        closest_agent_dist = float("inf")
         all_agents = simulation_state.get_entities_with_components([TimeBudgetComponent, PositionComponent])
         for other_id, other_comps in all_agents.items():
             if other_id == entity_id:
@@ -68,8 +85,8 @@ class SoulSimStateEncoder(StateEncoderInterface):
                 other_agent_features = [
                     dist / max_dist,
                     other_health.normalized if other_health else 0.0,
-                    safe_divide(other_combat.attack_power, 20.0) if other_combat else 0.0,
-                    1.0 if other_id == target_entity_id else 0.0
+                    (safe_divide(other_combat.attack_power, 20.0) if other_combat else 0.0),
+                    1.0 if other_id == target_entity_id else 0.0,
                 ]
 
         # --- Social/Misc Features (can be expanded) ---
@@ -77,7 +94,8 @@ class SoulSimStateEncoder(StateEncoderInterface):
 
         # --- Combine and Pad/Truncate ---
         feature_vector = np.array(
-            self_features + resource_features + other_agent_features + social_features, dtype=np.float32
+            self_features + resource_features + other_agent_features + social_features,
+            dtype=np.float32,
         )
 
         expected_size = config.get("learning", {}).get("q_learning", {}).get("state_feature_dim", 16)

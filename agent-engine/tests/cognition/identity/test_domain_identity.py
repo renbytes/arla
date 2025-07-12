@@ -1,13 +1,14 @@
 # tests/cognition/identity/test_domain_identity.py
 
 from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
 # Subject under test
 from agent_engine.cognition.identity.domain_identity import (
-    MultiDomainIdentity,
     IdentityDomain,
+    MultiDomainIdentity,
     SocialValidationCollector,
 )
 
@@ -112,7 +113,12 @@ def test_update_domain_identity_successful_update(identity):
     identity.domains[domain_to_update].embedding = np.array([0, 0, 1, 0], dtype=np.float32)
 
     new_traits = np.array([0, 1, 0, 1], dtype=np.float32)
-    context = {"social_feedback": {"positive_social_responses": 0.9, "social_approval_rating": 0.8}}
+    context = {
+        "social_feedback": {
+            "positive_social_responses": 0.9,
+            "social_approval_rating": 0.8,
+        }
+    }
     original_embedding = identity.get_domain_embedding(domain_to_update).copy()
 
     # Act
@@ -150,7 +156,6 @@ def test_update_domain_identity_resisted_update(identity):
     # FIX: Set a known initial embedding.
     initial_embedding = np.array([1, 1, 1, 1], dtype=np.float32)
     identity.domains[domain_to_update].embedding = initial_embedding / np.linalg.norm(initial_embedding)
-
 
     # New traits are very different from existing identity
     new_traits = -identity.get_domain_embedding(domain_to_update)

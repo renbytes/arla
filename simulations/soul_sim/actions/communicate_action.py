@@ -2,11 +2,12 @@
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
-from simulations.soul_sim.components import PositionComponent, TimeBudgetComponent
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent
+
+from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
+from simulations.soul_sim.components import PositionComponent, TimeBudgetComponent
 
 if TYPE_CHECKING:
     from agent_core.core.ecs.abstractions import SimulationState
@@ -20,7 +21,9 @@ class CommunicateAction(ActionInterface):
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
         return simulation_state.config.get("agent", {}).get("communicate_cost", 0.2)
 
-    def generate_possible_params(self, entity_id: str, simulation_state: "SimulationState", current_tick: int) -> List[Dict[str, Any]]:
+    def generate_possible_params(
+        self, entity_id: str, simulation_state: "SimulationState", current_tick: int
+    ) -> List[Dict[str, Any]]:
         params_list: List[Dict[str, Any]] = []
         pos_comp = simulation_state.get_component(entity_id, PositionComponent)
         if not isinstance(pos_comp, PositionComponent) or not hasattr(pos_comp, "environment"):
@@ -34,14 +37,43 @@ class CommunicateAction(ActionInterface):
                 continue
             other_time_comp = simulation_state.get_component(other_id, TimeBudgetComponent)
             if isinstance(other_time_comp, TimeBudgetComponent) and other_time_comp.is_active:
-                params_list.append({"target_agent_id": other_id, "message": "information_exchange", "intent": Intent.COOPERATE})
-                params_list.append({"target_agent_id": other_id, "message": "assert_dominance", "intent": Intent.COMPETE})
+                params_list.append(
+                    {
+                        "target_agent_id": other_id,
+                        "message": "information_exchange",
+                        "intent": Intent.COOPERATE,
+                    }
+                )
+                params_list.append(
+                    {
+                        "target_agent_id": other_id,
+                        "message": "assert_dominance",
+                        "intent": Intent.COMPETE,
+                    }
+                )
 
         return params_list
 
-    def execute(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int) -> Dict[str, Any]:
+    def execute(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+        current_tick: int,
+    ) -> Dict[str, Any]:
         return {}
 
-    def get_feature_vector(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+    ) -> List[float]:
         intent = params.get("intent", Intent.COOPERATE)
-        return create_standard_feature_vector(self.action_id, intent, self.get_base_cost(simulation_state), params, {"target_agent_id": (0, 1, 1)})
+        return create_standard_feature_vector(
+            self.action_id,
+            intent,
+            self.get_base_cost(simulation_state),
+            params,
+            {"target_agent_id": (0, 1, 1)},
+        )

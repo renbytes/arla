@@ -10,7 +10,9 @@ from typing import Any, Dict, NoReturn
 
 import mlflow
 from agent_sim.infrastructure.data.async_runner import async_runner
-from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
 from agent_sim.infrastructure.tasks.celery_app import app
 from celery import Task
 
@@ -129,7 +131,11 @@ def run_experiment_task(
             # 2. Submit the Celery task, passing the string ID
             job = (
                 run_simulation_task.s(
-                    config_overrides, simulation_package, mlflow_run_id_str, mlflow_exp_id, experiment_name
+                    config_overrides,
+                    simulation_package,
+                    mlflow_run_id_str,
+                    mlflow_exp_id,
+                    experiment_name,
                 )
                 .set(queue="simulations")
                 .delay()

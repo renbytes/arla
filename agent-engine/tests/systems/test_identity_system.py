@@ -8,21 +8,21 @@ symbol used inside the production module –
 unit-testing and eliminates the 401 error spam.
 """
 
-from unittest.mock import MagicMock, patch
 from typing import Any, Dict, Iterator
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
-# Subject under test
-from agent_engine.systems.identity_system import IdentitySystem
+from agent_core.core.ecs.component import (
+    IdentityComponent,
+)
 from agent_engine.cognition.identity.domain_identity import (
     IdentityDomain,
     MultiDomainIdentity,
 )
-from agent_core.core.ecs.component import (
-    IdentityComponent,
-)
+
+# Subject under test
+from agent_engine.systems.identity_system import IdentitySystem
 
 # --- Fixtures ---
 
@@ -86,7 +86,10 @@ def identity_system(
         mock_get_embedding.return_value = np.ones(4, dtype=np.float32)
         system = IdentitySystem(
             simulation_state=mock_simulation_state,
-            config={"llm": {}, "agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}}},
+            config={
+                "llm": {},
+                "agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}},
+            },
             cognitive_scaffold=mock_cognitive_scaffold,
         )
         yield system
@@ -96,7 +99,9 @@ def identity_system(
 
 
 def test_on_reflection_completed_updates_identity(
-    identity_system: IdentitySystem, mock_simulation_state: MagicMock, mock_cognitive_scaffold: MagicMock
+    identity_system: IdentitySystem,
+    mock_simulation_state: MagicMock,
+    mock_cognitive_scaffold: MagicMock,
 ):
     """
     GIVEN a reflection event with a context dictionary
@@ -130,7 +135,11 @@ def test_on_reflection_completed_updates_identity(
     updated_domains = {c.kwargs["domain"] for c in calls}
 
     assert len(updated_domains) == 3
-    assert {IdentityDomain.SOCIAL, IdentityDomain.COMPETENCE, IdentityDomain.MORAL} == updated_domains
+    assert {
+        IdentityDomain.SOCIAL,
+        IdentityDomain.COMPETENCE,
+        IdentityDomain.MORAL,
+    } == updated_domains
 
     # 3. The generic context from the event was passed through to the identity model.
     call_context = calls[0].kwargs["context"]
@@ -168,10 +177,19 @@ def test_on_reflection_completed_missing_component(identity_system: IdentitySyst
     "llm_response, expected_domains",
     [
         ("", {}),  # Empty response
-        ("SOCIAL:\n- friendly: 0.8", {IdentityDomain.SOCIAL: {"friendly": 0.8}}),  # Valid
+        (
+            "SOCIAL:\n- friendly: 0.8",
+            {IdentityDomain.SOCIAL: {"friendly": 0.8}},
+        ),  # Valid
         ("INVALID_DOMAIN:\n- trait: 1.0", {}),  # Skips invalid domains
-        ("COMPETENCE:\n- invalid-line", {IdentityDomain.COMPETENCE: {}}),  # Handles malformed lines
-        ("MORAL:\n- honest: 99.9", {IdentityDomain.MORAL: {"honest": 1.0}}),  # Clips scores to 1.0
+        (
+            "COMPETENCE:\n- invalid-line",
+            {IdentityDomain.COMPETENCE: {}},
+        ),  # Handles malformed lines
+        (
+            "MORAL:\n- honest: 99.9",
+            {IdentityDomain.MORAL: {"honest": 1.0}},
+        ),  # Clips scores to 1.0
     ],
 )
 def test_parse_structured_llm_traits(identity_system: IdentitySystem, llm_response: str, expected_domains: Dict):

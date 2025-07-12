@@ -1,7 +1,8 @@
 from typing import Any, List
+
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
-from agent_core.core.ecs.component import ActionPlanComponent
 from agent_core.agents.actions.action_registry import action_registry
+from agent_core.core.ecs.component import ActionPlanComponent
 
 
 class SoulSimActionGenerator(ActionGeneratorInterface):

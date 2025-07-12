@@ -1,27 +1,28 @@
 # agent-engine/tests/systems/test_reflection_system.py
 
-from unittest.mock import MagicMock, AsyncMock, patch, call, ANY
-import pytest
+from unittest.mock import ANY, MagicMock, call, patch
 
-# Subject under test
-from agent_engine.systems.reflection_system import ReflectionSystem
+import pytest
 from agent_core.core.ecs.component import (
-    Component,
-    EpisodeComponent,
-    MemoryComponent,
-    TimeBudgetComponent,
     AffectComponent,
-    IdentityComponent,
-    GoalComponent,
     EmotionComponent,
+    EpisodeComponent,
+    GoalComponent,
+    IdentityComponent,
+    MemoryComponent,
     SocialMemoryComponent,
+    TimeBudgetComponent,
     ValidationComponent,
     ValueSystemComponent,
 )
 from agent_engine.cognition.identity.domain_identity import MultiDomainIdentity
 from agent_engine.cognition.reflection.episode import Episode
 
+# Subject under test
+from agent_engine.systems.reflection_system import ReflectionSystem
+
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_simulation_state():
@@ -49,6 +50,7 @@ def mock_simulation_state():
     state.get_entities_with_components.return_value = {"agent1": state.entities["agent1"]}
     return state
 
+
 @pytest.fixture
 def mock_narrative_provider():
     """Mocks the NarrativeContextProviderInterface."""
@@ -56,15 +58,17 @@ def mock_narrative_provider():
     # Return a predictable context dictionary
     provider.get_narrative_context.return_value = {
         "narrative": "I was at (5,5) and felt neutral.",
-        "llm_final_account": "", # This is filled in by the system
+        "llm_final_account": "",  # This is filled in by the system
         "social_feedback": {},
     }
     return provider
+
 
 @pytest.fixture
 def mock_cognitive_scaffold():
     """Mocks the CognitiveScaffold to return predictable LLM responses."""
     scaffold = MagicMock()
+
     # Set up a side effect to handle different query purposes
     def query_side_effect(agent_id, purpose, prompt, current_tick):
         if purpose == "episode_theming":
@@ -76,13 +80,20 @@ def mock_cognitive_scaffold():
     scaffold.query.side_effect = query_side_effect
     return scaffold
 
+
 @pytest.fixture
 def mock_event_bus():
     """Mocks the EventBus."""
     return MagicMock()
 
+
 @pytest.fixture
-def reflection_system(mock_simulation_state, mock_narrative_provider, mock_cognitive_scaffold, mock_event_bus):
+def reflection_system(
+    mock_simulation_state,
+    mock_narrative_provider,
+    mock_cognitive_scaffold,
+    mock_event_bus,
+):
     """Provides an initialized ReflectionSystem with all dependencies mocked."""
     mock_simulation_state.event_bus = mock_event_bus
 
@@ -94,30 +105,43 @@ def reflection_system(mock_simulation_state, mock_narrative_provider, mock_cogni
     )
     return system
 
+
 # --- Test Cases ---
 
-class TestReflectionSystem:
 
+class TestReflectionSystem:
     @pytest.mark.asyncio
-    async def test_run_reflection_cycle_orchestration(self, reflection_system, mock_simulation_state, mock_narrative_provider, mock_cognitive_scaffold, mock_event_bus):
+    async def test_run_reflection_cycle_orchestration(
+        self,
+        reflection_system,
+        mock_simulation_state,
+        mock_narrative_provider,
+        mock_cognitive_scaffold,
+        mock_event_bus,
+    ):
         """
         Tests that _run_reflection_cycle correctly orchestrates the full process:
         chunking, synthesizing, and publishing.
         """
         # --- Arrange ---
         # FIX: Use the correct key "action_plan" to match what ActionSystem publishes.
-        reflection_system.event_buffer["agent1"] = [{"current_tick": 1, "action_plan": MagicMock(action_type=MagicMock(name="Test Action"))}]
+        reflection_system.event_buffer["agent1"] = [
+            {
+                "current_tick": 1,
+                "action_plan": MagicMock(action_type=MagicMock(name="Test Action")),
+            }
+        ]
         components = mock_simulation_state.entities["agent1"]
 
         # --- Act ---
         # The component check is validated in a separate test, so we patch it here
         # to isolate the orchestration logic.
-        with patch.object(reflection_system, '_all_required_components_present', return_value=True):
+        with patch.object(reflection_system, "_all_required_components_present", return_value=True):
             await reflection_system._run_reflection_cycle(
                 entity_id="agent1",
                 components=components,
                 current_tick=50,
-                is_final_reflection=False
+                is_final_reflection=False,
             )
 
         # --- Assert ---
@@ -125,10 +149,7 @@ class TestReflectionSystem:
         # It should call the scaffold to get a theme for the new episode
         # FIX: Use keyword arguments to match the actual implementation
         mock_cognitive_scaffold.query.assert_any_call(
-            agent_id="agent1",
-            purpose="episode_theming",
-            prompt=ANY,
-            current_tick=50
+            agent_id="agent1", purpose="episode_theming", prompt=ANY, current_tick=50
         )
 
         # 2. Verify narrative synthesis was called
@@ -137,7 +158,7 @@ class TestReflectionSystem:
             agent_id="agent1",
             purpose="reflection_synthesis",
             prompt=ANY,
-            current_tick=50
+            current_tick=50,
         )
 
         # 3. Verify the final events were published
@@ -149,10 +170,10 @@ class TestReflectionSystem:
         mock_event_bus.publish.assert_has_calls(expected_calls, any_order=True)
 
         # Check the content of the 'reflection_completed' event
-        completed_call = next(c for c in mock_event_bus.publish.call_args_list if c[0][0] == 'reflection_completed')
+        completed_call = next(c for c in mock_event_bus.publish.call_args_list if c[0][0] == "reflection_completed")
         completed_data = completed_call[0][1]
-        assert completed_data['entity_id'] == 'agent1'
-        assert completed_data['context']['llm_final_account'] == "I have learned that I am a pensive agent."
+        assert completed_data["entity_id"] == "agent1"
+        assert completed_data["context"]["llm_final_account"] == "I have learned that I am a pensive agent."
 
     def test_on_action_executed_for_chunking(self, reflection_system):
         """
@@ -185,7 +206,10 @@ class TestReflectionSystem:
 
         # Add events to the buffer using the correct key
         reflection_system.event_buffer[entity_id] = [
-            {"current_tick": 10, "action_plan": MagicMock(action_type=MagicMock(name="MOVE"))},
+            {
+                "current_tick": 10,
+                "action_plan": MagicMock(action_type=MagicMock(name="MOVE")),
+            },
             {"current_tick": 12, "action_outcome": MagicMock(details={})},
         ]
 
@@ -217,7 +241,7 @@ class TestReflectionSystem:
             entity_id="agent_incomplete",
             components=incomplete_components,
             current_tick=50,
-            is_final_reflection=False
+            is_final_reflection=False,
         )
 
         # Assert

@@ -3,14 +3,19 @@
 from agent_core.environment.interface import EnvironmentInterface
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.utils.class_importer import import_class
-from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
 from omegaconf import DictConfig, OmegaConf
 
 from agent_persist.models import SimulationSnapshot
 
 
 def restore_state_from_snapshot(
-    snapshot: SimulationSnapshot, config: DictConfig, environment: EnvironmentInterface, db_logger: AsyncDatabaseManager
+    snapshot: SimulationSnapshot,
+    config: DictConfig,
+    environment: EnvironmentInterface,
+    db_logger: AsyncDatabaseManager,
 ) -> SimulationState:
     """Reconstructs a live SimulationState from a Pydantic snapshot model."""
 

@@ -146,7 +146,8 @@ class AffectSystem(System):
             )
 
         emotion_comp.current_emotion_category = get_emotion_from_affect(
-            **exp.to_dict(), learned_emotion_clusters=getattr(affect_comp, "learned_emotion_clusters", {})
+            **exp.to_dict(),
+            learned_emotion_clusters=getattr(affect_comp, "learned_emotion_clusters", {}),
         )
 
     def _create_affective_experience(

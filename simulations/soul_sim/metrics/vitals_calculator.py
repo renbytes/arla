@@ -1,11 +1,12 @@
 # FILE: simulations/soul_sim/metrics/vitals_calculator.py
 
 from collections import defaultdict
-from typing import Any, Dict, List, Type
+from typing import Any, Dict
 
 import numpy as np
-from agent_core.core.ecs.component import Component, TimeBudgetComponent
+from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.logging.metrics_calculator_interface import MetricsCalculatorInterface
+
 from simulations.soul_sim.components import HealthComponent, InventoryComponent
 
 
@@ -40,7 +41,7 @@ class VitalsAndEconomyCalculator(MetricsCalculatorInterface):
         return {
             "vitals_active_agents": float(active_agents),
             "vitals_avg_health": np.mean(stats["health"]) if stats["health"] else 0.0,
-            "vitals_avg_time_budget": np.mean(stats["time_budget"]) if stats["time_budget"] else 0.0,
+            "vitals_avg_time_budget": (np.mean(stats["time_budget"]) if stats["time_budget"] else 0.0),
             "economy_total_resources": np.sum(stats["resources"]),
             "economy_gini_coefficient": float(gini),
         }

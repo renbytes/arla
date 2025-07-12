@@ -239,7 +239,11 @@ class TimeBudgetComponent(Component):
         if self.is_active and self.current_time_budget <= 0:
             self.is_active = False
             fixed = True
-        if not self.is_active and self.current_time_budget > 0 and self.current_time_budget < self.initial_time_budget * 0.1:
+        if (
+            not self.is_active
+            and self.current_time_budget > 0
+            and self.current_time_budget < self.initial_time_budget * 0.1
+        ):
             self.current_time_budget = 0
             fixed = True
         if self.current_time_budget > self.max_time_budget:

@@ -7,17 +7,16 @@ repos:
     -   id: check-yaml
     -   id: check-added-large-files
 
+repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.8
+    rev: v0.4.4  # Or a newer version
     hooks:
+    # This hook lints for bugs and unused imports, and auto-fixes them.
     -   id: ruff
-        # Match Python files in ANY sub-repo's src directory
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
         args: [--fix, --exit-non-zero-on-fix]
+    # This hook does all the formatting, replacing Black.
     -   id: ruff-format
-        # Also match files in all src directories for formatting
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
-
+    
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: 'v1.10.0'
     hooks:

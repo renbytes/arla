@@ -1,12 +1,13 @@
 # tests/test_store.py
 
-import pytest
 import json
 from pathlib import Path
 
+import pytest
+from agent_persist.models import SimulationSnapshot
+
 # Subject under test
 from agent_persist.store import FileStateStore
-from agent_persist.models import SimulationSnapshot
 
 # --- Fixtures ---
 

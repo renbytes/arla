@@ -5,7 +5,14 @@ allowing for different world structures (e.g., 2D Grid, Graph, etc.).
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Set, Tuple  # Added Any for SpatialIndex placeholder
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 
 
 # Placeholder for SpatialIndex if it's not a separate, shared component.
@@ -29,7 +36,10 @@ class SpatialIndex:
         pass
 
     def update_entity_position(
-        self, entity_id: str, old_pos: Optional[Tuple[int, int]], new_pos: Tuple[int, int]
+        self,
+        entity_id: str,
+        old_pos: Optional[Tuple[int, int]],
+        new_pos: Tuple[int, int],
     ) -> None:
         pass
 
@@ -46,7 +56,9 @@ class EnvironmentInterface(ABC):
     """
 
     @abstractmethod
-    def get_valid_positions(self) -> List[Any]:  # Return type could be more specific, e.g., List[Tuple[int, int]]
+    def get_valid_positions(
+        self,
+    ) -> List[Any]:  # Return type could be more specific, e.g., List[Tuple[int, int]]
         """Return all valid positions in this environment."""
         pass
 

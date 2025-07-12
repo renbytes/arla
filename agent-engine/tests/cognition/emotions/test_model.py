@@ -1,12 +1,12 @@
 # tests/cognition/emotions/test_model.py
 
 from unittest.mock import patch
+
 import pytest
+from agent_engine.cognition.emotions.appraisal_theory import AppraisalProcessor
 
 # Subject under test
 from agent_engine.cognition.emotions.model import EmotionalDynamics, update_emotion
-from agent_engine.cognition.emotions.appraisal_theory import AppraisalProcessor
-
 
 # --- Fixtures ---
 

@@ -3,9 +3,9 @@
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
+from agent_core.agents.actions.action_registry import action_registry
 from sklearn.cluster import KMeans
 
-from agent_core.agents.actions.action_registry import action_registry
 from .affect_base import AffectiveExperience
 
 
@@ -32,7 +32,11 @@ def name_experience_cluster(
                 action_name = action_instance.name
 
         prompt_samples.append(
-            f"(Action: {action_name}, Reward: {exp.outcome_reward:.1f}, Valence: {exp.valence:.2f}, Arousal: {exp.arousal:.2f})"
+            f"""(Action: {action_name},
+            Reward: {exp.outcome_reward:.1f},
+            Valence: {exp.valence:.2f},
+            Arousal: {exp.arousal:.2f})
+            """
         )
 
     # Use an f-string to inject the samples into the template

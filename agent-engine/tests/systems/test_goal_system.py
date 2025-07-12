@@ -1,18 +1,19 @@
 # tests/systems/test_goal_system.py
 
+import os
 from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-import os
+from agent_core.core.ecs.component import (
+    EmotionComponent,
+    GoalComponent,
+    IdentityComponent,
+    MemoryComponent,
+)
 
 # Subject under test
 from agent_engine.systems.goal_system import GoalSystem
-from agent_core.core.ecs.component import (
-    GoalComponent,
-    MemoryComponent,
-    IdentityComponent,
-    EmotionComponent,
-)
 
 # --- Fixtures ---
 
@@ -34,11 +35,31 @@ def mock_simulation_state():
 
     mem_comp = MemoryComponent()
     mem_comp.episodic_memory = [
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.7, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.7,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
     ]
 
     id_comp = MagicMock(spec=IdentityComponent)
@@ -190,7 +211,11 @@ def test_on_update_goals_event_missing_components(goal_system, mock_simulation_s
     Tests that the system handles an entity with missing components gracefully.
     """
     # Arrange
-    event_data = {"entity_id": "agent_missing_comps", "narrative": "...", "current_tick": 100}
+    event_data = {
+        "entity_id": "agent_missing_comps",
+        "narrative": "...",
+        "current_tick": 100,
+    }
     mock_simulation_state.entities["agent_missing_comps"] = {}  # No components
 
     # Act

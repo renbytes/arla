@@ -117,7 +117,13 @@ def _stub_llm(monkeypatch):
             return False, sim, support
 
             monkeypatch.setattr(MultiDomainIdentity, "get_domain_embedding", _patched_get, raising=False)
-            monkeypatch.setattr(MultiDomainIdentity, "update_domain_identity", _patched_update, raising=False)
+            monkeypatch.setattr(
+                MultiDomainIdentity,
+                "update_domain_identity",
+                _patched_update,
+                raising=False,
+            )
+
     except ImportError:
         # Identity code not imported in this session – nothing to patch.
         pass

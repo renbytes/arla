@@ -1,12 +1,15 @@
 # tests/cognition/reflection/test_counterfactual.py
 
-import pytest
 from unittest.mock import MagicMock
 
-# Subject under test
-from agent_engine.cognition.reflection.counterfactual import generate_counterfactual, CounterfactualEpisode
-from agent_engine.cognition.reflection.episode import Episode
+import pytest
 
+# Subject under test
+from agent_engine.cognition.reflection.counterfactual import (
+    CounterfactualEpisode,
+    generate_counterfactual,
+)
+from agent_engine.cognition.reflection.episode import Episode
 
 # --- Fixtures ---
 
@@ -34,7 +37,12 @@ def sample_episode():
         "reward": 10.0,
         "action": {"type": "COMBAT", "target": "enemy_1"},
     }
-    other_event = {"tick": 48, "action_type": "MOVE", "status": "SUCCESS", "reward": 0.1}
+    other_event = {
+        "tick": 48,
+        "action_type": "MOVE",
+        "status": "SUCCESS",
+        "reward": 0.1,
+    }
 
     episode = Episode(
         start_tick=45,

@@ -16,7 +16,11 @@ class LoggingSystem(System):
     """
 
     def __init__(
-        self, simulation_state: Any, config: Dict[str, Any], cognitive_scaffold: Any, exporters: List[ExporterInterface]
+        self,
+        simulation_state: Any,
+        config: Dict[str, Any],
+        cognitive_scaffold: Any,
+        exporters: List[ExporterInterface],
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
         self.exporters = exporters

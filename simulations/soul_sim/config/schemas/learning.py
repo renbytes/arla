@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 # --- Learning Sub-configs ---
 class QLearningConfig(BaseModel):
     initial_epsilon: float
@@ -7,6 +8,7 @@ class QLearningConfig(BaseModel):
     min_epsilon: float
     alpha: float
     gamma: float
+
 
 class RewardsConfig(BaseModel):
     base_reward: float
@@ -25,10 +27,12 @@ class RewardsConfig(BaseModel):
     decay_reduction_per_nest: float
     max_decay_reduction: float
 
+
 class FailedStateConfig(BaseModel):
     threshold: float
     penalty_weight: float
     decay_rate: float
+
 
 class MemoryConfig(BaseModel):
     short_term_memory_maxlen: int
@@ -37,6 +41,7 @@ class MemoryConfig(BaseModel):
     reflection_interval: int
     cognitive_dissonance_threshold: float
 
+
 class IdentityLearningConfig(BaseModel):
     update_factor: float
     affect_mod_positive_action_arousal: float
@@ -44,10 +49,12 @@ class IdentityLearningConfig(BaseModel):
     self_schema_update_periods: int
     competence_bonus_multiplier: float
 
+
 class CriticalStateConfig(BaseModel):
     health_threshold_percent: float
     time_threshold_percent: float
     resource_threshold: float
+
 
 # --- Top-level Learning Config ---
 class LearningConfig(BaseModel):

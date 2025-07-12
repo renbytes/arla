@@ -90,7 +90,10 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         update_occurred = False
         if combined_support > update_threshold:
             update_strength = self._calculate_update_strength(
-                consistency_score, validation_score, resistance, current_domain.confidence
+                consistency_score,
+                validation_score,
+                resistance,
+                current_domain.confidence,
             )
             # Use the normalized traits for the delta calculation
             identity_delta = norm_new_traits - current_domain.embedding
@@ -118,7 +121,10 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         return update_occurred, consistency_score, validation_metrics
 
     def _assess_consistency(
-        self, new_traits: np.ndarray, current_embedding: np.ndarray, current_confidence: float
+        self,
+        new_traits: np.ndarray,
+        current_embedding: np.ndarray,
+        current_confidence: float,
     ) -> float:
         """Assess how consistent new traits are with existing self-concept."""
         if current_confidence < 0.1:
@@ -162,7 +168,10 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         return float(np.clip(final_validation, 0.0, 1.0))
 
     def _calculate_resistance(
-        self, current_domain: DomainIdentity, consistency_score: float, validation_score: float
+        self,
+        current_domain: DomainIdentity,
+        consistency_score: float,
+        validation_score: float,
     ) -> float:
         """Calculate psychological resistance to identity change."""
         stability_resistance = current_domain.stability * 0.4
@@ -173,7 +182,11 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         return float(np.clip(total_resistance, 0.0, 0.9))
 
     def _calculate_update_strength(
-        self, consistency_score: float, validation_score: float, resistance: float, current_confidence: float
+        self,
+        consistency_score: float,
+        validation_score: float,
+        resistance: float,
+        current_confidence: float,
     ) -> float:
         """Calculate how strongly to update the identity embedding."""
         evidence_strength = consistency_score * 0.4 + validation_score * 0.6
@@ -268,7 +281,12 @@ class SocialValidationCollector:
         if not social_schemas:
             return feedback
 
-        positive_count, negative_count, total_valence, recognition_score = 0, 0, 0.0, 0.0
+        positive_count, negative_count, total_valence, recognition_score = (
+            0,
+            0,
+            0.0,
+            0.0,
+        )
 
         for schema in social_schemas.values():
             if hasattr(schema, "impression_valence") and hasattr(schema, "interaction_count"):

@@ -3,20 +3,23 @@
 Unit tests for the CombatSystem in the soul_sim package.
 """
 
-from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 from agent_core.core.ecs.component import ActionPlanComponent, TimeBudgetComponent
 from agent_engine.simulation.simulation_state import SimulationState
-from simulations.soul_sim.components import CombatComponent, HealthComponent, PositionComponent
+
+from simulations.soul_sim.components import (
+    CombatComponent,
+    HealthComponent,
+    PositionComponent,
+)
 
 # --- Corrected Absolute Imports ---
 from simulations.soul_sim.environment.grid_world import GridWorld
 from simulations.soul_sim.systems.combat_system import CombatSystem
 from simulations.soul_sim.tests.systems.utils import MockEventBus
-from simulations.soul_sim.world import Grid2DEnvironment
 
 # --- Mock Objects and Fixtures for Testing ---
 
@@ -56,8 +59,8 @@ def combat_system_setup():
 
     def get_component_side_effect(entity_id, comp_type):
         return mock_state.entities.get(entity_id, {}).get(comp_type)
-    mock_state.get_component.side_effect = get_component_side_effect
 
+    mock_state.get_component.side_effect = get_component_side_effect
 
     system = CombatSystem(simulation_state=mock_state, config=mock_state.config, cognitive_scaffold=None)
 
@@ -79,7 +82,11 @@ def test_combat_system_resolves_attack(combat_system_setup):
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
 
     # FIX: The system expects the key "action_plan_component" from the event.
-    combat_event = {"entity_id": attacker_id, "action_plan_component": action_plan, "current_tick": 1}
+    combat_event = {
+        "entity_id": attacker_id,
+        "action_plan_component": action_plan,
+        "current_tick": 1,
+    }
 
     system.on_execute_combat(combat_event)
 
@@ -112,7 +119,11 @@ def test_combat_system_handles_defeat(combat_system_setup):
 
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
     # FIX: The system expects the key "action_plan_component" from the event.
-    combat_event = {"entity_id": attacker_id, "action_plan_component": action_plan, "current_tick": 1}
+    combat_event = {
+        "entity_id": attacker_id,
+        "action_plan_component": action_plan,
+        "current_tick": 1,
+    }
 
     system.on_execute_combat(combat_event)
 

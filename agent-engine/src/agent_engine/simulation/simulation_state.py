@@ -27,7 +27,9 @@ if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
     from agent_core.environment.interface import EnvironmentInterface
-    from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+    from agent_sim.infrastructure.database.async_database_manager import (
+        AsyncDatabaseManager,
+    )
 
     from agent_engine.simulation.system import SystemManager
 

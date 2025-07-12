@@ -167,7 +167,10 @@ class ReflectionSystem(System):
         """
 
         final_account = self.cognitive_scaffold.query(
-            agent_id=entity_id, purpose="reflection_synthesis", prompt=llm_prompt, current_tick=tick
+            agent_id=entity_id,
+            purpose="reflection_synthesis",
+            prompt=llm_prompt,
+            current_tick=tick,
         )
 
         context["llm_final_account"] = final_account
@@ -181,11 +184,17 @@ class ReflectionSystem(System):
         # Event for systems that need the validated text
         self.event_bus.publish(
             "reflection_validated",
-            {"entity_id": entity_id, "reflection_text": final_account, "confidence": confidence, "current_tick": tick},
+            {
+                "entity_id": entity_id,
+                "reflection_text": final_account,
+                "confidence": confidence,
+                "current_tick": tick,
+            },
         )
         # Event for systems that need the narrative to update goals
         self.event_bus.publish(
-            "update_goals_event", {"entity_id": entity_id, "narrative": final_account, "current_tick": tick}
+            "update_goals_event",
+            {"entity_id": entity_id, "narrative": final_account, "current_tick": tick},
         )
         # Event for systems that need the full context (like IdentitySystem)
         self.event_bus.publish(
@@ -216,7 +225,10 @@ class ReflectionSystem(System):
         """
 
         theme_raw = self.cognitive_scaffold.query(
-            agent_id=entity_id, purpose="episode_theming", prompt=llm_prompt, current_tick=tick
+            agent_id=entity_id,
+            purpose="episode_theming",
+            prompt=llm_prompt,
+            current_tick=tick,
         )
         theme = theme_raw.strip().replace('"', "") if theme_raw else "unknown_theme"
 

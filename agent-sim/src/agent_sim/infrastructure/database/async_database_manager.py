@@ -146,13 +146,20 @@ class AsyncDatabaseManager:
             session.add(run)
 
     async def log_agent_state(
-        self, simulation_id: uuid.UUID, tick: int, agent_id: str, components_data: Dict[str, Any]
+        self,
+        simulation_id: uuid.UUID,
+        tick: int,
+        agent_id: str,
+        components_data: Dict[str, Any],
     ) -> None:
         """Log agent state for a specific tick asynchronously."""
         async with self.get_session() as session:
             # Pass the generic dictionary to the AgentState constructor
             state = AgentState(
-                simulation_id=simulation_id, tick=tick, agent_id=agent_id, components_data=components_data
+                simulation_id=simulation_id,
+                tick=tick,
+                agent_id=agent_id,
+                components_data=components_data,
             )
             session.add(state)
 

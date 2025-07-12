@@ -3,6 +3,7 @@ This file now only contains simple data structures used across the action system
 The CoreActionType enum and static Action class have been replaced by the
 new plugin-based registry system.
 """
+
 # src/agent_core/agents/actions/base_action.py
 
 from abc import abstractmethod
@@ -65,7 +66,11 @@ class Action(ActionInterface):
 
     @abstractmethod
     def execute(
-        self, entity_id: str, simulation_state: Any, params: Dict[str, Any], current_tick: int
+        self,
+        entity_id: str,
+        simulation_state: Any,
+        params: Dict[str, Any],
+        current_tick: int,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 

@@ -11,7 +11,9 @@ from agent_core.core.ecs.component import (
     IdentityComponent,
 )
 from agent_engine.systems.components import QLearningComponent
+
 from .state_encoder import SoulSimStateEncoder
+
 
 class SoulSimDecisionSelector(DecisionSelectorInterface):
     """
@@ -58,14 +60,17 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         # --- 2. Feature Vector Calculation (Optimized) ---
         # The agent's internal state and the world state are constant during this
         # single decision moment. We calculate these feature vectors once before the loop.
-        state_features = self.state_encoder.encode_state(
-            simulation_state, entity_id, simulation_state.config
-        )
+        state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
 
         # Gather all cognitive components needed for the internal state vector
         id_comp, aff_comp, goal_comp, emo_comp = (
             simulation_state.get_component(entity_id, c)
-            for c in [IdentityComponent, AffectComponent, GoalComponent, EmotionComponent]
+            for c in [
+                IdentityComponent,
+                AffectComponent,
+                GoalComponent,
+                EmotionComponent,
+            ]
         )
         internal_features = simulation_state.get_internal_state_features_for_entity(
             id_comp, aff_comp, goal_comp, emo_comp

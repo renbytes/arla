@@ -1,21 +1,24 @@
 # simulations/soul_sim/tests/test_scenario_loader.py
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
+from agent_core.core.ecs.component import TimeBudgetComponent
+from agent_engine.systems.components import QLearningComponent
+
+# Import some real components to verify they are added correctly
+from simulations.soul_sim.components import (
+    CombatComponent,
+    PositionComponent,
+    ResourceComponent,
+)
 
 # Subject under test
 from simulations.soul_sim.simulation.scenario_loader import ScenarioLoader
 
-# Import some real components to verify they are added correctly
-from simulations.soul_sim.components import PositionComponent, ResourceComponent, CombatComponent
-from agent_core.core.ecs.component import TimeBudgetComponent
-from agent_engine.systems.components import QLearningComponent
-from agent_core.agents.actions.base_action import Intent
-from agent_engine.cognition.identity.domain_identity import IdentityDomain
-
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_config(tmp_path):
@@ -29,16 +32,21 @@ def mock_config(tmp_path):
         "agent": {
             "cognitive": {"embeddings": {"main_embedding_dim": 4, "schema_embedding_dim": 2}},
             "foundational": {
-                "vitals": {"initial_time_budget": 1000.0, "initial_health": 100.0, "initial_resources": 10.0},
+                "vitals": {
+                    "initial_time_budget": 1000.0,
+                    "initial_health": 100.0,
+                    "initial_resources": 10.0,
+                },
                 "attributes": {"initial_attack_power": 10.0},
                 "lifespan_std_dev_percent": 0.1,
             },
         },
         "learning": {
             "memory": {"affective_buffer_maxlen": 100},
-            "q_learning": {"alpha": 0.001}
-        }
+            "q_learning": {"alpha": 0.001},
+        },
     }
+
 
 @pytest.fixture
 def mock_simulation_state():
@@ -52,8 +60,10 @@ def mock_simulation_state():
 
     # Use a real dictionary to track entities and components for detailed assertions
     mock_state.entities = {}
+
     def add_entity_side_effect(entity_id):
         mock_state.entities[entity_id] = {}
+
     def add_component_side_effect(entity_id, component):
         mock_state.entities[entity_id][type(component)] = component
 
@@ -62,6 +72,7 @@ def mock_simulation_state():
 
     return mock_state
 
+
 @pytest.fixture
 def scenario_file(tmp_path):
     """Creates a temporary, valid scenario JSON file for testing."""
@@ -69,21 +80,32 @@ def scenario_file(tmp_path):
         "name": "Test Scenario",
         "resources": {
             "resource_list": [
-                {"pos": [10, 10], "params": {"resource_type": "gold", "initial_health": 100, "min_agents": 1, "max_agents": 1, "mining_rate": 1, "reward_per_mine": 1, "resource_yield": 1, "respawn_time": 1}}
+                {
+                    "pos": [10, 10],
+                    "params": {
+                        "resource_type": "gold",
+                        "initial_health": 100,
+                        "min_agents": 1,
+                        "max_agents": 1,
+                        "mining_rate": 1,
+                        "reward_per_mine": 1,
+                        "resource_yield": 1,
+                        "respawn_time": 1,
+                    },
+                }
             ]
         },
-        "groups": [
-            {"type": "full_agent", "count": 2}
-        ],
+        "groups": [{"type": "full_agent", "count": 2}],
     }
     file_path = tmp_path / "test_scenario.json"
     file_path.write_text(json.dumps(scenario_data))
     return file_path
 
+
 # --- Test Cases ---
 
-class TestScenarioLoader:
 
+class TestScenarioLoader:
     def test_load_happy_path(self, mock_config, scenario_file, mock_simulation_state):
         """
         Tests the successful loading of a valid scenario with agents and resources.
@@ -92,7 +114,9 @@ class TestScenarioLoader:
         mock_config["scenario_path"] = str(scenario_file)
         # Add resource counts to the mock config for this test
         mock_config["environment"] = {
-            "num_single_resources": 1, "num_double_resources": 0, "num_triple_resources": 0
+            "num_single_resources": 1,
+            "num_double_resources": 0,
+            "num_triple_resources": 0,
         }
         loader = ScenarioLoader(config=mock_config)
         loader.simulation_state = mock_simulation_state
@@ -103,7 +127,10 @@ class TestScenarioLoader:
         # Assert
         # 1. Check that a resource was created
         # Find the first entity that has a ResourceComponent
-        resource_entity_id = next((eid for eid, comps in mock_simulation_state.entities.items() if ResourceComponent in comps), None)
+        resource_entity_id = next(
+            (eid for eid, comps in mock_simulation_state.entities.items() if ResourceComponent in comps),
+            None,
+        )
         assert resource_entity_id is not None, "No resource entity was created"
 
         # 2. Check agent creation
@@ -189,7 +216,10 @@ class TestScenarioLoader:
 
     # The patch path must point to the `action_registry` instance within the module,
     # not the module itself.
-    @patch('agent_core.agents.actions.action_registry.action_registry._actions', {'move': None, 'extract': None, 'combat': None})
+    @patch(
+        "agent_core.agents.actions.action_registry.action_registry._actions",
+        {"move": None, "extract": None, "combat": None},
+    )
     def test_prepare_component_kwargs(self, mock_config, mock_simulation_state):
         """
         Tests the helper method that gathers constructor arguments from the config,

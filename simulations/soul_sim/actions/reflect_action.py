@@ -1,13 +1,13 @@
-
 # actions/action_definition.py
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
-from simulations.soul_sim.components import AffectComponent
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent
+
+from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
+from simulations.soul_sim.components import AffectComponent
 
 if TYPE_CHECKING:
     from agent_core.core.ecs.abstractions import SimulationState
@@ -21,7 +21,9 @@ class ReflectAction(ActionInterface):
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
         return simulation_state.config.get("agent", {}).get("reflect_cost", 15.0)
 
-    def generate_possible_params(self, entity_id: str, simulation_state: "SimulationState", current_tick: int) -> List[Dict[str, Any]]:
+    def generate_possible_params(
+        self, entity_id: str, simulation_state: "SimulationState", current_tick: int
+    ) -> List[Dict[str, Any]]:
         simulation_config = simulation_state.config.get("simulation", {})
         total_steps = simulation_config.get("steps", 500)
         if current_tick >= total_steps - 1:
@@ -36,8 +38,25 @@ class ReflectAction(ActionInterface):
             return [{"intent": Intent.SOLITARY}]
         return []
 
-    def execute(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int) -> Dict[str, Any]:
+    def execute(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+        current_tick: int,
+    ) -> Dict[str, Any]:
         return {}
 
-    def get_feature_vector(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]) -> List[float]:
-        return create_standard_feature_vector(self.action_id, Intent.SOLITARY, self.get_base_cost(simulation_state), params, {})
+    def get_feature_vector(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+    ) -> List[float]:
+        return create_standard_feature_vector(
+            self.action_id,
+            Intent.SOLITARY,
+            self.get_base_cost(simulation_state),
+            params,
+            {},
+        )

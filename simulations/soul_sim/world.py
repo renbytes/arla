@@ -58,7 +58,12 @@ class Grid2DEnvironment(EnvironmentInterface):
     def get_entities_in_radius(self, center: Tuple[int, int], radius: int) -> List[Tuple[str, Tuple[int, int]]]:
         return []  # Simplified
 
-    def update_entity_position(self, entity_id: str, old_pos: Optional[Tuple[int, int]], new_pos: Tuple[int, int]):
+    def update_entity_position(
+        self,
+        entity_id: str,
+        old_pos: Optional[Tuple[int, int]],
+        new_pos: Tuple[int, int],
+    ):
         if old_pos:
             self._spatial_index.remove_entity(entity_id, old_pos)
         self._spatial_index.add_entity(entity_id, new_pos)

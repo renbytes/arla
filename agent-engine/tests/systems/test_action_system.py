@@ -1,10 +1,8 @@
 # agent-engine/tests/systems/test_action_system.py
 
-from unittest.mock import MagicMock, patch, ANY
-import pytest
+from unittest.mock import MagicMock
 
-# Subject under test
-from agent_engine.systems.action_system import ActionSystem
+import pytest
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.base_action import ActionOutcome, Intent
 from agent_core.core.ecs.component import (
@@ -14,7 +12,11 @@ from agent_core.core.ecs.component import (
     TimeBudgetComponent,
 )
 
+# Subject under test
+from agent_engine.systems.action_system import ActionSystem
+
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_simulation_state():
@@ -43,7 +45,10 @@ def mock_reward_calculator():
     """Mocks the RewardCalculatorInterface."""
     calculator = MagicMock()
     # Simulate the calculator returning a final reward and a breakdown dictionary
-    calculator.calculate_final_reward.return_value = (15.0, {"base": 10.0, "bonus": 5.0})
+    calculator.calculate_final_reward.return_value = (
+        15.0,
+        {"base": 10.0, "bonus": 5.0},
+    )
     return calculator
 
 
@@ -72,8 +77,8 @@ def action_system(mock_simulation_state, mock_reward_calculator, mock_event_bus)
 
 # --- Test Cases ---
 
-class TestActionSystem:
 
+class TestActionSystem:
     def test_on_action_chosen_dispatches_specific_event(self, action_system, mock_event_bus):
         """
         Tests that receiving an 'action_chosen' event correctly publishes a
@@ -94,7 +99,11 @@ class TestActionSystem:
         mock_event_bus.publish.assert_called_once_with("execute_test_action_action", event_data)
 
     def test_on_action_outcome_ready_full_cycle(
-        self, action_system, mock_simulation_state, mock_reward_calculator, mock_event_bus
+        self,
+        action_system,
+        mock_simulation_state,
+        mock_reward_calculator,
+        mock_event_bus,
     ):
         """
         Tests the main logic: processing an outcome, using the reward calculator,
@@ -131,18 +140,18 @@ class TestActionSystem:
         mock_reward_calculator.calculate_final_reward.assert_called_once()
         # Manually inspect the keyword arguments of the call for robustness
         call_kwargs = mock_reward_calculator.calculate_final_reward.call_args.kwargs
-        assert call_kwargs['base_reward'] == 10.0
-        assert call_kwargs['action_type'] is mock_action_type
-        assert call_kwargs['action_intent'] == "SOLITARY"
-        assert call_kwargs['outcome_details'] == {"target": "rock"}
-        assert call_kwargs['entity_components'] == mock_simulation_state.entities["agent1"]
+        assert call_kwargs["base_reward"] == 10.0
+        assert call_kwargs["action_type"] is mock_action_type
+        assert call_kwargs["action_intent"] == "SOLITARY"
+        assert call_kwargs["outcome_details"] == {"target": "rock"}
+        assert call_kwargs["entity_components"] == mock_simulation_state.entities["agent1"]
 
         # 2. Verify the agent's components were updated
         assert aoc.success is True
         assert aoc.reward == 15.0  # The final, subjective reward
         assert aoc.details["reward_breakdown"]["bonus"] == 5.0
         assert cc.action_counts[mock_action_plan.action_type.action_id] == 1
-        assert tbc.current_time_budget == initial_budget - 1.0 # Check cost deduction
+        assert tbc.current_time_budget == initial_budget - 1.0  # Check cost deduction
 
         # 3. Verify the final 'action_executed' event was published correctly
         mock_event_bus.publish.assert_called_once()
@@ -184,7 +193,7 @@ class TestActionSystem:
         event_data = {
             "entity_id": "agent1",
             "action_outcome": MagicMock(),
-            "original_action_plan": ActionPlanComponent(action_type="not_an_action"), # Invalid type
+            "original_action_plan": ActionPlanComponent(action_type="not_an_action"),  # Invalid type
             "current_tick": 50,
         }
 

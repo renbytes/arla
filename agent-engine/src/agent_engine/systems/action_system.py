@@ -118,20 +118,25 @@ class ActionSystem(System):
     def _update_entity_components(self, entity_id: str, outcome: ActionOutcome, plan: ActionPlanComponent) -> None:
         """Helper to update the agent's components after an action."""
         # Update competence
-        if isinstance(cc := self.simulation_state.get_component(entity_id, CompetenceComponent), CompetenceComponent):
+        if isinstance(
+            cc := self.simulation_state.get_component(entity_id, CompetenceComponent),
+            CompetenceComponent,
+        ):
             if isinstance(plan.action_type, ActionInterface):
                 cc.action_counts[plan.action_type.action_id] += 1
 
         # Update action outcome
         if isinstance(
-            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent), ActionOutcomeComponent
+            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent),
+            ActionOutcomeComponent,
         ):
             aoc.success = outcome.success
             aoc.reward = outcome.reward
             aoc.details = outcome.details
 
         if isinstance(
-            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent), TimeBudgetComponent
+            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent),
+            TimeBudgetComponent,
         ):
             if isinstance(plan.action_type, ActionInterface):
                 action_cost = plan.action_type.get_base_cost(self.simulation_state)

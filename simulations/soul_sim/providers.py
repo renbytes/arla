@@ -13,12 +13,29 @@ from agent_core.agents.action_generator_interface import ActionGeneratorInterfac
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
-from agent_core.cognition.narrative_context_provider_interface import NarrativeContextProviderInterface
+from agent_core.cognition.narrative_context_provider_interface import (
+    NarrativeContextProviderInterface,
+)
 from agent_core.core.ecs.abstractions import SimulationState
-from agent_core.core.ecs.component import ActionPlanComponent, AffectComponent, Component, EmotionComponent, GoalComponent, IdentityComponent, TimeBudgetComponent, ValueSystemComponent
-from agent_core.environment.controllability_provider_interface import ControllabilityProviderInterface
-from agent_core.environment.state_node_encoder_interface import StateNodeEncoderInterface
-from agent_core.environment.vitality_metrics_provider_interface import VitalityMetricsProviderInterface
+from agent_core.core.ecs.component import (
+    ActionPlanComponent,
+    AffectComponent,
+    Component,
+    EmotionComponent,
+    GoalComponent,
+    IdentityComponent,
+    TimeBudgetComponent,
+    ValueSystemComponent,
+)
+from agent_core.environment.controllability_provider_interface import (
+    ControllabilityProviderInterface,
+)
+from agent_core.environment.state_node_encoder_interface import (
+    StateNodeEncoderInterface,
+)
+from agent_core.environment.vitality_metrics_provider_interface import (
+    VitalityMetricsProviderInterface,
+)
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
 from agent_engine.systems.components import QLearningComponent
@@ -26,7 +43,6 @@ from agent_engine.systems.components import QLearningComponent
 # Import your soul-sim specific components here
 # These imports will need to be adjusted to their actual location in your project
 from .components import (
-    CombatComponent,
     FailedStatesComponent,
     HealthComponent,
     InventoryComponent,
@@ -48,15 +64,13 @@ class SoulSimActionGenerator(ActionGeneratorInterface):
 
         for action_class in registered_action_classes:
             action_instance = action_class()
-            possible_params = action_instance.generate_possible_params(
-                entity_id, simulation_state, current_tick
-            )
+            possible_params = action_instance.generate_possible_params(entity_id, simulation_state, current_tick)
             for params in possible_params:
                 possible_actions.append(
                     ActionPlanComponent(
                         action_type=action_instance,
                         intent=params.get("intent"),
-                        params=params
+                        params=params,
                     )
                 )
 
@@ -208,12 +222,14 @@ class SoulSimStateEncoder(StateEncoderInterface):
 
         features.append(health_comp.normalized if health_comp else 0.0)
         features.append(time_comp.current_time_budget / time_comp.max_time_budget if time_comp else 0.0)
-        features.append(inventory_comp.current_resources / 100.0 if inventory_comp else 0.0) # Normalize by a reasonable max
+        features.append(
+            inventory_comp.current_resources / 100.0 if inventory_comp else 0.0
+        )  # Normalize by a reasonable max
 
         # Environment-related features (example)
         # In a real implementation, you would query the environment for nearby entities.
-        features.extend([0.0] * 5) # Placeholder for nearby enemies
-        features.extend([0.0] * 5) # Placeholder for nearby resources
+        features.extend([0.0] * 5)  # Placeholder for nearby enemies
+        features.extend([0.0] * 5)  # Placeholder for nearby resources
 
         return np.array(features, dtype=np.float32)
 
@@ -222,15 +238,21 @@ class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
     """Provides normalized (0-1) vitality scores from soul-sim components."""
 
     def get_normalized_vitality_metrics(
-        self, entity_id: str, components: Dict[Type[Component], Component], config: Dict[str, Any]
+        self,
+        entity_id: str,
+        components: Dict[Type[Component], Component],
+        config: Dict[str, Any],
     ) -> Dict[str, float]:
-
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
 
         health_norm = health_comp.normalized if health_comp else 0.0
-        time_norm = (time_comp.current_time_budget / time_comp.max_time_budget) if time_comp and time_comp.max_time_budget > 0 else 0.0
+        time_norm = (
+            (time_comp.current_time_budget / time_comp.max_time_budget)
+            if time_comp and time_comp.max_time_budget > 0
+            else 0.0
+        )
 
         # Normalize resources based on a config value, e.g., max expected resources
         max_res = 100.0
@@ -269,20 +291,23 @@ class SoulSimStateNodeEncoder(StateNodeEncoderInterface):
     def encode_state_for_causal_graph(
         self, entity_id: str, components: Dict[Type[Component], Component], **kwargs
     ) -> Tuple[Any, ...]:
-
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         pos_comp = cast(PositionComponent, components.get(PositionComponent))
 
         # Discretize continuous values into categories
-        if health_comp.normalized > 0.7: health_status = "high_health"
-        elif health_comp.normalized > 0.3: health_status = "medium_health"
-        else: health_status = "low_health"
+        if health_comp.normalized > 0.7:
+            health_status = "high_health"
+        elif health_comp.normalized > 0.3:
+            health_status = "medium_health"
+        else:
+            health_status = "low_health"
 
-        # Example of environmental context
-        location_type = "wilderness"
-        # In a real scenario, you would check if pos_comp.position is inside a "base" or "nest" area.
+        # Use the position component to create a location-specific node
+        # This makes the causal graph much more powerful.
+        pos_tuple = pos_comp.position if pos_comp else (0, 0)
+        location_node = f"at_{pos_tuple[0]}_{pos_tuple[1]}"
 
-        return ("STATE", health_status, location_type)
+        return ("STATE", health_status, location_node)
 
 
 class SoulSimNarrativeContextProvider(NarrativeContextProviderInterface):
@@ -291,7 +316,6 @@ class SoulSimNarrativeContextProvider(NarrativeContextProviderInterface):
     def get_narrative_context(
         self, entity_id: str, components: Dict[Type[Component], Component], **kwargs
     ) -> Dict[str, Any]:
-
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
         pos_comp = cast(PositionComponent, components.get(PositionComponent))

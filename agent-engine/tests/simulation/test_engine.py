@@ -1,16 +1,18 @@
 # agent-engine/tests/simulation/test_engine.py
 
-from unittest.mock import MagicMock, patch, AsyncMock, call
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from omegaconf import OmegaConf
+from agent_core.core.ecs.component import ActionPlanComponent, TimeBudgetComponent
 
 # Subject under test
 from agent_engine.simulation.engine import SimulationManager
-from agent_core.core.ecs.component import TimeBudgetComponent, ActionPlanComponent
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_persist.models import SimulationSnapshot
+from omegaconf import OmegaConf
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_config():
@@ -19,7 +21,7 @@ def mock_config():
         "simulation": {
             "steps": 3,
             "random_seed": 123,
-            "log_directory": "/tmp/test_logs"
+            "log_directory": "/tmp/test_logs",
         },
         "enable_debug_logging": False,
     }
@@ -45,49 +47,52 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
     Provides an initialized SimulationManager with all internal and external
     dependencies fully mocked for controlled testing.
     """
-    # Patch all classes that SimulationManager instantiates internally
-    with patch("agent_engine.simulation.engine.SystemManager") as MockSystemManager, \
-         patch("agent_engine.simulation.engine.SimulationState") as MockSimState, \
-         patch("agent_engine.simulation.engine.CognitiveScaffold") as MockScaffold, \
-         patch("agent_engine.simulation.engine.EventBus") as MockEventBus, \
-         patch("agent_engine.simulation.engine.FileStateStore") as MockFileStore, \
-         patch("agent_engine.simulation.engine.create_snapshot_from_state") as mock_create_snapshot:
+    # Patch all classes that SimulationManager instantiates internally.
+    # Using snake_case for mock variable names to comply with PEP 8 (N806).
+    with (
+        patch("agent_engine.simulation.engine.SystemManager", autospec=True) as mock_system_manager,
+        patch("agent_engine.simulation.engine.SimulationState", autospec=True) as mock_sim_state,
+        patch("agent_engine.simulation.engine.CognitiveScaffold", autospec=True) as mock_scaffold,
+        patch("agent_engine.simulation.engine.EventBus", autospec=True) as mock_event_bus,
+        patch("agent_engine.simulation.engine.FileStateStore", autospec=True) as mock_file_store,
+        patch("agent_engine.simulation.engine.create_snapshot_from_state") as mock_create_snapshot,
+    ):
+        # --- Configure Mock Instances ---
+        # These are the instances that will be created *inside* SimulationManager.__init__
+        mock_sim_state_instance = mock_sim_state.return_value
+        mock_system_manager_instance = mock_system_manager.return_value
 
-        # --- Configure Mocks ---
-
-        # Mock SimulationState to represent one active entity
-        mock_sim_state_instance = MockSimState.return_value
+        # Configure SimulationState to represent one active entity
         active_entity_components = {TimeBudgetComponent: TimeBudgetComponent(100)}
         mock_sim_state_instance.entities = {"agent_01": active_entity_components}
-        # Make get_component return the right component
         mock_sim_state_instance.get_component.return_value = active_entity_components[TimeBudgetComponent]
 
-        # Mock SystemManager to have an awaitable `update_all` method
-        mock_system_manager_instance = MockSystemManager.return_value
+        # Configure SystemManager to have an awaitable `update_all` method
         mock_system_manager_instance.update_all = AsyncMock()
 
-        # Mock DecisionSelector to return a valid action plan
+        # Configure external dependencies provided to the fixture
         mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
-
-        # Mock the environment's to_dict method, which is called during save_state
         mock_dependencies["environment"].to_dict.return_value = {"world_data": "empty"}
 
         # --- Instantiate the Manager ---
-        manager = SimulationManager(
-            config=mock_config,
-            **mock_dependencies
-        )
+        # The __init__ method will now use the patched classes automatically
+        manager = SimulationManager(config=mock_config, **mock_dependencies)
 
-        # Attach mocks to the manager instance for easy access in tests
-        manager.system_manager = mock_system_manager_instance
-        manager.simulation_state = mock_sim_state_instance
-        manager.event_bus = MockEventBus.return_value
-        manager.mock_file_store = MockFileStore.return_value
+        # --- Attach Mocks to the Manager for Easy Access in Tests ---
+        # This makes it easy for tests to access these mocks via the fixture instance
+        # and also "uses" every mock variable, satisfying the F841 linter rule.
+        manager.mock_system_manager = mock_system_manager_instance
+        manager.mock_sim_state = mock_sim_state_instance
+        manager.mock_scaffold = mock_scaffold.return_value
+        manager.mock_event_bus = mock_event_bus.return_value
+        manager.mock_file_store = mock_file_store.return_value
         manager.mock_create_snapshot = mock_create_snapshot
 
         yield manager
 
+
 # --- Test Cases ---
+
 
 def test_initialization_and_scenario_loading(sim_manager_with_mocks, mock_dependencies):
     """
@@ -118,9 +123,13 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
     call_order_tracker = []
 
     # Set up side effects to track the call order of the two main operations in the loop
-    manager.system_manager.update_all.side_effect = lambda current_tick: call_order_tracker.append(f"update_all_tick_{current_tick}")
+    manager.system_manager.update_all.side_effect = lambda current_tick: call_order_tracker.append(
+        f"update_all_tick_{current_tick}"
+    )
     # We track the turn via the action generator, which is the first step in a turn.
-    mock_dependencies["action_generator"].generate.side_effect = lambda simulation_state, entity_id, current_tick: call_order_tracker.append(f"process_turn_tick_{current_tick}")
+    mock_dependencies["action_generator"].generate.side_effect = (
+        lambda simulation_state, entity_id, current_tick: call_order_tracker.append(f"process_turn_tick_{current_tick}")
+    )
 
     # --- Act ---
     await manager.run()
@@ -133,12 +142,16 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
     # 2. **CRITICAL**: Verify the call order for each step
     # This assertion directly tests for and prevents the "Skipping Q-update" bug.
     expected_order = [
-        'update_all_tick_0', 'process_turn_tick_0',
-        'update_all_tick_1', 'process_turn_tick_1',
-        'update_all_tick_2', 'process_turn_tick_2',
+        "update_all_tick_0",
+        "process_turn_tick_0",
+        "update_all_tick_1",
+        "process_turn_tick_1",
+        "update_all_tick_2",
+        "process_turn_tick_2",
     ]
-    assert call_order_tracker == expected_order, \
-        "The order of operations is incorrect! Systems must be updated before entity turns are processed."
+    assert (
+        call_order_tracker == expected_order
+    ), "The order of operations is incorrect! Systems must be updated before entity turns are processed."
 
     # 3. Verify the final state was saved
     manager.mock_create_snapshot.assert_called_once_with(manager.simulation_state)
@@ -190,7 +203,7 @@ def test_load_state_replaces_simulation_state(sim_manager_with_mocks):
     # Mock the class method that creates a state from a snapshot
     with patch("agent_engine.simulation.engine.SimulationState.from_snapshot") as mock_from_snapshot:
         new_mock_state = MagicMock(spec=SimulationState)
-        new_mock_state.current_tick = 100 # Give it a different tick to verify
+        new_mock_state.current_tick = 100  # Give it a different tick to verify
         mock_from_snapshot.return_value = new_mock_state
 
         # --- Act ---

@@ -20,7 +20,9 @@ from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_persist.store import FileStateStore
-from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
 from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent-engine

@@ -1,25 +1,27 @@
 # agent-engine/tests/systems/test_q_learning_system.py
 
 from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 import torch
-
-# Subject under test
-from agent_engine.systems.q_learning_system import QLearningSystem
-from agent_engine.systems.components import QLearningComponent
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
-    TimeBudgetComponent,
-    IdentityComponent,
     AffectComponent,
-    GoalComponent,
     EmotionComponent,
+    GoalComponent,
+    IdentityComponent,
+    TimeBudgetComponent,
 )
+from agent_engine.systems.components import QLearningComponent
+
+# Subject under test
+from agent_engine.systems.q_learning_system import QLearningSystem
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_simulation_state():
@@ -100,11 +102,14 @@ def q_learning_system(mock_registry, mock_simulation_state, mock_state_encoder, 
 
 # --- Test Cases ---
 
+
 class TestQLearningSystem:
     """Groups tests for the QLearningSystem."""
 
     @pytest.mark.asyncio
-    async def test_update_and_execute_sequence_happy_path(self, q_learning_system, mock_simulation_state, mock_event_bus):
+    async def test_update_and_execute_sequence_happy_path(
+        self, q_learning_system, mock_simulation_state, mock_event_bus
+    ):
         """
         Tests the ideal operational sequence: update() is called, then on_action_executed().
         This verifies that the learning step works correctly when state is properly cached.
@@ -139,7 +144,11 @@ class TestQLearningSystem:
         # A learning event was published for monitoring
         mock_event_bus.publish.assert_called_with(
             "q_learning_update",
-            {"entity_id": "agent1", "q_loss": q_comp.loss_fn.return_value.item(), "current_tick": 5},
+            {
+                "entity_id": "agent1",
+                "q_loss": q_comp.loss_fn.return_value.item(),
+                "current_tick": 5,
+            },
         )
 
     def test_on_action_executed_skips_if_no_previous_state(self, q_learning_system, mock_simulation_state, capsys):
@@ -189,13 +198,20 @@ class TestQLearningSystem:
         # The state cache should remain empty
         assert "agent1" not in q_learning_system.previous_states
 
+
 class TestQLearningComponent:
     """Groups tests for the QLearningComponent data container."""
 
     def test_component_validation_success(self):
         """Tests that a healthy component passes validation."""
         # Arrange
-        q_comp = QLearningComponent(state_feature_dim=10, internal_state_dim=5, action_feature_dim=3, q_learning_alpha=0.01, device="cpu")
+        q_comp = QLearningComponent(
+            state_feature_dim=10,
+            internal_state_dim=5,
+            action_feature_dim=3,
+            q_learning_alpha=0.01,
+            device="cpu",
+        )
         q_comp.current_epsilon = 0.5
 
         # Act
@@ -211,7 +227,7 @@ class TestQLearningComponent:
         q_comp = QLearningComponent(10, 5, 3, 0.01, "cpu")
         # Manually introduce a NaN into the weights
         with torch.no_grad():
-            q_comp.utility_network.fc1.weight[0, 0] = float('nan')
+            q_comp.utility_network.fc1.weight[0, 0] = float("nan")
 
         # Act
         is_valid, errors = q_comp.validate("agent1")
@@ -222,7 +238,7 @@ class TestQLearningComponent:
         assert "contains NaN values" in errors[0]
         assert "fc1.weight" in errors[0]
 
-    @pytest.mark.parametrize("bad_epsilon", [-0.1, 1.1, float('nan')])
+    @pytest.mark.parametrize("bad_epsilon", [-0.1, 1.1, float("nan")])
     def test_component_validation_bad_epsilon(self, bad_epsilon):
         """Tests that validation catches out-of-bounds or NaN epsilon values."""
         # Arrange

@@ -1,24 +1,44 @@
 # simulations/soul_sim/simulation/scenario_loader.py
 
 import json
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Dict
 
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.component import (
-    ActionOutcomeComponent, ActionPlanComponent, AffectComponent, BeliefSystemComponent,
-    CompetenceComponent, EmotionComponent, EpisodeComponent, GoalComponent,
-    IdentityComponent, MemoryComponent, SocialMemoryComponent, TimeBudgetComponent,
-    ValidationComponent, ValueSystemComponent
+    ActionOutcomeComponent,
+    ActionPlanComponent,
+    AffectComponent,
+    BeliefSystemComponent,
+    CompetenceComponent,
+    EmotionComponent,
+    EpisodeComponent,
+    GoalComponent,
+    IdentityComponent,
+    MemoryComponent,
+    SocialMemoryComponent,
+    TimeBudgetComponent,
+    ValidationComponent,
+    ValueSystemComponent,
 )
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
-from agent_engine.cognition.identity.domain_identity import IdentityDomain, MultiDomainIdentity
+from agent_engine.cognition.identity.domain_identity import (
+    IdentityDomain,
+    MultiDomainIdentity,
+)
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.systems.components import QLearningComponent
 from agent_engine.utils.config_utils import get_config_value
+
 from simulations.soul_sim.components import (
-    CombatComponent, EnvironmentObservationComponent, FailedStatesComponent,
-    HealthComponent, InventoryComponent, NestComponent, PositionComponent, ResourceComponent
+    CombatComponent,
+    EnvironmentObservationComponent,
+    FailedStatesComponent,
+    HealthComponent,
+    InventoryComponent,
+    NestComponent,
+    PositionComponent,
+    ResourceComponent,
 )
 from simulations.soul_sim.environment.resources import init_resources
 
@@ -57,7 +77,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
         Defines agent archetypes using lists of component-creation functions.
         This is more robust than parsing component paths from YAML.
         """
-        CORE_COMPONENTS = [
+        core_components = [
             lambda kwargs: PositionComponent(kwargs["initial_pos"], kwargs["environment"]),
             lambda kwargs: TimeBudgetComponent(**kwargs["TimeBudgetComponent"]),
             lambda kwargs: HealthComponent(**kwargs["HealthComponent"]),
@@ -72,24 +92,22 @@ class ScenarioLoader(ScenarioLoaderInterface):
             lambda kwargs: CompetenceComponent(),
         ]
 
-        MEMORY_SUITE = [lambda kwargs: MemoryComponent()]
-        AFFECT_SUITE = [
+        memory_suite = [lambda kwargs: MemoryComponent()]
+        affect_suite = [
             lambda kwargs: EmotionComponent(),
             lambda kwargs: AffectComponent(**kwargs["AffectComponent"]),
             lambda kwargs: ValueSystemComponent(),
             lambda kwargs: SocialMemoryComponent(**kwargs["SocialMemoryComponent"]),
         ]
-        GOAL_SUITE = [lambda kwargs: GoalComponent(**kwargs["GoalComponent"])]
-        IDENTITY_SUITE = [
+        goal_suite = [lambda kwargs: GoalComponent(**kwargs["GoalComponent"])]
+        identity_suite = [
             lambda kwargs: IdentityComponent(**kwargs["IdentityComponent"]),
             lambda kwargs: EpisodeComponent(),
             lambda kwargs: BeliefSystemComponent(),
             lambda kwargs: ValidationComponent(),
         ]
 
-        self.ARCHETYPES = {
-            "full_agent": CORE_COMPONENTS + MEMORY_SUITE + AFFECT_SUITE + GOAL_SUITE + IDENTITY_SUITE
-        }
+        self.archetypes = {"full_agent": core_components + memory_suite + affect_suite + goal_suite + identity_suite}
 
     def _create_agents(self):
         """Creates agent entities based on the 'groups' defined in the scenario file."""
@@ -100,7 +118,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
             valid_positions = self.simulation_state.environment.get_valid_positions()
             for group in agent_groups:
                 archetype_name = group.get("type", "full_agent")
-                component_factory_funcs = self.ARCHETYPES.get(archetype_name)
+                component_factory_funcs = self.archetypes.get(archetype_name)
 
                 if not component_factory_funcs:
                     print(f"Warning: Archetype '{archetype_name}' not found. Agent group will be skipped.")
@@ -122,7 +140,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
         # FIX: Moved this print statement outside the conditional to ensure it always runs.
         print(f"--- Created {agent_counter} agents. ---")
 
-
     def _create_resources(self):
         """Initializes resource entities by calling the random generator."""
         # Get resource counts from the main YAML config
@@ -137,7 +154,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
             num_single=num_single,
             num_double=num_double,
             num_triple=num_triple,
-            seed=seed
+            seed=seed,
         )
 
         # Create entities from the generated dictionary
@@ -146,7 +163,8 @@ class ScenarioLoader(ScenarioLoaderInterface):
             pos = tuple(res_data["pos"])
 
             self.simulation_state.add_component(
-                res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
+                res_id,
+                PositionComponent(position=pos, environment=self.simulation_state.environment),
             )
 
             # FIX: Create a clean dictionary for the component's constructor
@@ -189,16 +207,28 @@ class ScenarioLoader(ScenarioLoaderInterface):
             "environment": self.simulation_state.environment,
             "TimeBudgetComponent": {
                 "initial_time_budget": get_config_value(self.config, "agent.foundational.vitals.initial_time_budget"),
-                "lifespan_std_dev_percent": get_config_value(self.config, "agent.foundational.lifespan_std_dev_percent"),
+                "lifespan_std_dev_percent": get_config_value(
+                    self.config, "agent.foundational.lifespan_std_dev_percent"
+                ),
             },
-            "HealthComponent": {"initial_health": get_config_value(self.config, "agent.foundational.vitals.initial_health")},
-            "InventoryComponent": {"initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources")},
-            "CombatComponent": {"attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power")},
-            "AffectComponent": {"affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen")},
+            "HealthComponent": {
+                "initial_health": get_config_value(self.config, "agent.foundational.vitals.initial_health")
+            },
+            "InventoryComponent": {
+                "initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources")
+            },
+            "CombatComponent": {
+                "attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power")
+            },
+            "AffectComponent": {
+                "affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen")
+            },
             "GoalComponent": {"embedding_dim": main_emb_dim},
             "IdentityComponent": {"multi_domain_identity": MultiDomainIdentity(embedding_dim=main_emb_dim)},
             "SocialMemoryComponent": {
-                "schema_embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.schema_embedding_dim"),
+                "schema_embedding_dim": get_config_value(
+                    self.config, "agent.cognitive.embeddings.schema_embedding_dim"
+                ),
                 "device": self.simulation_state.device,
             },
             "QLearningComponent": {

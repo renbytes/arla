@@ -1,6 +1,6 @@
 # actions/action_definition.py
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import Any, Dict, List
 
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent

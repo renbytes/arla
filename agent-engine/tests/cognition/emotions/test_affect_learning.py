@@ -1,8 +1,10 @@
 # tests/cognition/emotions/test_affect_learning.py
 
 from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
+from agent_engine.cognition.emotions.affect_base import AffectiveExperience
 
 # Subject under test
 from agent_engine.cognition.emotions.affect_learning import (
@@ -10,8 +12,6 @@ from agent_engine.cognition.emotions.affect_learning import (
     get_emotion_from_affect,
     name_experience_cluster,
 )
-from agent_engine.cognition.emotions.affect_base import AffectiveExperience
-
 
 # --- Fixtures ---
 
@@ -142,7 +142,14 @@ def test_name_experience_cluster(mock_cognitive_scaffold, mock_action_registry):
     prompt_template = "Summaries: {summaries}. Name this."
 
     # Act
-    name = name_experience_cluster(experiences, mock_cognitive_scaffold, "agent1", 100, prompt_template, "test_purpose")
+    name = name_experience_cluster(
+        experiences,
+        mock_cognitive_scaffold,
+        "agent1",
+        100,
+        prompt_template,
+        "test_purpose",
+    )
 
     # Assert
     assert name == "joy"
@@ -156,7 +163,11 @@ def test_name_experience_cluster(mock_cognitive_scaffold, mock_action_registry):
 
 @patch("agent_engine.cognition.emotions.affect_learning.KMeans")
 def test_discover_emotions_success(
-    mock_kmeans, mock_affect_component, mock_cognitive_scaffold, default_config, mock_action_registry
+    mock_kmeans,
+    mock_affect_component,
+    mock_cognitive_scaffold,
+    default_config,
+    mock_action_registry,
 ):
     """
     Tests the successful discovery and naming of emotion clusters.
@@ -194,7 +205,10 @@ def test_discover_emotions_insufficient_data(mock_affect_component, mock_cogniti
     mock_cognitive_scaffold.query.assert_not_called()
 
 
-@patch("agent_engine.cognition.emotions.affect_learning._cluster_experiences", return_value=(None, None))
+@patch(
+    "agent_engine.cognition.emotions.affect_learning._cluster_experiences",
+    return_value=(None, None),
+)
 def test_discover_emotions_clustering_fails(
     mock_cluster_exp, mock_affect_component, mock_cognitive_scaffold, default_config
 ):

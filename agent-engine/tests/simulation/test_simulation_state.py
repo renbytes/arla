@@ -1,20 +1,24 @@
 # agent-engine/tests/simulation/test_simulation_state.py
 
-import pytest
 import numpy as np
-
-# Subject under test
-from agent_engine.simulation.simulation_state import SimulationState
+import pytest
 from agent_core.core.ecs.component import (
-    Component,
     AffectComponent,
+    Component,
     EmotionComponent,
     GoalComponent,
     IdentityComponent,
 )
-from agent_engine.cognition.identity.domain_identity import IdentityDomain, MultiDomainIdentity
+from agent_engine.cognition.identity.domain_identity import (
+    IdentityDomain,
+    MultiDomainIdentity,
+)
+
+# Subject under test
+from agent_engine.simulation.simulation_state import SimulationState
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def config():
@@ -30,6 +34,7 @@ def sim_state(config):
 
 
 # --- Test Cases for Basic ECS Management ---
+
 
 class TestECSOperations:
     """Tests for basic entity-component-system management."""
@@ -47,9 +52,13 @@ class TestECSOperations:
         """
         Tests adding and retrieving a component for an entity.
         """
+
         class TestComponent(Component):
-            def to_dict(self): return {}
-            def validate(self, entity_id): return True, []
+            def to_dict(self):
+                return {}
+
+            def validate(self, entity_id):
+                return True, []
 
         sim_state.add_entity("agent1")
         test_comp = TestComponent()
@@ -105,7 +114,9 @@ class TestECSOperations:
         all_entities = sim_state.get_entities_with_components([])
         assert len(all_entities) == 3
 
+
 # --- Test Cases for get_internal_state_features_for_entity ---
+
 
 class TestInternalStateFeatures:
     """Tests for the internal state feature vector generation."""
@@ -152,7 +163,7 @@ class TestInternalStateFeatures:
         assert features[0] == pytest.approx(0.7)  # valence
         assert features[3] == pytest.approx(0.6)  # predictive_delta_smooth
         # Check that goal embedding is present
-        assert np.all(features[4:4+embedding_dim] == 1.0)
+        assert np.all(features[4 : 4 + embedding_dim] == 1.0)
 
     def test_get_internal_state_features_some_missing(self, sim_state, full_components, config):
         """

@@ -3,12 +3,19 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from agent_core.environment.interface import EnvironmentInterface
 
+
 class GridWorld(EnvironmentInterface):
     """
     A concrete implementation of a 2D grid-based environment.
     Manages entity positions and provides spatial query methods.
     """
-    def __init__(self, width: int, height: int, impassable_tiles: Optional[Set[Tuple[int, int]]] = None):
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        impassable_tiles: Optional[Set[Tuple[int, int]]] = None,
+    ):
         self.width = width
         self.height = height
         self.impassable_tiles = impassable_tiles or set()
@@ -36,15 +43,20 @@ class GridWorld(EnvironmentInterface):
         """Gets all valid neighboring positions (including diagonals)."""
         x, y = position
         potential_neighbors = [
-            (x - 1, y - 1), (x, y - 1), (x + 1, y - 1),
-            (x - 1, y),                 (x + 1, y),
-            (x - 1, y + 1), (x, y + 1), (x + 1, y + 1),
+            (x - 1, y - 1),
+            (x, y - 1),
+            (x + 1, y - 1),
+            (x - 1, y),
+            (x + 1, y),
+            (x - 1, y + 1),
+            (x, y + 1),
+            (x + 1, y + 1),
         ]
         return [pos for pos in potential_neighbors if self.is_valid_position(pos)]
 
     def distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
         """Calculates the Euclidean distance between two points."""
-        return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
+        return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
 
     def can_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Checks if movement is possible (i.e., target is a valid neighbor)."""
@@ -55,7 +67,10 @@ class GridWorld(EnvironmentInterface):
         return self._spatial_index.get(position, set())
 
     def update_entity_position(
-        self, entity_id: str, old_pos: Optional[Tuple[int, int]], new_pos: Tuple[int, int]
+        self,
+        entity_id: str,
+        old_pos: Optional[Tuple[int, int]],
+        new_pos: Tuple[int, int],
     ) -> None:
         """Updates the internal spatial index with an entity's new position."""
         if old_pos and old_pos in self._spatial_index:
@@ -77,9 +92,7 @@ class GridWorld(EnvironmentInterface):
             if not self._spatial_index[position]:
                 del self._spatial_index[position]
 
-    def get_entities_in_radius(
-        self, center: Tuple[int, int], radius: int
-    ) -> List[Tuple[str, Tuple[int, int]]]:
+    def get_entities_in_radius(self, center: Tuple[int, int], radius: int) -> List[Tuple[str, Tuple[int, int]]]:
         """Finds all entities within a given radius of a center point."""
         entities_found = []
         # Simple square bounding box check first for efficiency
@@ -98,7 +111,7 @@ class GridWorld(EnvironmentInterface):
             "width": self.width,
             "height": self.height,
             "impassable_tiles": list(self.impassable_tiles),
-            "entity_positions": {eid: list(pos) for eid, pos in self._entity_positions.items()}
+            "entity_positions": {eid: list(pos) for eid, pos in self._entity_positions.items()},
         }
 
     def restore_from_dict(self, data: Dict[str, Any]) -> None:

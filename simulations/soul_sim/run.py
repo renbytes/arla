@@ -6,8 +6,6 @@ import os
 import uuid
 from typing import Any, Dict, Optional
 
-from omegaconf import DictConfig, OmegaConf
-
 # Core/Engine Imports
 from agent_core.agents.actions.action_registry import action_registry
 from agent_engine.simulation.engine import SimulationManager
@@ -22,10 +20,12 @@ from agent_engine.systems.q_learning_system import QLearningSystem
 from agent_engine.systems.reflection_system import ReflectionSystem
 
 # Infrastructure Imports
-from agent_sim.infrastructure.data.async_runner import async_runner
-from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
 from agent_sim.infrastructure.logging.database_emitter import DatabaseEmitter
 from agent_sim.infrastructure.logging.mlflow_exporter import MLflowExporter
+from omegaconf import DictConfig, OmegaConf
 
 # Simulation-Specific Imports
 from simulations.soul_sim.component_factory import SoulSimComponentFactory
@@ -33,10 +33,14 @@ from simulations.soul_sim.config.schemas import SoulSimAppConfig
 from simulations.soul_sim.environment.grid_world import GridWorld
 from simulations.soul_sim.metrics.vitals_calculator import VitalsAndEconomyCalculator
 from simulations.soul_sim.providers import (
-    SoulSimActionGenerator, SoulSimControllabilityProvider,
-    SoulSimDecisionSelector, SoulSimNarrativeContextProvider,
-    SoulSimRewardCalculator, SoulSimStateEncoder, SoulSimStateNodeEncoder,
-    SoulSimVitalityMetricsProvider
+    SoulSimActionGenerator,
+    SoulSimControllabilityProvider,
+    SoulSimDecisionSelector,
+    SoulSimNarrativeContextProvider,
+    SoulSimRewardCalculator,
+    SoulSimStateEncoder,
+    SoulSimStateNodeEncoder,
+    SoulSimVitalityMetricsProvider,
 )
 from simulations.soul_sim.simulation.scenario_loader import ScenarioLoader
 from simulations.soul_sim.systems.combat_system import CombatSystem
@@ -46,7 +50,9 @@ from simulations.soul_sim.systems.movement_system import MovementSystem
 from simulations.soul_sim.systems.nest_system import NestSystem
 from simulations.soul_sim.systems.render_system import RenderSystem
 from simulations.soul_sim.systems.resource_system import ResourceSystem
-from simulations.soul_sim.systems.social_interaction_system import SocialInteractionSystem
+from simulations.soul_sim.systems.social_interaction_system import (
+    SocialInteractionSystem,
+)
 
 
 def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overrides: Dict[str, Any]):
@@ -58,7 +64,13 @@ def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overr
     asyncio.run(setup_and_run(run_id, task_id, experiment_id, config_overrides))
 
 
-async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_overrides: Dict[str, Any], checkpoint_path: Optional[str] = None):
+async def setup_and_run(
+    run_id: str,
+    task_id: str,
+    experiment_id: str,
+    config_overrides: Dict[str, Any],
+    checkpoint_path: Optional[str] = None,
+):
     """Asynchronous setup and execution for the simulation."""
 
     print(f"--- [{task_id}] Initializing Soul-Sim ---")
@@ -85,7 +97,7 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     mlflow_exporter = MLflowExporter()
 
     env_config = config_dict.get("environment", {})
-    grid_size = env_config.get('grid_world_size', (50, 50))
+    grid_size = env_config.get("grid_world_size", (50, 50))
     environment = GridWorld(width=grid_size[0], height=grid_size[1])
 
     # Instantiate all providers needed by the systems
@@ -138,7 +150,10 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
         controllability_provider=providers["controllability_provider"],
     )
     manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
-    manager.register_system(ReflectionSystem, narrative_context_provider=providers["narrative_context_provider"])
+    manager.register_system(
+        ReflectionSystem,
+        narrative_context_provider=providers["narrative_context_provider"],
+    )
     manager.register_system(IdentitySystem)
     manager.register_system(GoalSystem)
 
@@ -154,8 +169,12 @@ async def setup_and_run(run_id: str, task_id: str, experiment_id: str, config_ov
     # Logging and Metrics Systems
     vitals_calculator = VitalsAndEconomyCalculator()
     manager.register_system(LoggingSystem, exporters=[database_emitter, mlflow_exporter])
-    manager.register_system(MetricsSystem, calculators=[vitals_calculator], exporters=[database_emitter, mlflow_exporter])
-    manager.register_system(RenderSystem) # Add the render system
+    manager.register_system(
+        MetricsSystem,
+        calculators=[vitals_calculator],
+        exporters=[database_emitter, mlflow_exporter],
+    )
+    manager.register_system(RenderSystem)  # Add the render system
 
     # 6. Run the simulation
     print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick} ---")

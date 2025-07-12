@@ -1,6 +1,7 @@
 # src/agent_core/tests/core/ecs/test_event_bus.py
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 # Subject under test
 from agent_core.core.ecs.event_bus import EventBus
