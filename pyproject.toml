@@ -68,10 +68,7 @@ dev = [
 # --- UNIFIED TOOL CONFIGURATION ---
 
 [tool.ruff]
-line-length = 120
-select = ["E", "F", "W", "I", "N", "C90", "B"]
-ignore = ["B905"] # Allows using zip without strict=True
-# Define excludes once at the root level
+# Global settings like 'exclude' and 'line-length' live at the top level
 exclude = [
     ".git",
     "__pycache__",
@@ -80,6 +77,23 @@ exclude = [
     ".pytest_cache/",
     "notebooks/"
 ]
+line-length = 120
+
+# `ruff check`
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "C90", "B"]
+ignore = [
+    "B905", # Allows `zip` without `strict=True`
+]
+# This ignores the "variable should be lowercase" error (N806)
+# specifically in test files, which is a common and useful exception.
+[tool.ruff.lint.per-file-ignores]
+"*/tests/*" = ["N806"]
+
+# `ruff format`
+[tool.ruff.format]
+# This section is for formatter-only overrides.
+# It automatically inherits the global line-length from [tool.ruff].
 
 [tool.mypy]
 # The 'mypy_path' key has been removed. It's not needed.
