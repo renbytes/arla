@@ -55,6 +55,7 @@ def mock_openai(mocker):
     mock_client.chat.completions.create.return_value = mock_completion_response
 
     # Patch the 'OpenAI' class within the openai_client module's namespace.
+    # This ensures that when get_client() is called, it uses our mock.
     mocker.patch("agent_core.cognition.ai_models.openai_client.OpenAI", return_value=mock_client)
 
     return mock_client

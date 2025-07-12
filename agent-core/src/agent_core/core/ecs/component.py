@@ -185,10 +185,15 @@ class GoalComponent(Component):
 class EmotionComponent(Component):
     """Stores the agent's current emotional state (valence, arousal)."""
 
-    def __init__(self, valence: float = 0.0, arousal: float = 0.5) -> None:
+    def __init__(
+        self,
+        valence: float = 0.0,
+        arousal: float = 0.5,
+        current_emotion_category: str = "neutral",
+    ) -> None:
         self.valence: float = valence
         self.arousal: float = arousal
-        self.current_emotion_category: str = "neutral"
+        self.current_emotion_category: str = current_emotion_category
 
     def to_dict(self) -> Dict[str, Any]:
         return {

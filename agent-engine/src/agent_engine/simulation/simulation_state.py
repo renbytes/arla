@@ -15,7 +15,7 @@ from agent_core.core.ecs.component import (
     IdentityComponent,
 )
 from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
-from agent_persist.models import SimulationSnapshot
+from agent_persist.models import AgentSnapshot, ComponentSnapshot, SimulationSnapshot
 from numpy.typing import NDArray
 
 # Imports from agent_core
@@ -27,9 +27,6 @@ if TYPE_CHECKING:
     from agent_core.cognition.scaffolding import CognitiveScaffold
     from agent_core.core.ecs.event_bus import EventBus
     from agent_core.environment.interface import EnvironmentInterface
-    from agent_sim.infrastructure.database.async_database_manager import (
-        AsyncDatabaseManager,
-    )
 
     from agent_engine.simulation.system import SystemManager
 
@@ -50,7 +47,7 @@ class SimulationState(AbstractSimulationState):
         self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
         self.main_rng: Optional[np.random.Generator] = None
         self.current_tick: int = 0
-        self.db_logger: Optional["AsyncDatabaseManager"] = None
+        self.db_logger: Optional[Any] = None  # TYPE HINT CHANGED
 
     @property
     def event_bus(self) -> Optional["EventBus"]:
@@ -69,11 +66,11 @@ class SimulationState(AbstractSimulationState):
         component_factory: ComponentFactoryInterface,
         environment: "EnvironmentInterface",
         event_bus: "EventBus",
-        db_logger: "AsyncDatabaseManager",
+        db_logger: Any,  # TYPE HINT CHANGED
     ) -> "SimulationState":
         """Creates a new SimulationState instance from a snapshot."""
         # Initialize a new state object
-        sim_state = cls(config, "cpu")  # Assume "cpu" device for simplicity
+        sim_state = cls(config, "cpu")
         sim_state.current_tick = snapshot.current_tick
         sim_state.simulation_id = snapshot.simulation_id
         sim_state.environment = environment
@@ -81,7 +78,7 @@ class SimulationState(AbstractSimulationState):
         sim_state.db_logger = db_logger
 
         # Restore environment state first
-        if snapshot.environment_state:
+        if snapshot.environment_state and sim_state.environment:
             sim_state.environment.restore_from_dict(snapshot.environment_state)
 
         # Restore agents and their components using the factory
@@ -99,6 +96,29 @@ class SimulationState(AbstractSimulationState):
                     print(f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}")
 
         return sim_state
+
+    def to_snapshot(self) -> SimulationSnapshot:
+        """
+        Converts the live SimulationState object into a serializable SimulationSnapshot model.
+        """
+        agent_snapshots = []
+        for agent_id, components in self.entities.items():
+            component_snapshots = []
+            for component in components.values():
+                comp_snapshot = ComponentSnapshot(
+                    component_type=f"{component.__class__.__module__}.{component.__class__.__name__}",
+                    data=component.to_dict(),
+                )
+                component_snapshots.append(comp_snapshot)
+
+            agent_snapshots.append(AgentSnapshot(agent_id=agent_id, components=component_snapshots))
+
+        return SimulationSnapshot(
+            simulation_id=self.simulation_id,
+            current_tick=self.current_tick,
+            agents=agent_snapshots,
+            environment_state=(self.environment.to_dict() if self.environment else None),
+        )
 
     def add_entity(self, entity_id: str) -> None:
         if entity_id in self.entities:
