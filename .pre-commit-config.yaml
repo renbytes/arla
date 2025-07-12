@@ -9,7 +9,7 @@ repos:
 
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4  # Or a newer version
+    rev: v0.12.3
     hooks:
     # This hook lints for bugs and unused imports, and auto-fixes them.
     -   id: ruff

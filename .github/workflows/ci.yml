@@ -36,7 +36,7 @@ jobs:
       - name: Check formatting with Ruff
         run: |
           # Have ruff format check the entire project, not just a single 'src' folder.
-          ruff format --check .
+          ruff format --diff .
 
       - name: Type check with Mypy
         run: |

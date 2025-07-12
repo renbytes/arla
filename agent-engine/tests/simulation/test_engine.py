@@ -149,9 +149,9 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
         "update_all_tick_2",
         "process_turn_tick_2",
     ]
-    assert (
-        call_order_tracker == expected_order
-    ), "The order of operations is incorrect! Systems must be updated before entity turns are processed."
+    assert call_order_tracker == expected_order, (
+        "The order of operations is incorrect! Systems must be updated before entity turns are processed."
+    )
 
     # 3. Verify the final state was saved
     manager.mock_create_snapshot.assert_called_once_with(manager.simulation_state)
