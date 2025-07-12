@@ -137,7 +137,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
                 )
                 action_tensor = torch.tensor(action_features, dtype=torch.float32).unsqueeze(0)
 
-                # FIX: Call the actual utility network to get the Q-value.
+                # Call the actual utility network to get the Q-value.
                 q_value = q_comp.utility_network(state_tensor, internal_tensor, action_tensor).item()
 
                 if q_value > max_q_value:

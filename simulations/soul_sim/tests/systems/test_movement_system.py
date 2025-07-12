@@ -55,7 +55,7 @@ def test_movement_system_moves_entity(movement_system_setup):
     system, mock_state, mock_bus, entity_id = movement_system_setup
 
     action_plan = ActionPlanComponent(params={"direction": 0})  # Move Up
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     move_event = {
         "entity_id": entity_id,
         "action_plan_component": action_plan,
@@ -87,7 +87,7 @@ def test_movement_system_handles_boundary(movement_system_setup):
     pos_component.position = (0, 5)
 
     action_plan = ActionPlanComponent(params={"direction": 0})  # Move Up
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     move_event = {
         "entity_id": entity_id,
         "action_plan_component": action_plan,

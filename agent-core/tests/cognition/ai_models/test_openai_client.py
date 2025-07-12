@@ -54,7 +54,7 @@ def mock_openai(mocker):
     mock_completion_response.usage = mock_usage
     mock_client.chat.completions.create.return_value = mock_completion_response
 
-    # FIX: Patch the 'OpenAI' class within the openai_client module's namespace.
+    # Patch the 'OpenAI' class within the openai_client module's namespace.
     mocker.patch("agent_core.cognition.ai_models.openai_client.OpenAI", return_value=mock_client)
 
     return mock_client
@@ -74,7 +74,8 @@ def test_get_client_success(mocker):
 
 
 def test_get_client_no_api_key_raises_error(mocker):
-    mocker.patch("os.getenv", return_value=None)
+    # Use patch.dict to clear os.environ for the test's scope
+    mocker.patch.dict(os.environ, clear=True)
     with pytest.raises(OpenAIError):
         get_client()
 

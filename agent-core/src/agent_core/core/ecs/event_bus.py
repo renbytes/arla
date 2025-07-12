@@ -6,7 +6,7 @@ import traceback
 from collections import defaultdict
 from typing import Any, Callable, Coroutine, Dict, List, Union, cast
 
-# FIX: Update the EventHandler type to accept both sync and async functions.
+# Update the EventHandler type to accept both sync and async functions.
 EventHandler = Union[
     Callable[[Dict[str, Any]], None],
     Callable[[Dict[str, Any]], Coroutine[Any, Any, None]],

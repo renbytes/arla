@@ -83,7 +83,7 @@ def get_embedding_from_llm(
     text: str, expected_embedding_dim: int, llm_config: Optional[Dict[str, Any]] = None
 ) -> Optional[np.ndarray]:
     """Gets an embedding with proper validation."""
-    client = get_client()  # FIX: Get client via the new function
+    client = get_client()  # Get client via the new function
     config = llm_config if llm_config else {}
     model_name = config.get("embedding_model", "text-embedding-ada-002")
 
@@ -108,7 +108,7 @@ def get_embeddings_from_llm_batch(
     if not texts:
         return []
 
-    client = get_client()  # FIX: Get client via the new function
+    client = get_client()  # Get client via the new function
     config = llm_config if llm_config else {}
     model_name = config.get("embedding_model", "text-embedding-ada-002")
 
@@ -124,7 +124,7 @@ def query_llm(prompt_text: str, llm_config: Optional[Dict[str, Any]] = None) -> 
     """
     Queries the LLM, returning the response, token usage, and estimated cost.
     """
-    client = get_client()  # FIX: Get client via the new function
+    client = get_client()  # Get client via the new function
     config = llm_config if llm_config else {}
     model_name = config.get("completion_model", "gpt-4.1-nano")
     temp = config.get("temperature", 0.1)

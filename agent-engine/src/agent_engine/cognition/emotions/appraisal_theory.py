@@ -83,7 +83,7 @@ class AppraisalProcessor:
         elif not action_success and prediction_error < 0:
             base_relevance *= 1.1
 
-        # FIX: Cast the numpy float to a standard float to match the return type annotation.
+        # Cast the numpy float to a standard float to match the return type annotation.
         return float(np.clip(base_relevance, 0.0, 1.0))
 
     def _assess_goal_congruence(self, prediction_error: float, action_success: bool) -> float:
@@ -145,7 +145,7 @@ def compute_emotional_valence(appraisal: AppraisalDimensions) -> float:
     social_boost = appraisal.social_approval * 0.4
 
     total_valence = primary_valence + agency_boost + control_boost + social_boost
-    # FIX: Cast the numpy float to a standard float.
+    # Cast the numpy float to a standard float.
     return float(np.clip(total_valence, -1.0, 1.0))
 
 
@@ -166,5 +166,5 @@ def compute_emotional_arousal(appraisal: AppraisalDimensions, prediction_error: 
     control_stress = (1.0 - appraisal.controllability) * 0.3
 
     total_arousal = error_arousal * relevance_multiplier + uncertainty_boost + control_stress
-    # FIX: Cast the numpy float to a standard float.
+    # Cast the numpy float to a standard float.
     return float(np.clip(total_arousal, 0.0, 1.0))

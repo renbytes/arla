@@ -137,7 +137,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
                     self.simulation_state.environment.update_entity_position(entity_id, None, initial_pos)
                     agent_counter += 1
 
-        # FIX: Moved this print statement outside the conditional to ensure it always runs.
+        # Moved this print statement outside the conditional to ensure it always runs.
         print(f"--- Created {agent_counter} agents. ---")
 
     def _create_resources(self):
@@ -167,7 +167,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
                 PositionComponent(position=pos, environment=self.simulation_state.environment),
             )
 
-            # FIX: Create a clean dictionary for the component's constructor
+            # Create a clean dictionary for the component's constructor
             # This prevents passing unexpected arguments like 'id' or 'pos'.
             component_params = {
                 "resource_type": res_data["type"],

@@ -83,7 +83,7 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
 
         update_threshold = 0.3 + (current_domain.stability * 0.4)
 
-        # FIX: Increased the weight of social validation to allow it to have a stronger
+        # Increased the weight of social validation to allow it to have a stronger
         # influence on identity change, which resolves the test failure.
         combined_support = consistency_score * 0.2 + validation_score * 0.8
 

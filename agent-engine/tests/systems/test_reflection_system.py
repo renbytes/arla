@@ -124,7 +124,7 @@ class TestReflectionSystem:
         chunking, synthesizing, and publishing.
         """
         # --- Arrange ---
-        # FIX: Use the correct key "action_plan" to match what ActionSystem publishes.
+        # Use the correct key "action_plan" to match what ActionSystem publishes.
         reflection_system.event_buffer["agent1"] = [
             {
                 "current_tick": 1,
@@ -147,7 +147,7 @@ class TestReflectionSystem:
         # --- Assert ---
         # 1. Verify episode chunking and processing was attempted
         # It should call the scaffold to get a theme for the new episode
-        # FIX: Use keyword arguments to match the actual implementation
+        # Use keyword arguments to match the actual implementation
         mock_cognitive_scaffold.query.assert_any_call(
             agent_id="agent1", purpose="episode_theming", prompt=ANY, current_tick=50
         )

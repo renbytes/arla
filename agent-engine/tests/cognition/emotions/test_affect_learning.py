@@ -34,7 +34,7 @@ def mock_action_registry(mocker):
     """Mocks the global action_registry."""
     registry = MagicMock()
 
-    # FIX: Directly assign the list to the attribute on the mock instance.
+    # Directly assign the list to the attribute on the mock instance.
     # This is a simpler and more reliable way to mock the property for this test.
     registry.action_ids = ["action_a", "action_b"]
 
@@ -154,11 +154,16 @@ def test_name_experience_cluster(mock_cognitive_scaffold, mock_action_registry):
     # Assert
     assert name == "joy"
     mock_cognitive_scaffold.query.assert_called_once()
-    call_args = mock_cognitive_scaffold.query.call_args
-    assert (
-        "Summaries: (Action: Action A, Reward: 10.0, Valence: 0.80, Arousal: 0.70). Name this."
-        in call_args[1]["prompt"]
-    )
+
+    # Check for essential content instead of a brittle, exact string.
+    # This makes the test robust against formatting changes.
+    actual_prompt = mock_cognitive_scaffold.query.call_args[1]["prompt"]
+    assert "Summaries:" in actual_prompt
+    assert "Action: Action A" in actual_prompt
+    assert "Reward: 10.0" in actual_prompt
+    assert "Valence: 0.80" in actual_prompt
+    assert "Arousal: 0.70" in actual_prompt
+    assert "Name this." in actual_prompt
 
 
 @patch("agent_engine.cognition.emotions.affect_learning.KMeans")

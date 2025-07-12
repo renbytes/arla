@@ -21,7 +21,7 @@ class CognitiveSystem(ABC):
 
     REQUIRED_COMPONENTS: Sequence[Type[CognitiveComponent]] = []
 
-    # FIX: Renamed the method from 'init' to the standard '__init__'.
+    # Renamed the method from 'init' to the standard '__init__'.
     # This corrects the super() call chain and resolves the TypeError.
     def __init__(
         self,

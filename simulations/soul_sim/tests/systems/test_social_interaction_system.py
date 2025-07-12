@@ -90,7 +90,7 @@ def test_successful_cooperative_communication(system_setup):
     """
     system, mock_state, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={"target_agent_id": "agent_b"}, intent=Intent.COOPERATE)
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     event_data = {
         "entity_id": "agent_a",
         "action_plan_component": action_plan,
@@ -126,7 +126,7 @@ def test_successful_competitive_communication(system_setup):
     """
     system, mock_state, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={"target_agent_id": "agent_b"}, intent=Intent.COMPETE)
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     event_data = {
         "entity_id": "agent_a",
         "action_plan_component": action_plan,
@@ -184,7 +184,7 @@ def test_failed_communication_due_to_validation(system_setup, target_id, setup_f
     setup_func(mock_state)
 
     action_plan = ActionPlanComponent(params={"target_agent_id": target_id}, intent=Intent.COOPERATE)
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     event_data = {
         "entity_id": "agent_a",
         "action_plan_component": action_plan,
@@ -210,7 +210,7 @@ def test_communication_with_no_target(system_setup):
     """
     system, _, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={}, intent=Intent.COOPERATE)
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     event_data = {
         "entity_id": "agent_a",
         "action_plan_component": action_plan,

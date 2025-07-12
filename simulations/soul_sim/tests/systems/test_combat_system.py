@@ -81,7 +81,7 @@ def test_combat_system_resolves_attack(combat_system_setup):
 
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
 
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     combat_event = {
         "entity_id": attacker_id,
         "action_plan_component": action_plan,
@@ -118,7 +118,7 @@ def test_combat_system_handles_defeat(combat_system_setup):
     attacker_combat_comp.attack_power = 200.0
 
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
-    # FIX: The system expects the key "action_plan_component" from the event.
+    # The system expects the key "action_plan_component" from the event.
     combat_event = {
         "entity_id": attacker_id,
         "action_plan_component": action_plan,

@@ -64,7 +64,7 @@ class AffectiveExperience:
             ]
         ).astype(np.float32)
 
-    # FIX: Added the return type annotation -> Dict[str, Any].
+    # Added the return type annotation -> Dict[str, Any].
     # This resolves the [no-untyped-def] error.
     def to_dict(self) -> Dict[str, Any]:
         """Converts the AffectiveExperience to a dictionary for logging/transfer."""

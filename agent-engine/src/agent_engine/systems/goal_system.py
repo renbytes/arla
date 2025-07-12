@@ -182,12 +182,12 @@ class GoalSystem(System):
 
         ctx_emb = get_embedding_with_cache(context, emb_dim, self.config.get("llm", {}))
         if ctx_emb is None:
-            # FIX: Assign to a locally-typed variable before returning
+            # Assign to a locally-typed variable before returning
             # to resolve the mypy inference issue.
             current_goal: Optional[str] = goal_comp.current_symbolic_goal
             return current_goal
 
-        # FIX: Explicitly annotate the types for 'best_goal' and 'max_score'.
+        # Explicitly annotate the types for 'best_goal' and 'max_score'.
         # This prevents mypy from getting confused and inferring 'Any'.
         best_goal: Optional[str] = None
         max_score: float = -float("inf")

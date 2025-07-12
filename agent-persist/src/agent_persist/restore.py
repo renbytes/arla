@@ -20,15 +20,15 @@ def restore_state_from_snapshot(
     """Reconstructs a live SimulationState from a Pydantic snapshot model."""
 
     # 1. Initialize a new, empty SimulationState
-    # FIX: Convert OmegaConf to a standard dict and provide a valid device string.
+    # Convert OmegaConf to a standard dict and provide a valid device string.
     sim_state = SimulationState(config=OmegaConf.to_container(config, resolve=True), device="cpu")
     sim_state.current_tick = snapshot.current_tick
     sim_state.simulation_id = snapshot.simulation_id
-    # FIX: Assign the passed environment and logger to the new state object.
+    # Assign the passed environment and logger to the new state object.
     sim_state.environment = environment
     sim_state.db_logger = db_logger
 
-    # FIX: The import_class helper is called inside the loop, so this line is not needed.
+    # The import_class helper is called inside the loop, so this line is not needed.
     # component_importer = import_class()
 
     # 2. Iterate through the agents in the snapshot

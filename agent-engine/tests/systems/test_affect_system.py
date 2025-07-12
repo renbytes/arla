@@ -185,7 +185,7 @@ def test_emotion_discovery_is_triggered(mock_discover, affect_system, mock_simul
     Tests that the discover_emotions function is called when the buffer is full.
     """
     # Arrange
-    # FIX: Set a value that won't cause division by zero in the application code.
+    # Set a value that won't cause division by zero in the application code.
     affect_system.config["learning"]["memory"]["emotion_cluster_min_data"] = 4
     event_data = {
         "entity_id": "agent1",
@@ -214,7 +214,7 @@ async def test_passive_dissonance_decay(affect_system, mock_simulation_state):
     affect_comp.cognitive_dissonance = 0.5
 
     # Act
-    # FIX: Use a tick value that will pass the `(current_tick + 1) % 10 == 0` check.
+    # Use a tick value that will pass the `(current_tick + 1) % 10 == 0` check.
     await affect_system.update(current_tick=9)  # Passive update
 
     # Assert

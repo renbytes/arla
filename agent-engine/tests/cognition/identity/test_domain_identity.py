@@ -108,7 +108,7 @@ def test_update_domain_identity_successful_update(identity):
     # Arrange
     domain_to_update = IdentityDomain.COMPETENCE
 
-    # FIX: Set a known initial embedding to make the consistency score predictable.
+    # Set a known initial embedding to make the consistency score predictable.
     # We make it somewhat different from the new traits to ensure consistency isn't 1.0.
     identity.domains[domain_to_update].embedding = np.array([0, 0, 1, 0], dtype=np.float32)
 
@@ -153,7 +153,7 @@ def test_update_domain_identity_resisted_update(identity):
     identity.domains[domain_to_update].stability = 0.9  # Very stable
     identity.domains[domain_to_update].confidence = 0.95  # Very confident
 
-    # FIX: Set a known initial embedding.
+    # Set a known initial embedding.
     initial_embedding = np.array([1, 1, 1, 1], dtype=np.float32)
     identity.domains[domain_to_update].embedding = initial_embedding / np.linalg.norm(initial_embedding)
 

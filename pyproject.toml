@@ -125,7 +125,8 @@ pythonpath = [
   "agent-engine/src",
   "agent-concurrent/src",
   "agent-persist/src",
-  "agent-sim/src"
+  "agent-sim/src",
+  "simulations"
 ]
 testpaths = [
     "agent-core/tests",
