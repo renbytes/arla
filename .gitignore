@@ -9,9 +9,9 @@ venv/
 .env
 
 # Build artifacts
-build/
-dist/
-*.egg-info/
+**/build/
+**/dist/
+**/*.egg-info/
 *.so
 
 # IDEs and editors
