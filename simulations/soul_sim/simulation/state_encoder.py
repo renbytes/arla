@@ -2,14 +2,11 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 from agent_core.core.ecs.component import (
-    HealthComponent,
-    InventoryComponent,
-    PositionComponent,
     TimeBudgetComponent,
 )
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
 from agent_engine.utils.math_utils import safe_divide
-from simulations.soul_sim.components import CombatComponent, ResourceComponent
+from simulations.soul_sim.components import CombatComponent, HealthComponent, InventoryComponent, PositionComponent, ResourceComponent
 
 
 class SoulSimStateEncoder(StateEncoderInterface):

@@ -43,7 +43,7 @@ llm:
 
 agent:
   foundational:
-    num_agents: 10
+    num_agents: 40
     lifespan_std_dev_percent: 0.1
     vitals:
       initial_time_budget: 1000.0
@@ -69,11 +69,11 @@ agent:
     actions:
       base: 1.0
       communicate: 1.0
-      extract: 5.0
-      combat: 10.0
-      flee: 2.0
-      reflect: 20.0
-      nest: 50.0
+      extract: 1.0
+      combat: 1.0
+      flee: 1.0
+      reflect: 1.0
+      nest: 1.0
 
   dynamics:
     decay:
@@ -112,10 +112,10 @@ agent:
     identity_coherence_minimum: 0.4
 
 environment:
-  grid_world_size: [50, 50]
-  num_single_resources: 20
-  num_double_resources: 10
-  num_triple_resources: 5
+  grid_world_size: [10, 10]
+  num_single_resources: 25
+  num_double_resources: 15
+  num_triple_resources: 10
   resource_respawn_single: 50
   resource_respawn_double: 100
   resource_respawn_triple: 200

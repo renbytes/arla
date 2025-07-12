@@ -90,6 +90,10 @@ class TestScenarioLoader:
         """
         # Arrange
         mock_config["scenario_path"] = str(scenario_file)
+        # Add resource counts to the mock config for this test
+        mock_config["environment"] = {
+            "num_single_resources": 1, "num_double_resources": 0, "num_triple_resources": 0
+        }
         loader = ScenarioLoader(config=mock_config)
         loader.simulation_state = mock_simulation_state
 
@@ -97,12 +101,10 @@ class TestScenarioLoader:
         loader.load()
 
         # Assert
-        # 1. Check resource creation
-        assert "resource_0" in mock_simulation_state.entities
-        resource_comps = mock_simulation_state.entities["resource_0"]
-        assert PositionComponent in resource_comps
-        assert ResourceComponent in resource_comps
-        assert resource_comps[PositionComponent].position == (10, 10)
+        # 1. Check that a resource was created
+        # Find the first entity that has a ResourceComponent
+        resource_entity_id = next((eid for eid, comps in mock_simulation_state.entities.items() if ResourceComponent in comps), None)
+        assert resource_entity_id is not None, "No resource entity was created"
 
         # 2. Check agent creation
         assert "full_agent_0" in mock_simulation_state.entities
@@ -151,8 +153,9 @@ class TestScenarioLoader:
         captured = capsys.readouterr()
 
         # Assert
-        # No entities should have been created
-        assert not mock_simulation_state.entities
+        # Resources should be created from config, but no agents.
+        assert "full_agent_0" not in mock_simulation_state.entities
+        assert any(ResourceComponent in v for v in mock_simulation_state.entities.values())
         assert "Created 0 agents" in captured.out
 
     def test_load_handles_unknown_archetype(self, mock_config, tmp_path, mock_simulation_state, capsys):
@@ -173,11 +176,18 @@ class TestScenarioLoader:
         captured = capsys.readouterr()
 
         # Assert
-        # No agents should be created, and a warning should be printed.
-        assert not mock_simulation_state.entities
+        # Check that no AGENT entities were created
+        agent_ids = [eid for eid in mock_simulation_state.entities if "agent" in eid]
+        assert not agent_ids, "Agent entities were created for an unknown archetype."
+
+        # Check that RESOURCE entities were still created
+        # Check for the component type in the dictionary's keys, not its values.
+        assert any(ResourceComponent in v for v in mock_simulation_state.entities.values())
+
+        # Check that the warning was printed
         assert "Warning: Archetype 'unknown_archetype' not found" in captured.out
 
-    # FIX: The patch path must point to the `action_registry` instance within the module,
+    # The patch path must point to the `action_registry` instance within the module,
     # not the module itself.
     @patch('agent_core.agents.actions.action_registry.action_registry._actions', {'move': None, 'extract': None, 'combat': None})
     def test_prepare_component_kwargs(self, mock_config, mock_simulation_state):

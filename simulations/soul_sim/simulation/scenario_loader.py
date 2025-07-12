@@ -20,6 +20,7 @@ from simulations.soul_sim.components import (
     CombatComponent, EnvironmentObservationComponent, FailedStatesComponent,
     HealthComponent, InventoryComponent, NestComponent, PositionComponent, ResourceComponent
 )
+from simulations.soul_sim.environment.resources import init_resources
 
 
 class ScenarioLoader(ScenarioLoaderInterface):
@@ -123,17 +124,48 @@ class ScenarioLoader(ScenarioLoaderInterface):
 
 
     def _create_resources(self):
-        """Initializes resource entities based on scenario config."""
-        resource_config = self.scenario_data.get("resources", {})
-        for i, res_data in enumerate(resource_config.get("resource_list", [])):
-            res_id = f"resource_{i}"
+        """Initializes resource entities by calling the random generator."""
+        # Get resource counts from the main YAML config
+        num_single = get_config_value(self.config, "environment.num_single_resources", 10)
+        num_double = get_config_value(self.config, "environment.num_double_resources", 5)
+        num_triple = get_config_value(self.config, "environment.num_triple_resources", 2)
+        seed = get_config_value(self.config, "simulation.random_seed", None)
+
+        # Generate the dictionary of resources with random positions
+        resources_to_create = init_resources(
+            environment=self.simulation_state.environment,
+            num_single=num_single,
+            num_double=num_double,
+            num_triple=num_triple,
+            seed=seed
+        )
+
+        # Create entities from the generated dictionary
+        for res_id, res_data in resources_to_create.items():
             self.simulation_state.add_entity(res_id)
             pos = tuple(res_data["pos"])
+
             self.simulation_state.add_component(
                 res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
             )
-            self.simulation_state.add_component(res_id, ResourceComponent(**res_data["params"]))
+
+            # FIX: Create a clean dictionary for the component's constructor
+            # This prevents passing unexpected arguments like 'id' or 'pos'.
+            component_params = {
+                "resource_type": res_data["type"],
+                "initial_health": res_data["initial_health"],
+                "min_agents": res_data["min_agents_needed"],
+                "max_agents": res_data["max_agents_allowed"],
+                "mining_rate": res_data["mining_rate"],
+                "reward_per_mine": res_data["reward_per_mine_action"],
+                "resource_yield": res_data["resource_yield"],
+                "respawn_time": res_data["resource_respawn_time"],
+            }
+
+            self.simulation_state.add_component(res_id, ResourceComponent(**component_params))
             self.simulation_state.environment.update_entity_position(res_id, None, pos)
+
+        print(f"--- Created {len(resources_to_create)} resources randomly. ---")
 
     def _prepare_component_kwargs(self, initial_pos: tuple) -> Dict[str, Any]:
         """Gathers all possible constructor arguments for any component from the config."""
