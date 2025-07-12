@@ -1,5 +1,7 @@
 # agent-engine/tests/simulation/test_simulation_state.py
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 from agent_core.core.ecs.component import (
@@ -9,6 +11,8 @@ from agent_core.core.ecs.component import (
     GoalComponent,
     IdentityComponent,
 )
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
+from agent_core.environment.interface import EnvironmentInterface
 from agent_engine.cognition.identity.domain_identity import (
     IdentityDomain,
     MultiDomainIdentity,
@@ -16,6 +20,9 @@ from agent_engine.cognition.identity.domain_identity import (
 
 # Subject under test
 from agent_engine.simulation.simulation_state import SimulationState
+
+# Import snapshot models for testing
+from agent_persist.models import SimulationSnapshot
 
 # --- Fixtures ---
 
@@ -208,3 +215,138 @@ class TestInternalStateFeatures:
         assert np.all(features[-3:] == 0.0)
         # Check that all feature values (everything except the flags) are 0.0
         assert np.all(features[:-3] == 0.0)
+
+
+# --- Test Cases for Snapshotting ---
+
+
+class TestSnapshotting:
+    """Tests the to_snapshot and from_snapshot methods."""
+
+    def test_to_snapshot_creates_correct_structure(self, sim_state):
+        """
+        Tests that to_snapshot correctly serializes the simulation state.
+        """
+        # Arrange
+        mock_env = MagicMock(spec=EnvironmentInterface)
+        mock_env.to_dict.return_value = {"world_size": [10, 10]}
+        sim_state.environment = mock_env
+
+        sim_state.simulation_id = "test_sim_123"
+        sim_state.current_tick = 150
+
+        sim_state.add_entity("agent_01")
+        sim_state.add_component("agent_01", EmotionComponent(valence=0.5, arousal=0.6))
+
+        # Act
+        snapshot = sim_state.to_snapshot()
+
+        # Assert
+        assert isinstance(snapshot, SimulationSnapshot)
+        assert snapshot.simulation_id == "test_sim_123"
+        assert snapshot.current_tick == 150
+        assert snapshot.environment_state == {"world_size": [10, 10]}
+        assert len(snapshot.agents) == 1
+
+        agent_snapshot = snapshot.agents[0]
+        assert agent_snapshot.agent_id == "agent_01"
+        assert len(agent_snapshot.components) == 1
+
+        comp_snapshot = agent_snapshot.components[0]
+        assert comp_snapshot.component_type == "agent_core.core.ecs.component.EmotionComponent"
+        assert comp_snapshot.data["valence"] == 0.5
+
+    def test_from_snapshot_restores_state_correctly(self, config):
+        """
+        Tests that from_snapshot correctly reconstructs a SimulationState.
+        """
+        # Arrange
+        snapshot_data = {
+            "simulation_id": "restored_sim_456",
+            "current_tick": 200,
+            "agents": [
+                {
+                    "agent_id": "agent_01",
+                    "components": [
+                        {
+                            "component_type": "agent_core.core.ecs.component.EmotionComponent",
+                            "data": {"valence": 0.8, "arousal": 0.3},
+                        }
+                    ],
+                }
+            ],
+            "environment_state": {"weather": "sunny"},
+        }
+        snapshot = SimulationSnapshot(**snapshot_data)
+
+        # Mock dependencies for from_snapshot
+        mock_factory = MagicMock(spec=ComponentFactoryInterface)
+        mock_factory.create_component.return_value = EmotionComponent(valence=0.8, arousal=0.3)
+        mock_env = MagicMock(spec=EnvironmentInterface)
+        mock_bus = MagicMock()
+        mock_logger = MagicMock()
+
+        # Act
+        restored_state = SimulationState.from_snapshot(snapshot, config, mock_factory, mock_env, mock_bus, mock_logger)
+
+        # Assert
+        assert restored_state.simulation_id == "restored_sim_456"
+        assert restored_state.current_tick == 200
+        assert "agent_01" in restored_state.entities
+        mock_env.restore_from_dict.assert_called_once_with({"weather": "sunny"})
+        mock_factory.create_component.assert_called_once_with(
+            "agent_core.core.ecs.component.EmotionComponent",
+            {"valence": 0.8, "arousal": 0.3},
+        )
+        assert isinstance(
+            restored_state.get_component("agent_01", EmotionComponent),
+            EmotionComponent,
+        )
+
+    def test_snapshot_roundtrip(self, sim_state, config):
+        """
+        Tests that saving a state to a snapshot and restoring it results
+        in an equivalent state.
+        """
+        # --- Arrange ---
+
+        # 1. Create a simple mock component factory for the test
+        class MockFactory(ComponentFactoryInterface):
+            def create_component(self, component_type, data):
+                # Simple factory that only knows about EmotionComponent
+                if component_type.endswith("EmotionComponent"):
+                    return EmotionComponent(**data)
+                return Component()
+
+        # 2. Set up the original state
+        original_state = sim_state
+        original_state.simulation_id = "roundtrip_sim"
+        original_state.current_tick = 50
+        original_state.environment = MagicMock(spec=EnvironmentInterface)
+        original_state.environment.to_dict.return_value = {"type": "mock"}
+        original_state.add_entity("agent_x")
+        original_state.add_component("agent_x", EmotionComponent(valence=0.9))
+
+        # --- Act ---
+
+        # 1. Save to snapshot
+        snapshot = original_state.to_snapshot()
+
+        # 2. Restore from snapshot
+        restored_state = SimulationState.from_snapshot(
+            snapshot,
+            config=config,
+            component_factory=MockFactory(),
+            environment=original_state.environment,
+            event_bus=MagicMock(),
+            db_logger=MagicMock(),
+        )
+
+        # --- Assert ---
+        assert restored_state.simulation_id == original_state.simulation_id
+        assert restored_state.current_tick == original_state.current_tick
+
+        # Compare dictionaries for a more robust check of content
+        original_agent_comps = {type(c).__name__: c.to_dict() for c in original_state.entities["agent_x"].values()}
+        restored_agent_comps = {type(c).__name__: c.to_dict() for c in restored_state.entities["agent_x"].values()}
+        assert original_agent_comps == restored_agent_comps
