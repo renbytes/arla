@@ -1,5 +1,7 @@
 # agent-persist/src/agent_persist/restore.py
 
+from typing import Any, Dict, cast
+
 from agent_core.environment.interface import EnvironmentInterface
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.utils.class_importer import import_class
@@ -21,7 +23,8 @@ def restore_state_from_snapshot(
 
     # 1. Initialize a new, empty SimulationState
     # Convert OmegaConf to a standard dict and provide a valid device string.
-    sim_state = SimulationState(config=OmegaConf.to_container(config, resolve=True), device="cpu")
+    resolved_config = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
+    sim_state = SimulationState(config=resolved_config, device="cpu")
     sim_state.current_tick = snapshot.current_tick
     sim_state.simulation_id = snapshot.simulation_id
     # Assign the passed environment and logger to the new state object.
