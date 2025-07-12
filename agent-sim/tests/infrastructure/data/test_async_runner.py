@@ -6,13 +6,13 @@ Comprehensive unit tests for the AsyncRunner class.
 import asyncio
 import threading
 from concurrent.futures import TimeoutError
-from typing import Any, Coroutine, Iterator
+from typing import Any, Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest
+from agent_sim.infrastructure.data.async_runner import AsyncRunner
 
 # Subject under test
-from src.agent_sim.infrastructure.data.async_runner import AsyncRunner
 
 # --- Test Coroutines ---
 
