@@ -55,7 +55,7 @@ dev = [
     "pytest-mock",
     "pytest-asyncio",
     "ruff==0.12.3",
-    "mypy",
+    "mypy==1.16.1",
     "pip-tools",
     "pre-commit",
     "flower>=2.0.0",
