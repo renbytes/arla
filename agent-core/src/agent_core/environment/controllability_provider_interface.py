@@ -1,10 +1,10 @@
 # src/agent_core/environment/controllability_provider_interface.py
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 if TYPE_CHECKING:
-    from agent_core.core.ecs.component import Component
     from agent_core.core.ecs.abstractions import SimulationState
+    from agent_core.core.ecs.component import Component
 
 
 class ControllabilityProviderInterface(ABC):

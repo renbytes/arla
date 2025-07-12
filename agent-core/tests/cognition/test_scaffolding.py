@@ -1,4 +1,6 @@
 # src/agent_core/tests/cognition/test_scaffolding.py
+from unittest.mock import MagicMock
+
 import pytest
 
 # Subject under test
@@ -13,18 +15,26 @@ def mock_dependencies(mocker):
     # Mock the imported query_llm function
     mock_query_llm = mocker.patch(
         "agent_core.cognition.scaffolding.query_llm",
-        return_value=("LLM Response", 100, 0.001),  # (response_text, tokens, cost)
+        return_value=("LLM Response", 100, 0.001),
     )
 
-    # Mock the globally instantiated db_logger and async_runner
-    mock_db_logger = mocker.patch("agent_core.cognition.scaffolding.db_logger_instance")
-    mock_async_runner = mocker.patch("agent_core.cognition.scaffolding.async_runner_instance")
+    # Patch asyncio.create_task where it is used, and remove the unused async_runner mock
+    mock_create_task = mocker.patch("agent_core.cognition.scaffolding.asyncio.create_task")
 
-    # Return all mocks in a dictionary for easy access in tests
+    # We now mock the db_logger on the scaffold directly in the scaffold fixture
+    # This is a cleaner approach than mocking a global instance.
+    mock_db_logger = MagicMock()
+
+    # Configure the mock to return an awaitable coroutine
+    async def dummy_coro():
+        pass
+
+    mock_db_logger.log_scaffold_interaction.return_value = dummy_coro()
+
     return {
         "query_llm": mock_query_llm,
-        "db_logger": mock_db_logger,
-        "async_runner": mock_async_runner,
+        "db_logger": mock_db_logger,  # This is now a local mock
+        "create_task": mock_create_task,
     }
 
 
@@ -33,7 +43,12 @@ def scaffold(mock_dependencies):
     """Provides a CognitiveScaffold instance with mocked dependencies."""
     # The config can be simple for this test
     config = {"llm": {"temperature": 0.5}}
-    scaffold_instance = CognitiveScaffold(simulation_id="sim_123", config=config)
+    # Pass the required db_logger from the mocked dependencies
+    scaffold_instance = CognitiveScaffold(
+        simulation_id="sim_123",
+        config=config,
+        db_logger=mock_dependencies["db_logger"],
+    )
     return scaffold_instance
 
 
@@ -73,7 +88,6 @@ def test_scaffold_query_calls_llm_and_logs_correctly(scaffold, mock_dependencies
         cost_usd=0.001,
     )
 
-    # 4. Check that the async runner was used to call the logger
-    # This verifies that the logging call is correctly wrapped for async execution.
+    # 4. Check that asyncio.create_task was used to call the logger
     log_coroutine = mock_dependencies["db_logger"].log_scaffold_interaction.return_value
-    mock_dependencies["async_runner"].run_async.assert_called_once_with(log_coroutine)
+    mock_dependencies["create_task"].assert_called_once_with(log_coroutine)

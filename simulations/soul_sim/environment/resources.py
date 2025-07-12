@@ -5,11 +5,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from simulations.soul_sim.components import PositionComponent, ResourceComponent
-
 # Import Component classes for type hinting and manipulation
 from agent_core.environment.interface import EnvironmentInterface
 
+from simulations.soul_sim.components import PositionComponent, ResourceComponent
 
 # --- Resource Constants ---
 RESOURCE_TYPES: Dict[str, Dict[str, Any]] = {

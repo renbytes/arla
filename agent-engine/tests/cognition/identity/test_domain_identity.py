@@ -1,13 +1,14 @@
 # tests/cognition/identity/test_domain_identity.py
 
 from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 
 # Subject under test
 from agent_engine.cognition.identity.domain_identity import (
-    MultiDomainIdentity,
     IdentityDomain,
+    MultiDomainIdentity,
     SocialValidationCollector,
 )
 
@@ -102,11 +103,22 @@ def test_get_identity_stability(identity):
 def test_update_domain_identity_successful_update(identity):
     """
     Tests a scenario where an identity update should occur due to high support.
+    This test is now deterministic.
     """
     # Arrange
     domain_to_update = IdentityDomain.COMPETENCE
+
+    # Set a known initial embedding to make the consistency score predictable.
+    # We make it somewhat different from the new traits to ensure consistency isn't 1.0.
+    identity.domains[domain_to_update].embedding = np.array([0, 0, 1, 0], dtype=np.float32)
+
     new_traits = np.array([0, 1, 0, 1], dtype=np.float32)
-    context = {"social_feedback": {"positive_social_responses": 0.9, "social_approval_rating": 0.8}}
+    context = {
+        "social_feedback": {
+            "positive_social_responses": 0.9,
+            "social_approval_rating": 0.8,
+        }
+    }
     original_embedding = identity.get_domain_embedding(domain_to_update).copy()
 
     # Act
@@ -122,15 +134,13 @@ def test_update_domain_identity_successful_update(identity):
     new_embedding = identity.get_domain_embedding(domain_to_update)
     assert not np.array_equal(original_embedding, new_embedding)
 
-    # Change the assertion to check for increased cosine similarity,
-    # which is the correct metric for normalized directional vectors.
+    # Check that the new embedding has moved closer to the target traits
     def cosine_similarity(v1, v2):
         return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
 
     original_sim = cosine_similarity(original_embedding, new_traits)
     new_sim = cosine_similarity(new_embedding, new_traits)
 
-    # The new similarity should be greater than the original one.
     assert new_sim > original_sim
 
 
@@ -143,6 +153,10 @@ def test_update_domain_identity_resisted_update(identity):
     identity.domains[domain_to_update].stability = 0.9  # Very stable
     identity.domains[domain_to_update].confidence = 0.95  # Very confident
 
+    # Set a known initial embedding.
+    initial_embedding = np.array([1, 1, 1, 1], dtype=np.float32)
+    identity.domains[domain_to_update].embedding = initial_embedding / np.linalg.norm(initial_embedding)
+
     # New traits are very different from existing identity
     new_traits = -identity.get_domain_embedding(domain_to_update)
     context = {"social_feedback": {"negative_social_responses": 0.8}}  # Negative feedback
@@ -152,7 +166,7 @@ def test_update_domain_identity_resisted_update(identity):
     updated, _, _ = identity.update_domain_identity(
         domain=domain_to_update,
         new_traits=new_traits,
-        context=context,  # Fix: Use 'context' instead of 'social_feedback'
+        context=context,
         current_tick=10,
     )
 

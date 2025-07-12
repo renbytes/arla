@@ -47,7 +47,11 @@ class ActionInterface(ABC):
 
     @abstractmethod
     def execute(
-        self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+        current_tick: int,
     ) -> Dict[str, Any]:
         """
         Executes the action's logic and modifies the simulation state.
@@ -56,7 +60,10 @@ class ActionInterface(ABC):
 
     @abstractmethod
     def get_feature_vector(
-        self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
     ) -> List[float]:
         """
         Generates the feature vector for this specific action variant.

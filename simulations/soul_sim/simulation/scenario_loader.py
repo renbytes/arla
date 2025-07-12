@@ -1,242 +1,242 @@
-import importlib
+# simulations/soul_sim/simulation/scenario_loader.py
+
 import json
-import inspect
-import logging
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
+from typing import Any, Dict
 
-from omegaconf import DictConfig, OmegaConf
-from rich import print
-
-# Core imports
-from agent_core.core.ecs.component import Component
+from agent_core.agents.actions.action_registry import action_registry
+from agent_core.agents.actions.base_action import Intent
+from agent_core.core.ecs.component import (
+    ActionOutcomeComponent,
+    ActionPlanComponent,
+    AffectComponent,
+    BeliefSystemComponent,
+    CompetenceComponent,
+    EmotionComponent,
+    EpisodeComponent,
+    GoalComponent,
+    IdentityComponent,
+    MemoryComponent,
+    SocialMemoryComponent,
+    TimeBudgetComponent,
+    ValidationComponent,
+    ValueSystemComponent,
+)
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
+from agent_engine.cognition.identity.domain_identity import (
+    IdentityDomain,
+    MultiDomainIdentity,
+)
 from agent_engine.simulation.simulation_state import SimulationState
+from agent_engine.systems.components import QLearningComponent
 from agent_engine.utils.config_utils import get_config_value
-from agent_engine.cognition.identity.domain_identity import IdentityDomain
 
-# Simulation-specific component imports
-from simulations.soul_sim.components import PositionComponent, ResourceComponent
-
-logger = logging.getLogger(__name__)
-
-def _import_class(class_path: str) -> Type[Component]:
-    """Helper to dynamically import a component class from its full path string."""
-    try:
-        module_path, class_name = class_path.rsplit(".", 1)
-        print(f"[DEBUG] Importing module: {module_path}, class: {class_name}")
-        module = importlib.import_module(module_path)
-        cls = getattr(module, class_name)
-        print(f"[DEBUG] Successfully imported: {cls}")
-        return cls
-    except Exception as e:
-        print(f"[ERROR] Failed to import {class_path}: {e}")
-        raise
+from simulations.soul_sim.components import (
+    CombatComponent,
+    EnvironmentObservationComponent,
+    FailedStatesComponent,
+    HealthComponent,
+    InventoryComponent,
+    NestComponent,
+    PositionComponent,
+    ResourceComponent,
+)
+from simulations.soul_sim.environment.resources import init_resources
 
 
 class ScenarioLoader(ScenarioLoaderInterface):
     """
-    Debug version of ScenarioLoader with extensive logging.
+    Loads a scenario from a JSON file and sets up the initial state of the simulation
+    by creating agents with pre-defined, robust component archetypes.
     """
 
-    def __init__(self, config: Any):
-        # Convert OmegaConf to a standard dict for easier processing
-        if isinstance(config, DictConfig):
-            self.config = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
-        else:
-            self.config = config
-
-        print(f"[DEBUG] ScenarioLoader initialized with config keys: {list(self.config.keys())}")
-        print(f"[DEBUG] Agent config structure: {self.config.get('agent', {}).keys()}")
-
-        # The SimulationState will be injected by the main run script before `load` is called
-        self.simulation_state: Optional[SimulationState] = None
-        # This will hold the parsed data from the scenario JSON file
-        self.scenario_data: Optional[Dict[str, Any]] = None
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.simulation_state: SimulationState = None  # Injected by SimulationManager
+        self.scenario_data: Dict[str, Any] = {}
+        self._define_archetypes()
 
     def load(self) -> None:
-        """
-        Loads the scenario file, parses its data, and then populates the
-        simulation state with agents and resources.
-        """
-        print("[DEBUG] ScenarioLoader.load() called")
-
+        """Loads the scenario file and populates the simulation state."""
         if not self.simulation_state:
-            raise RuntimeError("SimulationState has not been set on the ScenarioLoader before calling load().")
+            raise RuntimeError("SimulationState must be set before calling load().")
 
         scenario_path = self.config.get("scenario_path")
-        print(f"[DEBUG] Scenario path: {scenario_path}")
-
         if not scenario_path:
-            logger.error("ScenarioLoader: 'scenario_path' not found in configuration. Cannot load scenario.")
-            return
+            raise ValueError("Scenario path not found in configuration.")
 
-        try:
-            print(f"--- Attempting to load scenario file from: {scenario_path} ---")
-            with open(scenario_path, "r") as f:
-                self.scenario_data = json.load(f)
-            print(f"[DEBUG] Loaded scenario data: {self.scenario_data}")
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to load or parse scenario file at {scenario_path}: {e}")
-            return
+        print(f"--- Loading scenario from: {scenario_path} ---")
+        with open(scenario_path, "r") as f:
+            self.scenario_data = json.load(f)
 
-        print(f"--- Loading scenario: {self.scenario_data.get('name', 'Untitled')} ---")
-        self._create_resources(self.scenario_data.get("resources", {}))
-        self._create_agents(self.scenario_data.get("groups", []))
-        print("--- Scenario loading complete. ---")
+        self._create_resources()
+        self._create_agents()
+        print(f"--- Scenario '{self.scenario_data.get('name', 'Untitled')}' loaded successfully. ---")
 
-    def _create_resources(self, resource_config: Dict[str, Any]):
-        """Initializes resource entities based on scenario config."""
-        print(f"[DEBUG] Creating resources with config: {resource_config}")
-
-        if not self.simulation_state or not self.simulation_state.environment:
-            print("[DEBUG] No simulation state or environment - skipping resource creation")
-            return
-
-        for i, res_data in enumerate(resource_config.get("resource_list", [])):
-            res_id = f"resource_{i}"
-            print(f"[DEBUG] Creating resource {res_id} with data: {res_data}")
-
-            self.simulation_state.add_entity(res_id)
-
-            pos = tuple(res_data["pos"])
-            self.simulation_state.add_component(
-                res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
-            )
-            self.simulation_state.add_component(res_id, ResourceComponent(**res_data["params"]))
-            print(f"[DEBUG] Successfully created resource {res_id}")
-
-    def _create_agents(self, agent_groups: List[Dict[str, Any]]):
+    def _define_archetypes(self):
         """
-        Creates agents by iterating through the 'groups' defined in the scenario.
+        Defines agent archetypes using lists of component-creation functions.
+        This is more robust than parsing component paths from YAML.
         """
-        print(f"[DEBUG] Creating agents from groups: {agent_groups}")
+        core_components = [
+            lambda kwargs: PositionComponent(kwargs["initial_pos"], kwargs["environment"]),
+            lambda kwargs: TimeBudgetComponent(**kwargs["TimeBudgetComponent"]),
+            lambda kwargs: HealthComponent(**kwargs["HealthComponent"]),
+            lambda kwargs: InventoryComponent(**kwargs["InventoryComponent"]),
+            lambda kwargs: CombatComponent(**kwargs["CombatComponent"]),
+            lambda kwargs: NestComponent(),
+            lambda kwargs: QLearningComponent(**kwargs["QLearningComponent"]),
+            lambda kwargs: ActionPlanComponent(),
+            lambda kwargs: ActionOutcomeComponent(),
+            lambda kwargs: EnvironmentObservationComponent(),
+            lambda kwargs: FailedStatesComponent(),
+            lambda kwargs: CompetenceComponent(),
+        ]
 
-        if not self.simulation_state or not self.simulation_state.environment:
-            print("[DEBUG] No simulation state or environment - skipping agent creation")
-            return
+        memory_suite = [lambda kwargs: MemoryComponent()]
+        affect_suite = [
+            lambda kwargs: EmotionComponent(),
+            lambda kwargs: AffectComponent(**kwargs["AffectComponent"]),
+            lambda kwargs: ValueSystemComponent(),
+            lambda kwargs: SocialMemoryComponent(**kwargs["SocialMemoryComponent"]),
+        ]
+        goal_suite = [lambda kwargs: GoalComponent(**kwargs["GoalComponent"])]
+        identity_suite = [
+            lambda kwargs: IdentityComponent(**kwargs["IdentityComponent"]),
+            lambda kwargs: EpisodeComponent(),
+            lambda kwargs: BeliefSystemComponent(),
+            lambda kwargs: ValidationComponent(),
+        ]
 
-        if not agent_groups:
-            logger.warning("Scenario file contains no agent groups. The simulation will end immediately.")
-            return
+        self.archetypes = {"full_agent": core_components + memory_suite + affect_suite + goal_suite + identity_suite}
 
-        valid_positions = self.simulation_state.environment.get_valid_positions()
-        print(f"[DEBUG] Valid positions count: {len(valid_positions)}")
+    def _create_agents(self):
+        """Creates agent entities based on the 'groups' defined in the scenario file."""
+        agent_groups = self.scenario_data.get("groups", [])
         agent_counter = 0
 
-        for group in agent_groups:
-            num_agents_in_group = group.get("count", 0)
-            archetype_name = group.get("type", "default")
+        if agent_groups:
+            valid_positions = self.simulation_state.environment.get_valid_positions()
+            for group in agent_groups:
+                archetype_name = group.get("type", "full_agent")
+                component_factory_funcs = self.archetypes.get(archetype_name)
 
-            print(f"Creating {num_agents_in_group} agents of type '{archetype_name}'...")
+                if not component_factory_funcs:
+                    print(f"Warning: Archetype '{archetype_name}' not found. Agent group will be skipped.")
+                    continue
 
-            for agent_idx in range(num_agents_in_group):
-                entity_id = f"agent_{agent_counter}"
-                initial_pos = tuple(valid_positions[agent_counter % len(valid_positions)])
-                print(f"[DEBUG] Creating agent {entity_id} at position {initial_pos}")
+                for _ in range(group.get("count", 0)):
+                    entity_id = f"{archetype_name}_{agent_counter}"
+                    initial_pos = tuple(valid_positions[agent_counter % len(valid_positions)])
+                    self.simulation_state.add_entity(entity_id)
+                    component_kwargs = self._prepare_component_kwargs(initial_pos)
 
-                try:
-                    self._create_agent_with_components(entity_id, initial_pos, archetype_name)
-                    print(f"[DEBUG] Successfully created agent {entity_id}")
-                except Exception as e:
-                    print(f"[ERROR] Failed to create agent {entity_id}: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    for factory_func in component_factory_funcs:
+                        component = factory_func(component_kwargs)
+                        self.simulation_state.add_component(entity_id, component)
 
-                agent_counter += 1
+                    self.simulation_state.environment.update_entity_position(entity_id, None, initial_pos)
+                    agent_counter += 1
 
-        print(f"[DEBUG] Total agents created: {agent_counter}")
+        # Moved this print statement outside the conditional to ensure it always runs.
+        print(f"--- Created {agent_counter} agents. ---")
 
-    def _create_agent_with_components(self, entity_id: str, initial_pos: Tuple[int, int], archetype_name: str):
-        """Dynamically instantiates and adds all components listed in the config for a specific archetype."""
-        print(f"[DEBUG] Creating agent {entity_id} with archetype {archetype_name}")
+    def _create_resources(self):
+        """Initializes resource entities by calling the random generator."""
+        # Get resource counts from the main YAML config
+        num_single = get_config_value(self.config, "environment.num_single_resources", 10)
+        num_double = get_config_value(self.config, "environment.num_double_resources", 5)
+        num_triple = get_config_value(self.config, "environment.num_triple_resources", 2)
+        seed = get_config_value(self.config, "simulation.random_seed", None)
 
-        if not self.simulation_state:
-            print("[DEBUG] No simulation state - returning")
-            return
+        # Generate the dictionary of resources with random positions
+        resources_to_create = init_resources(
+            environment=self.simulation_state.environment,
+            num_single=num_single,
+            num_double=num_double,
+            num_triple=num_triple,
+            seed=seed,
+        )
 
-        self.simulation_state.add_entity(entity_id)
+        # Create entities from the generated dictionary
+        for res_id, res_data in resources_to_create.items():
+            self.simulation_state.add_entity(res_id)
+            pos = tuple(res_data["pos"])
 
-        component_config_path = f"agent.cognitive.archetypes.{archetype_name}.components"
-        component_paths = get_config_value(self.config, component_config_path, [])
+            self.simulation_state.add_component(
+                res_id,
+                PositionComponent(position=pos, environment=self.simulation_state.environment),
+            )
 
-        print(f"[DEBUG] Component paths for {archetype_name}: {component_paths}")
+            # Create a clean dictionary for the component's constructor
+            # This prevents passing unexpected arguments like 'id' or 'pos'.
+            component_params = {
+                "resource_type": res_data["type"],
+                "initial_health": res_data["initial_health"],
+                "min_agents": res_data["min_agents_needed"],
+                "max_agents": res_data["max_agents_allowed"],
+                "mining_rate": res_data["mining_rate"],
+                "reward_per_mine": res_data["reward_per_mine_action"],
+                "resource_yield": res_data["resource_yield"],
+                "respawn_time": res_data["resource_respawn_time"],
+            }
 
-        if not component_paths:
-            logger.warning(f"Warning: No components listed for archetype '{archetype_name}'. Agent '{entity_id}' will be empty.")
-            return
+            self.simulation_state.add_component(res_id, ResourceComponent(**component_params))
+            self.simulation_state.environment.update_entity_position(res_id, None, pos)
 
-        all_possible_kwargs = self._prepare_component_kwargs(initial_pos)
-        print(f"[DEBUG] Available kwargs keys: {list(all_possible_kwargs.keys())}")
-
-        component_count = 0
-        for path_str in component_paths:
-            try:
-                print(f"[DEBUG] Processing component: {path_str}")
-                ComponentClass = _import_class(path_str)
-
-                constructor_params = inspect.signature(ComponentClass.__init__).parameters
-                print(f"[DEBUG] Constructor params for {ComponentClass.__name__}: {list(constructor_params.keys())}")
-
-                valid_kwargs = {
-                    name: all_possible_kwargs[name]
-                    for name in constructor_params
-                    if name in all_possible_kwargs and name != 'self'
-                }
-                print(f"[DEBUG] Valid kwargs for {ComponentClass.__name__}: {list(valid_kwargs.keys())}")
-
-                component_instance = ComponentClass(**valid_kwargs)
-                self.simulation_state.add_component(entity_id, component_instance)
-                component_count += 1
-                print(f"[DEBUG] Successfully added component {ComponentClass.__name__} to {entity_id}")
-
-            except Exception as e:
-                print(f"[ERROR] Failed to load component '{path_str}' for '{entity_id}': {e}")
-                import traceback
-                traceback.print_exc()
-
-        print(f"[DEBUG] Agent {entity_id} created with {component_count} components")
+        print(f"--- Created {len(resources_to_create)} resources randomly. ---")
 
     def _prepare_component_kwargs(self, initial_pos: tuple) -> Dict[str, Any]:
-        """Gathers all possible constructor arguments for any component."""
-        if not self.simulation_state: return {}
+        """Gathers all possible constructor arguments for any component from the config."""
+        main_emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
 
-        main_embedding_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
-        num_domains = len(IdentityDomain)
+        # Calculate the true dimensions of the feature vectors dynamically.
+        # State features from SoulSimStateEncoder
+        state_feature_dim = 16
 
-        # This calculation MUST match the vector construction in SimulationState.get_internal_state_features_for_entity
-        # It's composed of: (affect/emotion vector) + (goal embedding) + (N * identity domain embeddings) + (flags)
-        calculated_internal_dim = 4 + main_embedding_dim + (num_domains * main_embedding_dim) + 3
+        # Action features from create_standard_feature_vector
+        action_feature_dim = len(action_registry.action_ids) + len(Intent) + 1 + 5
 
-        kwargs = {
-            "config": self.config,
-            "device": self.simulation_state.device,
+        # Internal state features from get_internal_state_features_for_entity
+        internal_state_dim = (
+            4  # affect/emotion
+            + main_emb_dim  # goal embedding
+            + (len(IdentityDomain) * main_emb_dim)  # all identity domains
+        )
+        return {
+            "initial_pos": initial_pos,
             "environment": self.simulation_state.environment,
-            "position": initial_pos,
-            "initial_time_budget": get_config_value(self.config, "agent.foundational.vitals.initial_time_budget", 1000.0),
-            "initial_health": get_config_value(self.config, "agent.foundational.vitals.initial_health", 100.0),
-            "initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources", 10.0),
-            "attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power", 10.0),
-            "affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen", 100),
-            "lifespan_std_dev_percent": get_config_value(self.config, "agent.foundational.lifespan_std_dev_percent", 0.1),
-            "schema_embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.schema_embedding_dim", 128),
-            "embedding_dim": get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536),
-            "state_feature_dim": 20,
-            "internal_state_dim": 20,
-            "action_feature_dim": 5,
-            "state_feature_dim": get_config_value(self.config, "learning.q_learning.state_feature_dim", 16),
-            "internal_state_dim": calculated_internal_dim,
-            "action_feature_dim": get_config_value(self.config, "learning.q_learning.action_feature_dim", 5),
-            "q_learning_alpha": get_config_value(self.config, "learning.q_learning.alpha", 0.001),
+            "TimeBudgetComponent": {
+                "initial_time_budget": get_config_value(self.config, "agent.foundational.vitals.initial_time_budget"),
+                "lifespan_std_dev_percent": get_config_value(
+                    self.config, "agent.foundational.lifespan_std_dev_percent"
+                ),
+            },
+            "HealthComponent": {
+                "initial_health": get_config_value(self.config, "agent.foundational.vitals.initial_health")
+            },
+            "InventoryComponent": {
+                "initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources")
+            },
+            "CombatComponent": {
+                "attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power")
+            },
+            "AffectComponent": {
+                "affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen")
+            },
+            "GoalComponent": {"embedding_dim": main_emb_dim},
+            "IdentityComponent": {"multi_domain_identity": MultiDomainIdentity(embedding_dim=main_emb_dim)},
+            "SocialMemoryComponent": {
+                "schema_embedding_dim": get_config_value(
+                    self.config, "agent.cognitive.embeddings.schema_embedding_dim"
+                ),
+                "device": self.simulation_state.device,
+            },
+            "QLearningComponent": {
+                # Use the dynamically calculated dimensions instead of placeholders
+                "state_feature_dim": state_feature_dim,
+                "internal_state_dim": internal_state_dim,
+                "action_feature_dim": action_feature_dim,
+                "q_learning_alpha": get_config_value(self.config, "learning.q_learning.alpha"),
+                "device": self.simulation_state.device,
+            },
         }
-
-        # Add a multi-domain identity instance, which IdentityComponent requires.
-        try:
-            from agent_engine.cognition.identity.domain_identity import MultiDomainIdentity
-            # This creates the object that will be injected into the IdentityComponent constructor.
-            kwargs["multi_domain_identity"] = MultiDomainIdentity(embedding_dim=kwargs["embedding_dim"])
-            print("[DEBUG] Created MultiDomainIdentity instance")
-        except Exception as e:
-            print(f"[DEBUG] Could not create MultiDomainIdentity: {e}")
-
-        print(f"[DEBUG] Prepared kwargs: {list(kwargs.keys())}")
-        return kwargs

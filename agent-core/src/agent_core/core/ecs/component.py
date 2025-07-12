@@ -274,10 +274,16 @@ class BeliefSystemComponent(Component):
         self.rule_base: List[str] = []
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"belief_count": len(self.belief_base), "rule_count": len(self.rule_base)}
+        return {
+            "belief_count": len(self.belief_base),
+            "rule_count": len(self.rule_base),
+        }
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        return isinstance(self.belief_base, dict) and isinstance(self.rule_base, list), []
+        return (
+            isinstance(self.belief_base, dict) and isinstance(self.rule_base, list),
+            [],
+        )
 
 
 class SocialMemoryComponent(Component):

@@ -59,7 +59,12 @@ class GoalSystem(System):
         current_tick = event_data["current_tick"]
 
         components = self.simulation_state.entities.get(entity_id, {})
-        required_types = [GoalComponent, MemoryComponent, IdentityComponent, EmotionComponent]
+        required_types = [
+            GoalComponent,
+            MemoryComponent,
+            IdentityComponent,
+            EmotionComponent,
+        ]
         if not all(comp_type in components for comp_type in required_types):
             print(f"GoalSystem: Entity {entity_id} missing components. Skipping.")
             return
@@ -104,7 +109,11 @@ class GoalSystem(System):
                 continue
 
             sample_summaries = "; ".join(
-                np.random.choice(np.array(summaries)[cluster_indices], size=min(3, len(cluster_indices)), replace=False)
+                np.random.choice(
+                    np.array(summaries)[cluster_indices],
+                    size=min(3, len(cluster_indices)),
+                    replace=False,
+                )
             )
             prompt = f"""
                 The following actions were successful:
@@ -127,7 +136,12 @@ class GoalSystem(System):
                 print(f"Error inventing goal for {entity_id}: {e}")
 
     def _add_or_update_goal_in_component(
-        self, goal_comp: GoalComponent, entity_id: str, name: str, success_count: int, tick: int
+        self,
+        goal_comp: GoalComponent,
+        entity_id: str,
+        name: str,
+        success_count: int,
+        tick: int,
     ) -> None:
         """Adds a new goal or updates the success history of an existing one."""
         emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
@@ -146,7 +160,10 @@ class GoalSystem(System):
                 print(f"AGENT {entity_id} invented new goal: '{name}'")
 
     def _select_best_goal(
-        self, entity_id: str, components: Dict[Type[Component], Component], narrative: str
+        self,
+        entity_id: str,
+        components: Dict[Type[Component], Component],
+        narrative: str,
     ) -> Optional[str]:
         """Selects the best symbolic goal based on the agent's current context."""
         goal_comp = cast(GoalComponent, components.get(GoalComponent))
@@ -165,12 +182,12 @@ class GoalSystem(System):
 
         ctx_emb = get_embedding_with_cache(context, emb_dim, self.config.get("llm", {}))
         if ctx_emb is None:
-            # FIX: Assign to a locally-typed variable before returning
+            # Assign to a locally-typed variable before returning
             # to resolve the mypy inference issue.
             current_goal: Optional[str] = goal_comp.current_symbolic_goal
             return current_goal
 
-        # FIX: Explicitly annotate the types for 'best_goal' and 'max_score'.
+        # Explicitly annotate the types for 'best_goal' and 'max_score'.
         # This prevents mypy from getting confused and inferring 'Any'.
         best_goal: Optional[str] = None
         max_score: float = -float("inf")

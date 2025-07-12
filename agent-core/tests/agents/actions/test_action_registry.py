@@ -1,11 +1,12 @@
 # src/agent_core/tests/test_action_registry.py
 
-import pytest
 from typing import Any, Dict, List
+
+import pytest
+from agent_core.agents.actions.action_interface import ActionInterface
 
 # Subject under test
 from agent_core.agents.actions.action_registry import ActionRegistry, action_registry
-from agent_core.agents.actions.action_interface import ActionInterface
 
 # --- Mock Objects for Testing ---
 
@@ -30,7 +31,11 @@ class MockAction(ActionInterface):
         return [{"param1": "value1"}]
 
     def execute(
-        self, entity_id: str, simulation_state: Any, params: Dict[str, Any], current_tick: int
+        self,
+        entity_id: str,
+        simulation_state: Any,
+        params: Dict[str, Any],
+        current_tick: int,
     ) -> Dict[str, Any]:
         return {"status": "success"}
 
@@ -58,7 +63,11 @@ class AnotherMockAction(ActionInterface):
         return []
 
     def execute(
-        self, entity_id: str, simulation_state: Any, params: Dict[str, Any], current_tick: int
+        self,
+        entity_id: str,
+        simulation_state: Any,
+        params: Dict[str, Any],
+        current_tick: int,
     ) -> Dict[str, Any]:
         return {}
 
@@ -107,7 +116,9 @@ def test_register_invalid_action_raises_type_error(fresh_registry: ActionRegistr
         fresh_registry.register(InvalidAction)  # type: ignore[arg-type]
 
 
-def test_register_duplicate_action_id_raises_value_error(fresh_registry: ActionRegistry):
+def test_register_duplicate_action_id_raises_value_error(
+    fresh_registry: ActionRegistry,
+):
     """
     Tests that attempting to register an action with an ID that is already
     in the registry raises a ValueError.

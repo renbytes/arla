@@ -1,18 +1,18 @@
 import os
-import numpy as np
-import pytest
 from unittest.mock import MagicMock, patch
 
 # Subject under test
 import agent_core.cognition.ai_models.openai_client as oac
+import numpy as np
+import pytest
 from agent_core.cognition.ai_models.openai_client import (
+    EmbeddingValidationError,
     get_client,
     get_embedding_from_llm,
-    get_embeddings_from_llm_batch,
     get_embedding_with_cache,
+    get_embeddings_from_llm_batch,
     query_llm,
     validate_embedding,
-    EmbeddingValidationError,
 )
 from openai import OpenAIError
 
@@ -36,7 +36,10 @@ def mock_openai(mocker):
     mock_embedding_data = MagicMock()
     mock_embedding_data.embedding = [0.1, 0.2, 0.3]
     mock_embedding_response = MagicMock()
-    mock_embedding_response.data = [mock_embedding_data, mock_embedding_data]  # For batch
+    mock_embedding_response.data = [
+        mock_embedding_data,
+        mock_embedding_data,
+    ]  # For batch
     mock_client.embeddings.create.return_value = mock_embedding_response
 
     # Mock setup for chat completions API
@@ -51,7 +54,7 @@ def mock_openai(mocker):
     mock_completion_response.usage = mock_usage
     mock_client.chat.completions.create.return_value = mock_completion_response
 
-    # FIX: Patch the 'OpenAI' class within the openai_client module's namespace.
+    # Patch the 'OpenAI' class within the openai_client module's namespace.
     mocker.patch("agent_core.cognition.ai_models.openai_client.OpenAI", return_value=mock_client)
 
     return mock_client
@@ -71,7 +74,8 @@ def test_get_client_success(mocker):
 
 
 def test_get_client_no_api_key_raises_error(mocker):
-    mocker.patch("os.getenv", return_value=None)
+    # Use patch.dict to clear os.environ for the test's scope
+    mocker.patch.dict(os.environ, clear=True)
     with pytest.raises(OpenAIError):
         get_client()
 

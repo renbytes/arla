@@ -3,50 +3,41 @@
 Unit tests for the CombatSystem in the soul_sim package.
 """
 
-from typing import Any, Dict, List
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 from agent_core.core.ecs.component import ActionPlanComponent, TimeBudgetComponent
 from agent_engine.simulation.simulation_state import SimulationState
-from simulations.soul_sim.components import CombatComponent, HealthComponent, PositionComponent
+
+from simulations.soul_sim.components import (
+    CombatComponent,
+    HealthComponent,
+    PositionComponent,
+)
 
 # --- Corrected Absolute Imports ---
+from simulations.soul_sim.environment.grid_world import GridWorld
 from simulations.soul_sim.systems.combat_system import CombatSystem
-from simulations.soul_sim.world import Grid2DEnvironment
+from simulations.soul_sim.tests.systems.utils import MockEventBus
 
 # --- Mock Objects and Fixtures for Testing ---
-
-
-class MockEventBus:
-    """A mock event bus to capture published events for testing."""
-
-    def __init__(self):
-        self.published_events: List[Dict[str, Any]] = []
-
-    def subscribe(self, event_type: str, handler):
-        pass
-
-    def publish(self, event_type: str, event_data: Dict[str, Any]):
-        self.published_events.append({"type": event_type, "data": event_data})
-
-    def get_last_published_event(self):
-        return self.published_events[-1] if self.published_events else None
 
 
 @pytest.fixture
 def combat_system_setup():
     """Pytest fixture to set up a test environment for the CombatSystem."""
     mock_bus = MockEventBus()
-    mock_env = Grid2DEnvironment(width=10, height=10)
+    mock_env = GridWorld(width=10, height=10)
 
-    mock_state = SimulationState(config={}, device="cpu")
+    mock_state = MagicMock(spec=SimulationState)
     mock_state.event_bus = mock_bus
     mock_state.environment = mock_env
     mock_state.config = {
         "learning": {"rewards": {"combat_reward_hit": 0.1, "combat_reward_defeat": 10.0}},
     }
     mock_state.main_rng = np.random.default_rng(123)
+    mock_state.entities = {}
 
     # Create Attacker
     attacker_id = "attacker_1"
@@ -54,7 +45,7 @@ def combat_system_setup():
         PositionComponent: PositionComponent(position=(5, 5), environment=mock_env),
         HealthComponent: HealthComponent(initial_health=100.0),
         CombatComponent: CombatComponent(attack_power=10.0),
-        TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0),
+        TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0, lifespan_std_dev_percent=0.0),
     }
 
     # Create Defender
@@ -63,8 +54,13 @@ def combat_system_setup():
         PositionComponent: PositionComponent(position=(5, 6), environment=mock_env),
         HealthComponent: HealthComponent(initial_health=100.0),
         CombatComponent: CombatComponent(attack_power=5.0),
-        TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0),
+        TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0, lifespan_std_dev_percent=0.0),
     }
+
+    def get_component_side_effect(entity_id, comp_type):
+        return mock_state.entities.get(entity_id, {}).get(comp_type)
+
+    mock_state.get_component.side_effect = get_component_side_effect
 
     system = CombatSystem(simulation_state=mock_state, config=mock_state.config, cognitive_scaffold=None)
 
@@ -85,7 +81,12 @@ def test_combat_system_resolves_attack(combat_system_setup):
 
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
 
-    combat_event = {"entity_id": attacker_id, "action_plan": action_plan, "current_tick": 1}
+    # The system expects the key "action_plan_component" from the event.
+    combat_event = {
+        "entity_id": attacker_id,
+        "action_plan_component": action_plan,
+        "current_tick": 1,
+    }
 
     system.on_execute_combat(combat_event)
 
@@ -117,7 +118,12 @@ def test_combat_system_handles_defeat(combat_system_setup):
     attacker_combat_comp.attack_power = 200.0
 
     action_plan = ActionPlanComponent(params={"target_agent_id": defender_id})
-    combat_event = {"entity_id": attacker_id, "action_plan": action_plan, "current_tick": 1}
+    # The system expects the key "action_plan_component" from the event.
+    combat_event = {
+        "entity_id": attacker_id,
+        "action_plan_component": action_plan,
+        "current_tick": 1,
+    }
 
     system.on_execute_combat(combat_event)
 

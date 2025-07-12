@@ -188,7 +188,11 @@ class QLearningSystem(System):
 
         self.event_bus.publish(
             "q_learning_update",
-            {"entity_id": entity_id, "q_loss": loss.item(), "current_tick": current_tick},
+            {
+                "entity_id": entity_id,
+                "q_loss": loss.item(),
+                "current_tick": current_tick,
+            },
         )
 
     def _generate_possible_action_plans(self, entity_id: str, current_tick: int) -> List[ActionPlanComponent]:

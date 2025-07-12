@@ -4,7 +4,9 @@ import uuid
 from typing import Any, Dict
 
 from agent_engine.logging.exporter_interface import ExporterInterface
-from agent_sim.infrastructure.database.async_database_manager import AsyncDatabaseManager
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
 from agent_sim.infrastructure.database.models import Metric
 
 
@@ -50,5 +52,8 @@ class DatabaseEmitter(ExporterInterface):
 
     async def log_learning_curve(self, tick: int, agent_id: str, q_loss: float) -> None:
         await self.db_manager.log_learning_curve(
-            simulation_id=self.simulation_id, tick=tick, agent_id=agent_id, q_loss=q_loss
+            simulation_id=self.simulation_id,
+            tick=tick,
+            agent_id=agent_id,
+            q_loss=q_loss,
         )

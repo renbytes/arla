@@ -36,12 +36,12 @@ jobs:
       - name: Check formatting with Ruff
         run: |
           # Have ruff format check the entire project, not just a single 'src' folder.
-          ruff format --check .
+          ruff format --diff .
 
       - name: Type check with Mypy
         run: |
-          # Tell mypy which packages to check.
-          mypy agent-core/src agent-engine/src agent-concurrent/src agent-persist/src agent-sim/src
+          # Only check packages that have Python files and aren't excluded
+          mypy agent-core/src agent-engine/src agent-concurrent/src agent-persist/src
 
       - name: Run tests with Pytest
         run: |

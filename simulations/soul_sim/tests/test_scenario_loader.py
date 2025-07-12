@@ -1,59 +1,36 @@
+# simulations/soul_sim/tests/test_scenario_loader.py
+
 import json
-import logging
-from pathlib import Path
-from unittest.mock import MagicMock, ANY
+from unittest.mock import MagicMock, patch
 
 import pytest
-from omegaconf import OmegaConf
-
-# Classes from the core libraries needed for testing
 from agent_core.core.ecs.component import TimeBudgetComponent
-from agent_engine.simulation.simulation_state import SimulationState
+from agent_engine.systems.components import QLearningComponent
 
-# The class we are testing
-from simulations.soul_sim.simulation.scenario_loader import ScenarioLoader
-
-# Import some real components to verify dynamic loading
+# Import some real components to verify they are added correctly
 from simulations.soul_sim.components import (
     CombatComponent,
-    HealthComponent,
-    InventoryComponent,
     PositionComponent,
     ResourceComponent,
 )
 
-# --- Fixtures for Mocking Dependencies ---
+# Subject under test
+from simulations.soul_sim.simulation.scenario_loader import ScenarioLoader
+
+# --- Fixtures ---
+
 
 @pytest.fixture
-def mock_config() -> dict:
-    """Provides a standard, nested configuration dictionary for tests."""
+def mock_config(tmp_path):
+    """Provides a standard, nested configuration dictionary and a dummy scenario file path."""
+    # Create a dummy scenario file for the config to point to
+    scenario_path = tmp_path / "test_scenario.json"
+    scenario_path.touch()
+
     return {
+        "scenario_path": str(scenario_path),
         "agent": {
-            "cognitive": {
-                "archetypes": {
-                    "scout": {
-                        "components": [
-                            "agent_core.core.ecs.component.TimeBudgetComponent",
-                            "simulations.soul_sim.components.PositionComponent",
-                            "simulations.soul_sim.components.HealthComponent",
-                        ]
-                    },
-                    "brute": {
-                        "components": [
-                            "agent_core.core.ecs.component.TimeBudgetComponent",
-                            "simulations.soul_sim.components.PositionComponent",
-                            "simulations.soul_sim.components.HealthComponent",
-                            "simulations.soul_sim.components.CombatComponent",
-                        ]
-                    },
-                    "bad_archetype": {
-                        "components": [
-                            "invalid.path.to.NonExistentComponent"
-                        ]
-                    }
-                },
-                "embeddings": {"main_embedding_dim": 4},
-            },
+            "cognitive": {"embeddings": {"main_embedding_dim": 4, "schema_embedding_dim": 2}},
             "foundational": {
                 "vitals": {
                     "initial_time_budget": 1000.0,
@@ -61,54 +38,33 @@ def mock_config() -> dict:
                     "initial_resources": 10.0,
                 },
                 "attributes": {"initial_attack_power": 10.0},
+                "lifespan_std_dev_percent": 0.1,
             },
         },
         "learning": {
             "memory": {"affective_buffer_maxlen": 100},
-            "q_learning": {"alpha": 0.001}
-        }
-    }
-
-
-@pytest.fixture
-def scenario_file(tmp_path: Path) -> Path:
-    """Creates a temporary, valid scenario JSON file for testing."""
-    scenario_data = {
-        "name": "Test Scenario",
-        "resources": {
-            "resource_list": [
-                {"pos": [10, 10], "params": {"value": 100, "type": "gold"}}
-            ]
+            "q_learning": {"alpha": 0.001},
         },
-        "groups": [
-            {"type": "scout", "count": 1},
-            {"type": "brute", "count": 2}
-        ],
     }
-    file_path = tmp_path / "test_scenario.json"
-    file_path.write_text(json.dumps(scenario_data))
-    return file_path
 
 
 @pytest.fixture
-def mock_simulation_state() -> MagicMock:
+def mock_simulation_state():
     """Provides a MagicMock of the SimulationState for tracking calls."""
     mock_env = MagicMock()
-    mock_env.get_valid_positions.return_value = [(x, y) for x in range(5) for y in range(5)]
+    mock_env.get_valid_positions.return_value = [(x, y) for x in range(20) for y in range(20)]
 
-    mock_state = MagicMock(spec=SimulationState)
+    mock_state = MagicMock()
     mock_state.environment = mock_env
     mock_state.device = "cpu"
 
-    # Store added components in a dictionary for detailed assertions
+    # Use a real dictionary to track entities and components for detailed assertions
     mock_state.entities = {}
 
     def add_entity_side_effect(entity_id):
         mock_state.entities[entity_id] = {}
 
     def add_component_side_effect(entity_id, component):
-        if entity_id not in mock_state.entities:
-            add_entity_side_effect(entity_id)
         mock_state.entities[entity_id][type(component)] = component
 
     mock_state.add_entity.side_effect = add_entity_side_effect
@@ -117,184 +73,179 @@ def mock_simulation_state() -> MagicMock:
     return mock_state
 
 
+@pytest.fixture
+def scenario_file(tmp_path):
+    """Creates a temporary, valid scenario JSON file for testing."""
+    scenario_data = {
+        "name": "Test Scenario",
+        "resources": {
+            "resource_list": [
+                {
+                    "pos": [10, 10],
+                    "params": {
+                        "resource_type": "gold",
+                        "initial_health": 100,
+                        "min_agents": 1,
+                        "max_agents": 1,
+                        "mining_rate": 1,
+                        "reward_per_mine": 1,
+                        "resource_yield": 1,
+                        "respawn_time": 1,
+                    },
+                }
+            ]
+        },
+        "groups": [{"type": "full_agent", "count": 2}],
+    }
+    file_path = tmp_path / "test_scenario.json"
+    file_path.write_text(json.dumps(scenario_data))
+    return file_path
+
+
 # --- Test Cases ---
 
-def test_initialization_with_dict_config(scenario_file: Path, mock_config: dict):
-    """Tests that the loader initializes correctly with a standard dictionary."""
-    loader = ScenarioLoader(scenario_path=str(scenario_file), config=mock_config)
-    assert loader.scenario_path == str(scenario_file)
-    assert loader.config["agent"]["foundational"]["vitals"]["initial_health"] == 100.0
-    assert loader.scenario_data["name"] == "Test Scenario"
 
+class TestScenarioLoader:
+    def test_load_happy_path(self, mock_config, scenario_file, mock_simulation_state):
+        """
+        Tests the successful loading of a valid scenario with agents and resources.
+        """
+        # Arrange
+        mock_config["scenario_path"] = str(scenario_file)
+        # Add resource counts to the mock config for this test
+        mock_config["environment"] = {
+            "num_single_resources": 1,
+            "num_double_resources": 0,
+            "num_triple_resources": 0,
+        }
+        loader = ScenarioLoader(config=mock_config)
+        loader.simulation_state = mock_simulation_state
 
-def test_initialization_with_omegaconf(scenario_file: Path, mock_config: dict):
-    """Tests that the loader correctly converts an OmegaConf DictConfig."""
-    omega_conf = OmegaConf.create(mock_config)
-    loader = ScenarioLoader(scenario_path=str(scenario_file), config=omega_conf)
-    assert isinstance(loader.config, dict) # Should be converted
-    assert loader.config["agent"]["cognitive"]["archetypes"]["scout"]["components"][0] == "agent_core.core.ecs.component.TimeBudgetComponent"
-
-
-def test_load_raises_error_if_state_not_set(scenario_file: Path, mock_config: dict):
-    """Tests that calling load() before setting the simulation state raises a RuntimeError."""
-    loader = ScenarioLoader(scenario_path=str(scenario_file), config=mock_config)
-    with pytest.raises(RuntimeError, match="SimulationState has not been set"):
+        # Act
         loader.load()
 
+        # Assert
+        # 1. Check that a resource was created
+        # Find the first entity that has a ResourceComponent
+        resource_entity_id = next(
+            (eid for eid, comps in mock_simulation_state.entities.items() if ResourceComponent in comps),
+            None,
+        )
+        assert resource_entity_id is not None, "No resource entity was created"
 
-def test_load_happy_path(scenario_file: Path, mock_config: dict, mock_simulation_state: MagicMock):
-    """Tests the successful loading of a valid scenario with multiple agent archetypes."""
-    # Arrange
-    loader = ScenarioLoader(scenario_path=str(scenario_file), config=mock_config)
-    loader.set_simulation_state(mock_simulation_state)
+        # 2. Check agent creation
+        assert "full_agent_0" in mock_simulation_state.entities
+        assert "full_agent_1" in mock_simulation_state.entities
 
-    # Act
-    loader.load()
+        # 3. Verify components of one agent
+        agent_comps = mock_simulation_state.entities["full_agent_0"]
+        assert PositionComponent in agent_comps
+        assert TimeBudgetComponent in agent_comps
+        assert CombatComponent in agent_comps
+        assert QLearningComponent in agent_comps
+        assert agent_comps[CombatComponent].attack_power == 10.0
 
-    # Assert
-    # 1. Check resource creation
-    assert "resource_0" in mock_simulation_state.entities
-    assert PositionComponent in mock_simulation_state.entities["resource_0"]
+    def test_load_raises_error_if_state_not_set(self, mock_config):
+        """
+        Tests that calling load() before the simulation_state is injected raises a RuntimeError.
+        """
+        loader = ScenarioLoader(config=mock_config)
+        with pytest.raises(RuntimeError, match="SimulationState must be set before calling load()"):
+            loader.load()
 
-    # 2. Check agent creation counts
-    assert "agent_0" in mock_simulation_state.entities  # 1st agent (scout)
-    assert "agent_1" in mock_simulation_state.entities  # 2nd agent (brute)
-    assert "agent_2" in mock_simulation_state.entities  # 3rd agent (brute)
-    assert mock_simulation_state.add_entity.call_count == 4 # 3 agents + 1 resource
+    def test_load_raises_error_for_missing_scenario_file(self, mock_config, mock_simulation_state):
+        """
+        Tests that a ValueError is raised if the scenario_path in the config is invalid.
+        """
+        mock_config["scenario_path"] = "/path/to/non_existent_file.json"
+        loader = ScenarioLoader(config=mock_config)
+        loader.simulation_state = mock_simulation_state
+        with pytest.raises(FileNotFoundError):
+            loader.load()
 
-    # 3. Check component loading for different archetypes
-    # Scout should have 3 components and no CombatComponent
-    scout_components = mock_simulation_state.entities["agent_0"]
-    assert len(scout_components) == 3
-    assert TimeBudgetComponent in scout_components
-    assert HealthComponent in scout_components
-    assert CombatComponent not in scout_components
+    def test_load_handles_empty_scenario(self, mock_config, tmp_path, mock_simulation_state, capsys):
+        """
+        Tests that the loader handles a scenario file with no groups or resources without crashing.
+        """
+        # Arrange
+        empty_scenario_path = tmp_path / "empty.json"
+        empty_scenario_path.write_text(json.dumps({"name": "Empty", "groups": [], "resources": {}}))
+        mock_config["scenario_path"] = str(empty_scenario_path)
 
-    # Brute should have 4 components, including CombatComponent
-    brute_components = mock_simulation_state.entities["agent_1"]
-    assert len(brute_components) == 4
-    assert TimeBudgetComponent in brute_components
-    assert HealthComponent in brute_components
-    assert CombatComponent in brute_components
-    assert brute_components[CombatComponent].attack_power == 10.0
+        loader = ScenarioLoader(config=mock_config)
+        loader.simulation_state = mock_simulation_state
 
-
-def test_load_gracefully_handles_empty_scenario(tmp_path: Path, mock_config: dict, mock_simulation_state: MagicMock, caplog):
-    """Tests that the loader handles a scenario file with no groups or resources without crashing."""
-    # Arrange
-    empty_scenario_path = tmp_path / "empty.json"
-    empty_scenario_path.write_text(json.dumps({"name": "Empty", "groups": [], "resources": {}}))
-
-    loader = ScenarioLoader(scenario_path=str(empty_scenario_path), config=mock_config)
-    loader.set_simulation_state(mock_simulation_state)
-
-    # Act
-    with caplog.at_level(logging.WARNING):
+        # Act
         loader.load()
+        captured = capsys.readouterr()
 
-    # Assert
-    mock_simulation_state.add_entity.assert_not_called()
-    assert "Scenario file contains no agent groups" in caplog.text
+        # Assert
+        # Resources should be created from config, but no agents.
+        assert "full_agent_0" not in mock_simulation_state.entities
+        assert any(ResourceComponent in v for v in mock_simulation_state.entities.values())
+        assert "Created 0 agents" in captured.out
 
+    def test_load_handles_unknown_archetype(self, mock_config, tmp_path, mock_simulation_state, capsys):
+        """
+        Tests that an agent with an archetype not defined in the loader is skipped gracefully.
+        """
+        # Arrange
+        scenario_data = {"groups": [{"type": "unknown_archetype", "count": 1}]}
+        scenario_path = tmp_path / "unknown_archetype.json"
+        scenario_path.write_text(json.dumps(scenario_data))
+        mock_config["scenario_path"] = str(scenario_path)
 
-def test_load_handles_unknown_archetype(tmp_path: Path, mock_config: dict, mock_simulation_state: MagicMock, caplog):
-    """Tests that an agent with an archetype not in the config is created empty but does not crash."""
-    # Arrange
-    scenario_data = {"groups": [{"type": "unknown_archetype", "count": 1}]}
-    scenario_path = tmp_path / "unknown_archetype.json"
-    scenario_path.write_text(json.dumps(scenario_data))
+        loader = ScenarioLoader(config=mock_config)
+        loader.simulation_state = mock_simulation_state
 
-    loader = ScenarioLoader(scenario_path=str(scenario_path), config=mock_config)
-    loader.set_simulation_state(mock_simulation_state)
-
-    # Act
-    with caplog.at_level(logging.WARNING):
+        # Act
         loader.load()
+        captured = capsys.readouterr()
 
-    # Assert
-    # The entity itself is created
-    assert "agent_0" in mock_simulation_state.entities
-    # But it has no components
-    assert len(mock_simulation_state.entities["agent_0"]) == 0
-    # And a warning was logged
-    assert "No components listed for archetype 'unknown_archetype'" in caplog.text
+        # Assert
+        # Check that no AGENT entities were created
+        agent_ids = [eid for eid in mock_simulation_state.entities if "agent" in eid]
+        assert not agent_ids, "Agent entities were created for an unknown archetype."
 
+        # Check that RESOURCE entities were still created
+        # Check for the component type in the dictionary's keys, not its values.
+        assert any(ResourceComponent in v for v in mock_simulation_state.entities.values())
 
-def test_load_handles_bad_component_path(tmp_path: Path, mock_config: dict, mock_simulation_state: MagicMock, capsys):
-    """Tests that an invalid component path in the config is skipped gracefully."""
-    # Arrange
-    scenario_data = {"groups": [{"type": "bad_archetype", "count": 1}]}
-    scenario_path = tmp_path / "bad_archetype.json"
-    scenario_path.write_text(json.dumps(scenario_data))
+        # Check that the warning was printed
+        assert "Warning: Archetype 'unknown_archetype' not found" in captured.out
 
-    loader = ScenarioLoader(scenario_path=str(scenario_path), config=mock_config)
-    loader.set_simulation_state(mock_simulation_state)
+    # The patch path must point to the `action_registry` instance within the module,
+    # not the module itself.
+    @patch(
+        "agent_core.agents.actions.action_registry.action_registry._actions",
+        {"move": None, "extract": None, "combat": None},
+    )
+    def test_prepare_component_kwargs(self, mock_config, mock_simulation_state):
+        """
+        Tests the helper method that gathers constructor arguments from the config,
+        especially verifying the dynamic calculation of Q-learning feature dimensions.
+        """
+        # Arrange
+        loader = ScenarioLoader(config=mock_config)
+        loader.simulation_state = mock_simulation_state
 
-    # Act
-    loader.load()
-    captured = capsys.readouterr()
+        # Act
+        kwargs = loader._prepare_component_kwargs(initial_pos=(1, 2))
 
-    # Assert
-    assert "agent_0" in mock_simulation_state.entities
-    # The agent should be empty as its only component path was invalid
-    assert len(mock_simulation_state.entities["agent_0"]) == 0
-    # Check that an error was printed to the console
-    assert "Failed to load component" in captured.out
-    assert "invalid.path.to.NonExistentComponent" in captured.out
+        # Assert
+        # Check standard value retrieval
+        assert kwargs["HealthComponent"]["initial_health"] == 100.0
+        assert kwargs["environment"] is mock_simulation_state.environment
 
+        # Check dynamic Q-learning dimensions
+        q_kwargs = kwargs["QLearningComponent"]
 
-def test_create_agent_with_components(
-    scenario_file: Path, mock_config: dict, mock_simulation_state: MagicMock
-):
-    """
-    Unit test for the `_create_agent_with_components` method.
+        # Expected action_feature_dim = len(action_ids) + len(Intent) + 1 + 5
+        # = 3 + 3 + 1 + 5 = 12
+        assert q_kwargs["action_feature_dim"] == 12
 
-    This test verifies that for a given archetype, the correct components
-    are dynamically imported, instantiated with the correct arguments based on
-    their __init__ signature, and added to the simulation state.
-    """
-    # Arrange
-    # Instantiate the loader, which we will use to call the private method
-    loader = ScenarioLoader(scenario_path=str(scenario_file), config=mock_config)
-    loader.set_simulation_state(mock_simulation_state)
+        # Expected internal_state_dim = 4 + main_emb_dim + (len(IdentityDomain) * main_emb_dim)
+        # = 4 + 4 + (5 * 4) = 28
+        assert q_kwargs["internal_state_dim"] == 28
 
-    # Define the specific inputs for this test
-    entity_id = "test_agent_scout"
-    initial_pos = (10, 20)
-    archetype_name = "scout"  # Defined in the mock_config fixture
-
-    # Act
-    # Directly call the private method we want to test
-    loader._create_agent_with_components(entity_id, initial_pos, archetype_name)
-
-    # Assert
-    # 1. Verify the entity was created in the simulation state
-    mock_simulation_state.add_entity.assert_called_with(entity_id)
-
-    # 2. Verify the correct number of components were added (3 for a "scout")
-    # The mock is configured to store components, so we can check its state
-    created_components = mock_simulation_state.entities[entity_id]
-    assert len(created_components) == 3
-
-    # 3. Verify the PositionComponent was created correctly
-    assert PositionComponent in created_components
-    pos_comp = created_components[PositionComponent]
-    assert isinstance(pos_comp, PositionComponent)
-    assert pos_comp.position == initial_pos  # Check positional arg
-    assert pos_comp.environment is mock_simulation_state.environment  # Check keyword arg
-
-    # 4. Verify the HealthComponent was created correctly
-    assert HealthComponent in created_components
-    health_comp = created_components[HealthComponent]
-    assert isinstance(health_comp, HealthComponent)
-    # Verify it was instantiated with the correct value from config
-    expected_health = mock_config["agent"]["foundational"]["vitals"]["initial_health"]
-    assert health_comp.health == expected_health
-
-    # 5. Verify the TimeBudgetComponent was created correctly
-    assert TimeBudgetComponent in created_components
-    time_comp = created_components[TimeBudgetComponent]
-    assert isinstance(time_comp, TimeBudgetComponent)
-    # Verify it was instantiated with the correct value from config
-    expected_budget = mock_config["agent"]["foundational"]["vitals"]["initial_time_budget"]
-    assert time_comp.initial_time_budget == expected_budget
+        assert q_kwargs["state_feature_dim"] == 16

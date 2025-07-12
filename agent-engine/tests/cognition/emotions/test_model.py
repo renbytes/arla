@@ -1,12 +1,12 @@
 # tests/cognition/emotions/test_model.py
 
 from unittest.mock import patch
+
 import pytest
+from agent_engine.cognition.emotions.appraisal_theory import AppraisalProcessor
 
 # Subject under test
 from agent_engine.cognition.emotions.model import EmotionalDynamics, update_emotion
-from agent_engine.cognition.emotions.appraisal_theory import AppraisalProcessor
-
 
 # --- Fixtures ---
 
@@ -63,7 +63,7 @@ def test_update_emotion_with_appraisal(
     Tests the core logic of updating emotion, verifying decay and learning.
     """
     # Arrange
-    # FIX: Instantiate EmotionalDynamics *after* the mock is in place.
+    # Instantiate EmotionalDynamics *after* the mock is in place.
     emotional_dynamics = EmotionalDynamics(default_config)
     current_emotion = {"valence": 0.5, "arousal": 0.4}
     event_params = {
@@ -106,7 +106,7 @@ def test_update_emotion_clipping(mock_compute_arousal, mock_compute_valence, moc
     Tests that the final valence and arousal values are correctly clipped.
     """
     # Arrange
-    # FIX: Instantiate EmotionalDynamics *after* the mock is in place.
+    # Instantiate EmotionalDynamics *after* the mock is in place.
     emotional_dynamics = EmotionalDynamics(default_config)
     current_emotion = {"valence": 0.9, "arousal": 0.1}
     event_params = {

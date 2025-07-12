@@ -1,11 +1,11 @@
 # agent-engine/tests/simulation/test_system.py
 
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
+
 import pytest
 
 # Subject under test
 from agent_engine.simulation.system import System, SystemManager
-
 
 # --- Mocks and Fixtures ---
 

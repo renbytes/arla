@@ -1,27 +1,24 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-added-large-files
-
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.8
+    rev: v0.12.3
     hooks:
     -   id: ruff
-        # Match Python files in ANY sub-repo's src directory
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
-        args: [--fix, --exit-non-zero-on-fix]
+        args:
+        - --fix
+        - --exit-non-zero-on-fix
     -   id: ruff-format
-        # Also match files in all src directories for formatting
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
-
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.10.0'
+-   repo: local
     hooks:
     -   id: mypy
-        # Match the same files for type checking
-        # TODO add back '|agent-sim/src'
-        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src)/
+        name: mypy
+        entry: mypy
+        language: system
+        files: ^(agent-core/src|agent-engine/src|agent-concurrent/src|agent-persist/src|agent-sim/src)/
+        args: [
+            agent-core/src,
+            agent-engine/src, 
+            agent-concurrent/src,
+            agent-persist/src,
+            agent-sim/src
+        ]
+        pass_filenames: false

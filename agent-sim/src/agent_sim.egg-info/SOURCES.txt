@@ -14,7 +14,11 @@ src/agent_sim/infrastructure/data/__init__.py
 src/agent_sim/infrastructure/data/async_runner.py
 src/agent_sim/infrastructure/database/__init__.py
 src/agent_sim/infrastructure/database/async_database_manager.py
+src/agent_sim/infrastructure/database/init_db.py
 src/agent_sim/infrastructure/database/models.py
+src/agent_sim/infrastructure/logging/__init__.py
+src/agent_sim/infrastructure/logging/database_emitter.py
+src/agent_sim/infrastructure/logging/mlflow_exporter.py
 src/agent_sim/infrastructure/tasks/__init__.py
 src/agent_sim/infrastructure/tasks/celery_app.py
 src/agent_sim/infrastructure/tasks/simulation_tasks.py

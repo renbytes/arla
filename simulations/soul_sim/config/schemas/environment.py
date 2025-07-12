@@ -1,5 +1,7 @@
 from typing import Tuple
+
 from pydantic import BaseModel
+
 
 class EnvironmentConfig(BaseModel):
     grid_world_size: Tuple[int, int]

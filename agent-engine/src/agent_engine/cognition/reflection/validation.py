@@ -51,13 +51,21 @@ class RuleValidator:
         if not inference or not self.episode.events:
             return 0.0
 
-        embedding_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
+        embedding_dim = get_config_value(
+            config=self.config,
+            path="agent.cognitive.embeddings.main_embedding_dim",
+            default=1536,
+        )
         llm_config = self.config.get("llm", {})
 
         reflection_embedding = get_embedding_with_cache(inference, embedding_dim, llm_config)
 
         # Summarize the raw events to create a factual context
-        llm_prompt = f"Concisely summarize the key events and outcomes from the following log into a single paragraph. Be factual and do not add interpretation. Data: {self.event_texts[:10000]}"
+        llm_prompt = f"""Concisely summarize the key events and outcomes from the
+            following log into a single paragraph.
+            Be factual and do not add interpretation.
+            Data: {self.event_texts[:10000]}
+        """
 
         try:
             event_summary = self.cognitive_scaffold.query(

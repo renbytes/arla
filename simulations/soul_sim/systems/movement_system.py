@@ -75,7 +75,11 @@ class MovementSystem(System):
             # Environment not set up correctly
             return
 
+        # This moved the agent
         new_pos = _apply_move_logic(old_pos, direction, (env.height, env.width))
+
+        # This gives spacial awareness, and thus which actions are available given the surroundings
+        env.update_entity_position(entity_id, old_pos, new_pos)
 
         # Update the component state
         pos_comp.position = new_pos

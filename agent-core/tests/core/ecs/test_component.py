@@ -3,21 +3,21 @@ import pytest
 
 # Subject under test
 from agent_core.core.ecs.component import (
-    TimeBudgetComponent,
-    EmotionComponent,
-    AffectComponent,
-    GoalComponent,
-    IdentityComponent,
-    ValidationComponent,
-    MemoryComponent,
-    EpisodeComponent,
-    BeliefSystemComponent,
-    SocialMemoryComponent,
-    ValueSystemComponent,
-    ActionPlanComponent,
     ActionOutcomeComponent,
+    ActionPlanComponent,
+    AffectComponent,
+    BeliefSystemComponent,
     Component,
     ComponentValidationError,
+    EmotionComponent,
+    EpisodeComponent,
+    GoalComponent,
+    IdentityComponent,
+    MemoryComponent,
+    SocialMemoryComponent,
+    TimeBudgetComponent,
+    ValidationComponent,
+    ValueSystemComponent,
 )
 
 # --- Mock Objects for Testing ---

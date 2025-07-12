@@ -1,7 +1,6 @@
 README.md
 pyproject.toml
 src/agent_engine/__init__.py
-src/agent_engine/conftest.py
 src/agent_engine/py.typed
 src/agent_engine.egg-info/PKG-INFO
 src/agent_engine.egg-info/SOURCES.txt
@@ -18,6 +17,10 @@ src/agent_engine/cognition/identity/domain_identity.py
 src/agent_engine/cognition/reflection/counterfactual.py
 src/agent_engine/cognition/reflection/episode.py
 src/agent_engine/cognition/reflection/validation.py
+src/agent_engine/logging/__init__.py
+src/agent_engine/logging/emitter_interface.py
+src/agent_engine/logging/exporter_interface.py
+src/agent_engine/logging/metrics_calculator_interface.py
 src/agent_engine/persistence/__init__.py
 src/agent_engine/persistence/snapshot_manager.py
 src/agent_engine/policy/__init__.py
@@ -35,7 +38,10 @@ src/agent_engine/systems/causal_graph_system.py
 src/agent_engine/systems/components.py
 src/agent_engine/systems/goal_system.py
 src/agent_engine/systems/identity_system.py
+src/agent_engine/systems/logging_system.py
+src/agent_engine/systems/metrics_system.py
 src/agent_engine/systems/q_learning_system.py
 src/agent_engine/systems/reflection_system.py
+src/agent_engine/utils/class_importer.py
 src/agent_engine/utils/config_utils.py
 src/agent_engine/utils/math_utils.py

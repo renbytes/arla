@@ -1,16 +1,17 @@
 # tests/systems/test_causal_graph_system.py
 
 from unittest.mock import MagicMock
+
 import pytest
+from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.core.ecs.component import (
+    EmotionComponent,
+    GoalComponent,
+    MemoryComponent,
+)
 
 # Subject under test
 from agent_engine.systems.causal_graph_system import CausalGraphSystem
-from agent_core.core.ecs.component import (
-    MemoryComponent,
-    EmotionComponent,
-    GoalComponent,
-)
-from agent_core.agents.actions.base_action import ActionOutcome
 
 # --- Fixtures ---
 
@@ -23,7 +24,7 @@ def mock_simulation_state():
     # Mock components
     mem_comp = MemoryComponent()
     # Set a previous state node to simulate the agent having been in a state before the action
-    setattr(mem_comp, "previous_state_node", ("STATE", "health_ok", "at_base"))
+    mem_comp.previous_state_node = "STATE", "health_ok", "at_base"
 
     emotion_comp = EmotionComponent(valence=0.5, arousal=0.8)
     goal_comp = GoalComponent(embedding_dim=4)
@@ -43,7 +44,11 @@ def mock_simulation_state():
 def mock_state_node_encoder():
     """Mocks the StateNodeEncoderInterface to return a predictable state tuple."""
     encoder = MagicMock()
-    encoder.encode_state_for_causal_graph.return_value = ("STATE", "health_good", "at_base")
+    encoder.encode_state_for_causal_graph.return_value = (
+        "STATE",
+        "health_good",
+        "at_base",
+    )
     return encoder
 
 

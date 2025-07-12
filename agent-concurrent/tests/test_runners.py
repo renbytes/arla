@@ -1,10 +1,11 @@
 # tests/test_runners.py
 
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
+
 # Subject under test
-from agent_concurrent.runners import SerialSystemRunner, AsyncSystemRunner
+from agent_concurrent.runners import AsyncSystemRunner, SerialSystemRunner
 
 # --- Mocks and Fixtures ---
 

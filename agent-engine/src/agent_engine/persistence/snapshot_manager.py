@@ -26,5 +26,5 @@ def create_snapshot_from_state(sim_state: SimulationState) -> SimulationSnapshot
         simulation_id=sim_state.simulation_id,
         current_tick=sim_state.current_tick,  # Assuming current_tick is on sim_state
         agents=agent_snapshots,
-        environment_state=sim_state.environment.to_dict() if sim_state.environment else None,
+        environment_state=(sim_state.environment.to_dict() if sim_state.environment else None),
     )

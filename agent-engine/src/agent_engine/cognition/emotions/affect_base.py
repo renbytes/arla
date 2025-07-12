@@ -1,6 +1,6 @@
 # cognition/emotions/affect_base.py
 
-from typing import Dict, Tuple, Any
+from typing import Any, Dict, Tuple
 
 import numpy as np
 
@@ -26,10 +26,9 @@ class AffectiveExperience:
         # Continuous affective states (renamed to be neutral)
         self.valence = valence
         self.arousal = arousal
-        self.prediction_delta_magnitude = (
-            prediction_delta_magnitude  # Represents the absolute magnitude of prediction error
-        )
-        self.predictive_delta_smooth = predictive_delta_smooth  # Represents a smoothed signal of predictive delta
+        self.prediction_delta_magnitude = prediction_delta_magnitude
+        # Represents a smoothed signal of predictive delta
+        self.predictive_delta_smooth = predictive_delta_smooth
 
         # Normalized physiological states
         self.health_norm = health_norm
@@ -45,14 +44,27 @@ class AffectiveExperience:
         # Combine into a single vector for clustering
         self.vector = np.concatenate(
             [
-                np.array([valence, arousal, prediction_delta_magnitude, predictive_delta_smooth]),
+                np.array(
+                    [
+                        valence,
+                        arousal,
+                        prediction_delta_magnitude,
+                        predictive_delta_smooth,
+                    ]
+                ),
                 np.array([health_norm, time_norm, res_norm]),
                 action_type_one_hot,
-                np.array([outcome_reward, prediction_error, 1.0 if is_positive_outcome else 0.0]),
+                np.array(
+                    [
+                        outcome_reward,
+                        prediction_error,
+                        1.0 if is_positive_outcome else 0.0,
+                    ]
+                ),
             ]
         ).astype(np.float32)
 
-    # FIX: Added the return type annotation -> Dict[str, Any].
+    # Added the return type annotation -> Dict[str, Any].
     # This resolves the [no-untyped-def] error.
     def to_dict(self) -> Dict[str, Any]:
         """Converts the AffectiveExperience to a dictionary for logging/transfer."""

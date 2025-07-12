@@ -2,11 +2,12 @@
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
-from simulations.soul_sim.components import PositionComponent, TimeBudgetComponent
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent
+
+from simulations.soul_sim.actions.action_utils import create_standard_feature_vector
+from simulations.soul_sim.components import PositionComponent, TimeBudgetComponent
 
 if TYPE_CHECKING:
     from agent_core.core.ecs.abstractions import SimulationState
@@ -35,10 +36,19 @@ class FleeAction(ActionInterface):
                 threats.append(other_pos)
         return threats
 
-    def _calculate_best_flee_direction(self, my_pos: tuple, threats: List[tuple], pos_comp: PositionComponent, simulation_state: "SimulationState") -> int:
+    def _calculate_best_flee_direction(
+        self,
+        my_pos: tuple,
+        threats: List[tuple],
+        pos_comp: PositionComponent,
+        simulation_state: "SimulationState",
+    ) -> int:
         if not threats or not hasattr(pos_comp, "environment"):
             return -1
-        avg_threat_pos = (sum(p[0] for p in threats) / len(threats), sum(p[1] for p in threats) / len(threats))
+        avg_threat_pos = (
+            sum(p[0] for p in threats) / len(threats),
+            sum(p[1] for p in threats) / len(threats),
+        )
         best_flee_pos, max_dist = None, -1.0
         possible_new_positions = pos_comp.environment.get_neighbors(my_pos)
         for new_pos in possible_new_positions:
@@ -59,7 +69,9 @@ class FleeAction(ActionInterface):
             return 3
         return -1
 
-    def generate_possible_params(self, entity_id: str, simulation_state: "SimulationState", current_tick: int) -> List[Dict[str, Any]]:
+    def generate_possible_params(
+        self, entity_id: str, simulation_state: "SimulationState", current_tick: int
+    ) -> List[Dict[str, Any]]:
         pos_comp = simulation_state.get_component(entity_id, PositionComponent)
         if not isinstance(pos_comp, PositionComponent):
             return []
@@ -71,9 +83,26 @@ class FleeAction(ActionInterface):
                 return [{"direction": best_direction, "intent": Intent.SOLITARY}]
         return []
 
-    def execute(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any], current_tick: int) -> Dict[str, Any]:
+    def execute(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+        current_tick: int,
+    ) -> Dict[str, Any]:
         return {}
 
-    def get_feature_vector(self, entity_id: str, simulation_state: "SimulationState", params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self,
+        entity_id: str,
+        simulation_state: "SimulationState",
+        params: Dict[str, Any],
+    ) -> List[float]:
         intent = params.get("intent", Intent.SOLITARY)
-        return create_standard_feature_vector(self.action_id, intent, self.get_base_cost(simulation_state), params, {"direction": (0, params.get("direction", 0), 3.0)})
+        return create_standard_feature_vector(
+            self.action_id,
+            intent,
+            self.get_base_cost(simulation_state),
+            params,
+            {"direction": (0, params.get("direction", 0), 3.0)},
+        )

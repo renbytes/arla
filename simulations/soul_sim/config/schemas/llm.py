@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class LLMConfig(BaseModel):
     provider: str
     completion_model: str

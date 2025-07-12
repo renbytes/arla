@@ -1,16 +1,17 @@
 # tests/systems/test_affect_system.py
 
 from unittest.mock import MagicMock, patch
-import pytest
 
-# Subject under test
-from agent_engine.systems.affect_system import AffectSystem
+import pytest
+from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import (
     AffectComponent,
     EmotionComponent,
     GoalComponent,
 )
-from agent_core.agents.actions.base_action import ActionOutcome
+
+# Subject under test
+from agent_engine.systems.affect_system import AffectSystem
 
 # --- Fixtures ---
 
@@ -23,8 +24,8 @@ def mock_simulation_state():
     # Mock components
     affect_comp = AffectComponent(affective_buffer_maxlen=100)
     affect_comp.predictive_delta_smooth = 0.5
-    setattr(affect_comp, "prev_reward", 0.0)  # Set the dynamic attribute for the test
-    setattr(affect_comp, "learned_emotion_clusters", {})
+    affect_comp.prev_reward = 0.0  # Set the dynamic attribute for the test
+    affect_comp.learned_emotion_clusters = {}
 
     emotion_comp = EmotionComponent(valence=0.1, arousal=0.2)
     goal_comp = GoalComponent(embedding_dim=4)
@@ -81,7 +82,13 @@ def mock_event_bus():
 
 @pytest.fixture
 @patch("agent_engine.systems.affect_system.action_registry")
-def affect_system(mock_registry, mock_simulation_state, mock_providers, mock_emotional_dynamics, mock_event_bus):
+def affect_system(
+    mock_registry,
+    mock_simulation_state,
+    mock_providers,
+    mock_emotional_dynamics,
+    mock_event_bus,
+):
     """Provides an initialized AffectSystem with its core dependencies mocked."""
     mock_registry.action_ids = ["test_action"]
     mock_simulation_state.event_bus = mock_event_bus
@@ -99,9 +106,16 @@ def affect_system(mock_registry, mock_simulation_state, mock_providers, mock_emo
 # --- Test Cases ---
 
 
-@patch("agent_engine.systems.affect_system.get_emotion_from_affect", return_value="discovered_joy")
+@patch(
+    "agent_engine.systems.affect_system.get_emotion_from_affect",
+    return_value="discovered_joy",
+)
 def test_on_action_executed_updates_affect_and_emotion(
-    mock_get_emotion, affect_system, mock_simulation_state, mock_providers, mock_emotional_dynamics
+    mock_get_emotion,
+    affect_system,
+    mock_simulation_state,
+    mock_providers,
+    mock_emotional_dynamics,
 ):
     """
     Tests the full event handler cycle for a standard action outcome.
@@ -171,7 +185,7 @@ def test_emotion_discovery_is_triggered(mock_discover, affect_system, mock_simul
     Tests that the discover_emotions function is called when the buffer is full.
     """
     # Arrange
-    # FIX: Set a value that won't cause division by zero in the application code.
+    # Set a value that won't cause division by zero in the application code.
     affect_system.config["learning"]["memory"]["emotion_cluster_min_data"] = 4
     event_data = {
         "entity_id": "agent1",
@@ -200,7 +214,7 @@ async def test_passive_dissonance_decay(affect_system, mock_simulation_state):
     affect_comp.cognitive_dissonance = 0.5
 
     # Act
-    # FIX: Use a tick value that will pass the `(current_tick + 1) % 10 == 0` check.
+    # Use a tick value that will pass the `(current_tick + 1) % 10 == 0` check.
     await affect_system.update(current_tick=9)  # Passive update
 
     # Assert

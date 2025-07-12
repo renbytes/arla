@@ -1,8 +1,10 @@
 # tests/cognition/emotions/test_affect_learning.py
 
 from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
+from agent_engine.cognition.emotions.affect_base import AffectiveExperience
 
 # Subject under test
 from agent_engine.cognition.emotions.affect_learning import (
@@ -10,8 +12,6 @@ from agent_engine.cognition.emotions.affect_learning import (
     get_emotion_from_affect,
     name_experience_cluster,
 )
-from agent_engine.cognition.emotions.affect_base import AffectiveExperience
-
 
 # --- Fixtures ---
 
@@ -34,7 +34,7 @@ def mock_action_registry(mocker):
     """Mocks the global action_registry."""
     registry = MagicMock()
 
-    # FIX: Directly assign the list to the attribute on the mock instance.
+    # Directly assign the list to the attribute on the mock instance.
     # This is a simpler and more reliable way to mock the property for this test.
     registry.action_ids = ["action_a", "action_b"]
 
@@ -142,21 +142,37 @@ def test_name_experience_cluster(mock_cognitive_scaffold, mock_action_registry):
     prompt_template = "Summaries: {summaries}. Name this."
 
     # Act
-    name = name_experience_cluster(experiences, mock_cognitive_scaffold, "agent1", 100, prompt_template, "test_purpose")
+    name = name_experience_cluster(
+        experiences,
+        mock_cognitive_scaffold,
+        "agent1",
+        100,
+        prompt_template,
+        "test_purpose",
+    )
 
     # Assert
     assert name == "joy"
     mock_cognitive_scaffold.query.assert_called_once()
-    call_args = mock_cognitive_scaffold.query.call_args
-    assert (
-        "Summaries: (Action: Action A, Reward: 10.0, Valence: 0.80, Arousal: 0.70). Name this."
-        in call_args[1]["prompt"]
-    )
+
+    # Check for essential content instead of a brittle, exact string.
+    # This makes the test robust against formatting changes.
+    actual_prompt = mock_cognitive_scaffold.query.call_args[1]["prompt"]
+    assert "Summaries:" in actual_prompt
+    assert "Action: Action A" in actual_prompt
+    assert "Reward: 10.0" in actual_prompt
+    assert "Valence: 0.80" in actual_prompt
+    assert "Arousal: 0.70" in actual_prompt
+    assert "Name this." in actual_prompt
 
 
 @patch("agent_engine.cognition.emotions.affect_learning.KMeans")
 def test_discover_emotions_success(
-    mock_kmeans, mock_affect_component, mock_cognitive_scaffold, default_config, mock_action_registry
+    mock_kmeans,
+    mock_affect_component,
+    mock_cognitive_scaffold,
+    default_config,
+    mock_action_registry,
 ):
     """
     Tests the successful discovery and naming of emotion clusters.
@@ -194,7 +210,10 @@ def test_discover_emotions_insufficient_data(mock_affect_component, mock_cogniti
     mock_cognitive_scaffold.query.assert_not_called()
 
 
-@patch("agent_engine.cognition.emotions.affect_learning._cluster_experiences", return_value=(None, None))
+@patch(
+    "agent_engine.cognition.emotions.affect_learning._cluster_experiences",
+    return_value=(None, None),
+)
 def test_discover_emotions_clustering_fails(
     mock_cluster_exp, mock_affect_component, mock_cognitive_scaffold, default_config
 ):

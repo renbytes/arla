@@ -1,6 +1,6 @@
 # src/agent_core/environment/vitality_metrics_provider_interface.py
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 # Forward reference for Component from agent_core
 if TYPE_CHECKING:
@@ -23,7 +23,10 @@ class VitalityMetricsProviderInterface(ABC):
 
     @abstractmethod
     def get_normalized_vitality_metrics(
-        self, entity_id: str, components: Dict[Type["Component"], "Component"], config: Dict[str, Any]
+        self,
+        entity_id: str,
+        components: Dict[Type["Component"], "Component"],
+        config: Dict[str, Any],
     ) -> Dict[str, float]:
         """
         Extracts and normalizes world-specific vitality metrics from an entity's

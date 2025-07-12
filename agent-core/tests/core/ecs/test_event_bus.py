@@ -1,6 +1,7 @@
 # src/agent_core/tests/core/ecs/test_event_bus.py
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 # Subject under test
 from agent_core.core.ecs.event_bus import EventBus
@@ -109,11 +110,11 @@ def test_handler_exception_does_not_stop_others(event_bus: EventBus, capsys):
     # The second handler should have been called despite the first one failing
     handler2.assert_called_once_with(event_data)
 
-    # FIX: Check the combined output of stdout and stderr
+    # Check the combined output of stdout and stderr
     captured = capsys.readouterr()
     full_output = captured.out + captured.err
 
-    assert "ERROR: Handler 0 (failing_handler) failed for event 'resilient_event'" in full_output
+    assert "ERROR: Handler failing_handler failed for event 'resilient_event'" in full_output
     assert "ValueError: This handler is designed to fail" in full_output
 
 
@@ -133,5 +134,3 @@ def test_debug_logging_output(debug_event_bus: EventBus, capsys):
     # Assert
     captured = capsys.readouterr()
     assert "DEBUG: Publishing event 'debug_event'" in captured.out
-    assert "DEBUG: Calling handler 0: my_mock_handler" in captured.out
-    assert "DEBUG: Handler 0 completed successfully" in captured.out

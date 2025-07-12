@@ -13,7 +13,11 @@ from typing import List, Sequence
 ROOT = "."  # repo root (relative or absolute)
 INCLUDE_DIRS = ["src", "tests"]  # folders to search; ["src", "tests"] etc.
 INCLUDE_EXTS = []  # e.g. [".py", ".md"]; empty → all types
-EXCLUDE = [".git", "__pycache__", ".ruff_cache"]  # name fragments to skip (dirs or files)
+EXCLUDE = [
+    ".git",
+    "__pycache__",
+    ".ruff_cache",
+]  # name fragments to skip (dirs or files)
 ENCODING = "utf-8"  # assumed text encoding
 JOIN_WITH = "\n\n"  # glue between files in the output
 OUTPUT_FILE = "all_code"  # output filename (relative to ROOT)

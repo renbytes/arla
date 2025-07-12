@@ -86,11 +86,13 @@ class ActionSystem(System):
             intent_name = action_plan.intent.name
 
         # Use the injected reward calculator
+        # Pass a copy of the details dictionary to prevent unintended mutation
+        # of the object that the mock is inspecting.
         final_reward, breakdown = self.reward_calculator.calculate_final_reward(
             base_reward=action_outcome.base_reward,
             action_type=action_plan.action_type,
             action_intent=intent_name,
-            outcome_details=action_outcome.details,
+            outcome_details=action_outcome.details.copy(),
             entity_components=entity_components,
         )
         action_outcome.reward = final_reward
@@ -116,20 +118,25 @@ class ActionSystem(System):
     def _update_entity_components(self, entity_id: str, outcome: ActionOutcome, plan: ActionPlanComponent) -> None:
         """Helper to update the agent's components after an action."""
         # Update competence
-        if isinstance(cc := self.simulation_state.get_component(entity_id, CompetenceComponent), CompetenceComponent):
+        if isinstance(
+            cc := self.simulation_state.get_component(entity_id, CompetenceComponent),
+            CompetenceComponent,
+        ):
             if isinstance(plan.action_type, ActionInterface):
                 cc.action_counts[plan.action_type.action_id] += 1
 
         # Update action outcome
         if isinstance(
-            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent), ActionOutcomeComponent
+            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent),
+            ActionOutcomeComponent,
         ):
             aoc.success = outcome.success
             aoc.reward = outcome.reward
             aoc.details = outcome.details
 
         if isinstance(
-            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent), TimeBudgetComponent
+            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent),
+            TimeBudgetComponent,
         ):
             if isinstance(plan.action_type, ActionInterface):
                 action_cost = plan.action_type.get_base_cost(self.simulation_state)

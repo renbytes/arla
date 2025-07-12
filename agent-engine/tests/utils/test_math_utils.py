@@ -5,11 +5,10 @@ import pytest
 
 # Subject under test
 from agent_engine.utils.math_utils import (
-    safe_divide,
     safe_cosine_similarity,
+    safe_divide,
     safe_normalize_vector,
 )
-
 
 # --- Test Cases for safe_divide ---
 

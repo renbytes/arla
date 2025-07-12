@@ -5,7 +5,6 @@ import pytest
 # Subject under test
 from agent_engine.cognition.reflection.episode import Episode
 
-
 # --- Fixtures ---
 
 
@@ -16,7 +15,11 @@ def sample_episode():
         {"tick": 10, "action_type": "MOVE", "reward": 0.1},
         {"tick": 12, "action_type": "EXTRACT", "reward": 5.0},
         {"tick": 15, "action_type": "COMMUNICATE", "reward": 0.5},
-        {"tick": 18, "action_type": "REST", "reward": 0.0},  # This event should not be in the preview
+        {
+            "tick": 18,
+            "action_type": "REST",
+            "reward": 0.0,
+        },  # This event should not be in the preview
     ]
 
     episode = Episode(
