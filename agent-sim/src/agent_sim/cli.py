@@ -79,16 +79,17 @@ def run_experiment(
         raise typer.Exit(code=1) from e
 
     # --- Load and merge configurations -------------------------------------
-    base_config_path = PROJECT_ROOT / exp_def.get("base_config_path", "")
+    base_config_path = PROJECT_ROOT / exp_def.get("base_config_path", "")  # type: ignore
     if not base_config_path.exists():
         print(f"[bold red]Error: Base config file not found at {base_config_path}[/bold red]")
         raise typer.Exit(code=1)
 
     base_config = OmegaConf.load(base_config_path)
-    variations = exp_def.get("variations", [{"name": "default", "overrides": {}}])
+    variations = exp_def.get("variations", [{"name": "default", "overrides": {}}])  # type: ignore
+
+    # Initialize the counter before the loop
     total_jobs = 0
 
-    # --- Submit a task for each variation ----------------------------------
     for variation in variations:
         variation_name = variation.get("name", "unnamed_variation")
         print(f"\n[cyan]Submitting tasks for variation: [bold]{variation_name}[/bold]")
@@ -100,21 +101,21 @@ def run_experiment(
         config_dict = OmegaConf.to_container(final_config, resolve=True)
 
         # Give each variation its own MLflow experiment name
-        experiment_name = f"{exp_def.get('experiment_name', 'UnnamedExp')} - {variation_name}"
+        experiment_name = f"{exp_def.get('experiment_name', 'UnnamedExp')} - {variation_name}"  # type: ignore
 
         # Submit the master experiment task to Celery
         run_experiment_task.delay(
-            scenario_paths=list(exp_def.get("scenarios", [])),
-            runs_per_scenario=exp_def.get("runs_per_scenario", 1),
+            scenario_paths=list(exp_def.get("scenarios", [])),  # type: ignore
+            runs_per_scenario=exp_def.get("runs_per_scenario", 1),  # type: ignore
             base_config=config_dict,
-            simulation_package=exp_def.get("simulation_package"),
+            simulation_package=exp_def.get("simulation_package"),  # type: ignore
             experiment_name=experiment_name,
         )
-        jobs_in_variation = len(exp_def.get("scenarios", [])) * exp_def.get("runs_per_scenario", 1)
+        jobs_in_variation = len(exp_def.get("scenarios", [])) * exp_def.get("runs_per_scenario", 1)  # type: ignore
         total_jobs += jobs_in_variation
         print(f"[green]✔ Submitted {jobs_in_variation} simulation runs for this variation.[/green]")
 
-    console.rule(f"[bold green]✅ Experiment '{exp_def.get('experiment_name')}' fully submitted.")
+    console.rule(f"[bold green]✅ Experiment '{exp_def.get('experiment_name')}' fully submitted.")  # type: ignore
     print(f"Total simulation runs queued: [bold cyan]{total_jobs}[/bold cyan]")
     print("Monitor your Celery workers and MLflow UI for progress.")
 

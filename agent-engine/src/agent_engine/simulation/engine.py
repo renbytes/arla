@@ -20,13 +20,9 @@ from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_persist.store import FileStateStore
-from agent_sim.infrastructure.database.async_database_manager import (
-    AsyncDatabaseManager,
-)
 from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent-engine
-from agent_engine.persistence.snapshot_manager import create_snapshot_from_state
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import SystemManager
 
@@ -34,7 +30,8 @@ from agent_engine.simulation.system import SystemManager
 class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
-    decisions, and updating all registered systems. It is decoupled from any
+    decisions, and updating all registered systems.
+    It is decoupled from any
     specific world implementation or game rules.
     """
 
@@ -46,13 +43,13 @@ class SimulationManager:
         action_generator: ActionGeneratorInterface,
         decision_selector: DecisionSelectorInterface,
         component_factory: ComponentFactoryInterface,
-        db_logger: AsyncDatabaseManager,
+        db_logger: Any,  # TYPE HINT CHANGED
         task_id: str = "local_run",
         experiment_id: Optional[str] = None,
         run_id: Optional[str] = None,
     ):
         self.config: Dict[str, Any] = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
-        self.device = "cpu"  # Simplified for the engine
+        self.device = "cpu"
         self.save_path = Path(self.config.get("simulation", {}).get("log_directory", "logs")) / "snapshots"
         self.db_logger = db_logger
 
@@ -84,9 +81,9 @@ class SimulationManager:
     async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
         """
         Executes the main ECS simulation loop asynchronously.
-
         Args:
             start_step: The tick to start the simulation from (for resuming).
+
             end_step: The tick to end the simulation on. If None, runs for the
                       number of steps specified in the config.
         """
@@ -102,7 +99,6 @@ class SimulationManager:
             self.simulation_state.current_tick = step
 
             # --- 1. CHECK FOR ACTIVE ENTITIES (EXIT EARLY IF NONE) ---
-            # This is the critical fix for the new failing test.
             active_entities: List[str] = []
             for eid, comps in self.simulation_state.entities.items():
                 time_comp = comps.get(TimeBudgetComponent)
@@ -129,12 +125,12 @@ class SimulationManager:
 
         # --- 5. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES ---
         print("\nSimulation loop finished.")
-        self.save_state(num_steps)  # Final save
+        self.save_state(num_steps)
 
     def save_state(self, tick: int) -> None:
         """Saves the current simulation state to a file."""
         print(f"--- Saving state at tick {tick} ---")
-        snapshot = create_snapshot_from_state(self.simulation_state)
+        snapshot = self.simulation_state.to_snapshot()  # UPDATED
         filepath = self.save_path / self.simulation_id / f"snapshot_tick_{tick}.json"
         store = FileStateStore(filepath)
         store.save(snapshot)
@@ -142,10 +138,11 @@ class SimulationManager:
     def load_state(self, filepath: str) -> None:
         """
         Loads the entire simulation state from a checkpoint file.
+
         This replaces the existing self.simulation_state with a new one.
         """
         print(f"--- Loading state from {filepath} ---")
-        store = FileStateStore(filepath)
+        store = FileStateStore(Path(filepath))
         snapshot = store.load()
 
         # Re-create the simulation state using the class method

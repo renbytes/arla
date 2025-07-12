@@ -42,6 +42,8 @@ class AsyncRunner:
             self._start_event_loop()
 
         # This will now always use a valid, running loop.
+        if self._loop is None:
+            raise RuntimeError("AsyncRunner event loop is not running.")
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result(timeout=30)
 

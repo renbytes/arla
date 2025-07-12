@@ -2,10 +2,8 @@
 
 import importlib
 import os
-import sys
 import traceback
 import uuid
-from pathlib import Path
 from typing import Any, Dict, NoReturn
 
 import mlflow
@@ -16,8 +14,8 @@ from agent_sim.infrastructure.database.async_database_manager import (
 from agent_sim.infrastructure.tasks.celery_app import app
 from celery import Task
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+# PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+# sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def _handle_simulation_exception(exc: Exception, task: Task, task_id: str, run_id_str: str) -> NoReturn:
@@ -50,7 +48,10 @@ def run_simulation_task(
     experiment_name: str,
 ) -> Dict[str, Any]:
     """Worker task that runs a single simulation and logs to a pre-existing run."""
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        raise ValueError("MLFLOW_TRACKING_URI environment variable must be set.")
+    mlflow.set_tracking_uri(tracking_uri)
     task_id = self.request.id or "local-task"
     db_manager = AsyncDatabaseManager()
 
@@ -92,7 +93,10 @@ def run_experiment_task(
     experiment_name: str,
 ) -> Dict[str, Any]:
     """Orchestrator task that creates DB/MLflow records and submits worker tasks."""
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        raise ValueError("MLFLOW_TRACKING_URI environment variable must be set.")
+    mlflow.set_tracking_uri(tracking_uri)
     db_manager = AsyncDatabaseManager()
 
     try:
