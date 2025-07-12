@@ -39,7 +39,7 @@ llm:
   embedding_model: "text-embedding-3-small"
   temperature: 0.2
   max_tokens: 500
-  reflection_prompt_pre"You are an agent in a simulation. Reflect on your recent experiences to understand yourself better. In one paragraph, what have you learned about yourself and your values? "
+  reflection_prompt_prefix: "You are an agent in a simulation. Reflect on your recent experiences to understand yourself better. In one paragraph, what have you learned about yourself and your values? "
 
 agent:
   foundational:
