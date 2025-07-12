@@ -15,6 +15,7 @@ from agent_core.agents.action_generator_interface import ActionGeneratorInterfac
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.cognition.scaffolding import CognitiveScaffold
 from agent_core.core.ecs.component import TimeBudgetComponent
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
@@ -42,6 +43,7 @@ class SimulationManager:
         scenario_loader: ScenarioLoaderInterface,
         action_generator: ActionGeneratorInterface,
         decision_selector: DecisionSelectorInterface,
+        component_factory: ComponentFactoryInterface,
         db_logger: AsyncDatabaseManager,
         task_id: str = "local_run",
         experiment_id: Optional[str] = None,
@@ -49,7 +51,7 @@ class SimulationManager:
     ):
         self.config: Dict[str, Any] = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
         self.device = "cpu"  # Simplified for the engine
-        self.save_path = Path(config.get("persistence", {}).get("save_path", "./sim_snapshots"))
+        self.save_path = Path(self.config.get("simulation", {}).get("log_directory", "logs")) / "snapshots"
         self.db_logger = db_logger
 
         # --- Injected Dependencies ---
@@ -57,6 +59,7 @@ class SimulationManager:
         self.scenario_loader = scenario_loader
         self.action_generator = action_generator
         self.decision_selector = decision_selector
+        self.component_factory = component_factory
 
         self._setup_simulation_ids(run_id, task_id, experiment_id)
         self._setup_rng()
@@ -76,17 +79,28 @@ class SimulationManager:
         """A convenience method to register a system with the SystemManager."""
         self.system_manager.register_system(system_class, **kwargs)
 
-    # Async:The main run loop is now async.
-    async def run(self) -> None:
-        """Executes the main ECS simulation loop asynchronously."""
-        num_steps = self.config.get("simulation", {}).get("steps", 100)
-        print(f"\nStarting simulation {self.simulation_id} for {num_steps} steps...")
+    async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
+        """
+        Executes the main ECS simulation loop asynchronously.
 
-        for step in range(num_steps):
+        Args:
+            start_step: The tick to start the simulation from (for resuming).
+            end_step: The tick to end the simulation on. If None, runs for the
+                      number of steps specified in the config.
+        """
+        if end_step is None:
+            num_steps = self.config.get("simulation", {}).get("steps", 100)
+        else:
+            num_steps = end_step
+
+        print(f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}...")
+
+        for step in range(start_step, num_steps):
             print(f"\n--- Simulation Step {step + 1}/{num_steps} ---")
             self.simulation_state.current_tick = step
 
-            # --- 1. PROCESS ENTITY TURNS FIRST ---
+            # --- 1. CHECK FOR ACTIVE ENTITIES (EXIT EARLY IF NONE) ---
+            # This is the critical fix for the new failing test.
             active_entities: List[str] = []
             for eid, comps in self.simulation_state.entities.items():
                 time_comp = comps.get(TimeBudgetComponent)
@@ -97,21 +111,21 @@ class SimulationManager:
                 print("All entities are inactive. Ending simulation.")
                 break
 
-            self.main_rng.shuffle(active_entities)
+            # --- 2. UPDATE ALL SYSTEMS ONCE (e.g., for state caching) ---
+            await self.system_manager.update_all(current_tick=step)
+
+            # --- 3. PROCESS ENTITY TURNS ---
+            if self.main_rng:
+                self.main_rng.shuffle(active_entities)
 
             for entity_id in active_entities:
                 self._process_entity_turn(entity_id, step)
 
-            # --- 2. UPDATE ALL SYSTEMS ONCE ---
-            # (The first call to update_all has been removed)
-            await self.system_manager.update_all(current_tick=step)
-
-            # --- 3. PERIODICALLY SAVE STATE ---
-            # Save state after systems have been updated for the tick
+            # --- 4. PERIODICALLY SAVE STATE ---
             if step > 0 and step % 50 == 0:
                 self.save_state(step)
 
-        # --- 4. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES ---
+        # --- 5. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES ---
         print("\nSimulation loop finished.")
         self.save_state(num_steps)  # Final save
 
@@ -124,13 +138,25 @@ class SimulationManager:
         store.save(snapshot)
 
     def load_state(self, filepath: str) -> None:
-        """Loads a simulation state from a file."""
-        # This is the more complex part you'll implement later
+        """
+        Loads the entire simulation state from a checkpoint file.
+        This replaces the existing self.simulation_state with a new one.
+        """
         print(f"--- Loading state from {filepath} ---")
-        # store = FileStateStore(filepath)
-        # snapshot = store.load()
-        # self.simulation_state = restore_state_from_snapshot(snapshot)
-        pass
+        store = FileStateStore(filepath)
+        snapshot = store.load()
+
+        # Re-create the simulation state using the class method
+        self.simulation_state = SimulationState.from_snapshot(
+            snapshot=snapshot,
+            config=self.config,
+            component_factory=self.component_factory,
+            environment=self.environment,
+            event_bus=self.event_bus,
+            db_logger=self.db_logger,
+        )
+
+        print(f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1} ---")
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
         """Handles the decision-making and action-dispatching for a single entity."""
@@ -151,14 +177,15 @@ class SimulationManager:
 
         self.simulation_state.add_component(entity_id, chosen_plan)
 
-        self.event_bus.publish(
-            "action_chosen",
-            {
-                "entity_id": entity_id,
-                "action_plan_component": chosen_plan,
-                "current_tick": current_tick,
-            },
-        )
+        if self.event_bus:
+            self.event_bus.publish(
+                "action_chosen",
+                {
+                    "entity_id": entity_id,
+                    "action_plan_component": chosen_plan,
+                    "current_tick": current_tick,
+                },
+            )
 
     def _setup_simulation_ids(self, run_id: Optional[str], task_id: str, experiment_id: Optional[str]) -> None:
         """Sets up unique IDs for the simulation run."""

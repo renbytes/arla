@@ -54,31 +54,6 @@ agent:
       initial_speed: 1
 
   cognitive:
-    # CORRECTED: 'archetype' is now 'archetypes' (plural) to hold multiple definitions
-    archetypes:
-      # This key now matches the 'type' in your scenario JSON
-      full_agent:
-        components:
-          - "simulations.soul_sim.components.PositionComponent"
-          - "agent_core.core.ecs.component.TimeBudgetComponent"
-          - "simulations.soul_sim.components.HealthComponent"
-          - "simulations.soul_sim.components.InventoryComponent"
-          - "simulations.soul_sim.components.CombatComponent"
-          - "simulations.soul_sim.components.NestComponent"
-          - "agent_core.core.ecs.component.ActionPlanComponent"
-          - "agent_core.core.ecs.component.ActionOutcomeComponent"
-          - "agent_engine.systems.components.QLearningComponent"
-          - "agent_core.core.ecs.component.CompetenceComponent"
-          - "agent_core.core.ecs.component.MemoryComponent"
-          - "agent_core.core.ecs.component.EmotionComponent"
-          - "agent_core.core.ecs.component.AffectComponent"
-          - "agent_core.core.ecs.component.ValueSystemComponent"
-          - "agent_core.core.ecs.component.SocialMemoryComponent"
-          - "agent_core.core.ecs.component.GoalComponent"
-          - "agent_core.core.ecs.component.IdentityComponent"
-          - "agent_core.core.ecs.component.EpisodeComponent"
-          - "agent_core.core.ecs.component.BeliefSystemComponent"
-          - "agent_core.core.ecs.component.ValidationComponent"
     architecture_flags:
       enable_reflection: true
       enable_emotion_clustering: true

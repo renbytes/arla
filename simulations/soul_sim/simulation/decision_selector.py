@@ -15,7 +15,7 @@ from .state_encoder import SoulSimStateEncoder
 
 class SoulSimDecisionSelector(DecisionSelectorInterface):
     """
-    Selects an agent's action using a Q-learning policy. [cite: 1141]
+    Selects an agent's action using a Q-learning policy.
 
     This selector uses an epsilon-greedy strategy. With a probability of
     epsilon, it **explores** by choosing a random action. Otherwise, it **exploits**
@@ -25,7 +25,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
 
     def __init__(self) -> None:
         """Initializes the decision selector with a reusable state encoder."""
-        # The state encoder is instantiated once for efficiency. [cite: 1142]
+        # The state encoder is instantiated once for efficiency.
         self.state_encoder = SoulSimStateEncoder()
 
     def select(
@@ -43,7 +43,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
             possible_actions: A list of valid ActionPlanComponent objects.
 
         Returns:
-            The chosen ActionPlanComponent, or None if no action is possible. [cite: 64]
+            The chosen ActionPlanComponent, or None if no action is possible.
         """
         # --- 1. Pre-computation and Epsilon-Greedy Check ---
         if not possible_actions:
@@ -62,7 +62,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
             simulation_state, entity_id, simulation_state.config
         )
 
-        # Gather all cognitive components needed for the internal state vector [cite: 1145]
+        # Gather all cognitive components needed for the internal state vector
         id_comp, aff_comp, goal_comp, emo_comp = (
             simulation_state.get_component(entity_id, c)
             for c in [IdentityComponent, AffectComponent, GoalComponent, EmotionComponent]

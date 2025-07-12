@@ -14,6 +14,8 @@ from agent_core.core.ecs.component import (
     GoalComponent,
     IdentityComponent,
 )
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
+from agent_persist.models import SimulationSnapshot
 from numpy.typing import NDArray
 
 # Imports from agent_core
@@ -56,6 +58,45 @@ class SimulationState(AbstractSimulationState):
     @event_bus.setter
     def event_bus(self, value: Optional["EventBus"]) -> None:
         self._event_bus = value
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        snapshot: SimulationSnapshot,
+        config: Dict[str, Any],
+        component_factory: ComponentFactoryInterface,
+        environment: "EnvironmentInterface",
+        event_bus: "EventBus",
+        db_logger: "AsyncDatabaseManager",
+    ) -> "SimulationState":
+        """Creates a new SimulationState instance from a snapshot."""
+        # Initialize a new state object
+        sim_state = cls(config, "cpu")  # Assume "cpu" device for simplicity
+        sim_state.current_tick = snapshot.current_tick
+        sim_state.simulation_id = snapshot.simulation_id
+        sim_state.environment = environment
+        sim_state.event_bus = event_bus
+        sim_state.db_logger = db_logger
+
+        # Restore environment state first
+        if snapshot.environment_state:
+            sim_state.environment.restore_from_dict(snapshot.environment_state)
+
+        # Restore agents and their components using the factory
+        for agent_snapshot in snapshot.agents:
+            agent_id = agent_snapshot.agent_id
+            sim_state.add_entity(agent_id)
+            for comp_snapshot in agent_snapshot.components:
+                try:
+                    # The factory handles the creation of all components
+                    component_instance = component_factory.create_component(
+                        comp_snapshot.component_type, comp_snapshot.data
+                    )
+                    sim_state.add_component(agent_id, component_instance)
+                except Exception as e:
+                    print(f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}")
+
+        return sim_state
 
     def add_entity(self, entity_id: str) -> None:
         if entity_id in self.entities:

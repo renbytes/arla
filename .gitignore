@@ -34,3 +34,4 @@ agent-engine/sim_snapshots/
 mlruns/
 dump.rdb
 sim_snapshots/
+data/

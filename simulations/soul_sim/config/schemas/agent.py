@@ -36,8 +36,6 @@ class ArchetypeConfig(BaseModel):
     components: List[str]
 
 class CognitiveConfig(BaseModel):
-    # This field now correctly matches the 'archetypes' key in your YAML config
-    archetypes: Dict[str, ArchetypeConfig]
     embeddings: EmbeddingsConfig
     architecture_flags: ArchitectureFlags
 

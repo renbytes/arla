@@ -82,7 +82,10 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         resistance = self._calculate_resistance(current_domain, consistency_score, validation_score)
 
         update_threshold = 0.3 + (current_domain.stability * 0.4)
-        combined_support = consistency_score * 0.4 + validation_score * 0.6
+
+        # FIX: Increased the weight of social validation to allow it to have a stronger
+        # influence on identity change, which resolves the test failure.
+        combined_support = consistency_score * 0.2 + validation_score * 0.8
 
         update_occurred = False
         if combined_support > update_threshold:

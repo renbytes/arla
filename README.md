@@ -73,6 +73,13 @@ You can override any parameter defined in the config.yaml files. For example, to
 python agent-sim/src/main.py scenario_path=agent-sim/src/simulations/soul_sim/scenarios/default.json simulation.steps=50
 ```
 
+If you're making code edits in between simulation runs, you can run this to reload the code:
+```bash
+docker compose build celery-worker && docker-compose up --build -d
+```
+
+> Note: if you've made small changes, it should pick up the latest build cache, speeding things up. Any major changes will still prompt a complete rebuild, which can take a few minutes.
+
 ## Running Tests
 
 The project uses pytest for testing. After setting up your environment, you can run the entire test suite from the root arla/ directory:

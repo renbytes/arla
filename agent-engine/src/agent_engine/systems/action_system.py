@@ -86,11 +86,13 @@ class ActionSystem(System):
             intent_name = action_plan.intent.name
 
         # Use the injected reward calculator
+        # FIX: Pass a copy of the details dictionary to prevent unintended mutation
+        # of the object that the mock is inspecting.
         final_reward, breakdown = self.reward_calculator.calculate_final_reward(
             base_reward=action_outcome.base_reward,
             action_type=action_plan.action_type,
             action_intent=intent_name,
-            outcome_details=action_outcome.details,
+            outcome_details=action_outcome.details.copy(),
             entity_components=entity_components,
         )
         action_outcome.reward = final_reward

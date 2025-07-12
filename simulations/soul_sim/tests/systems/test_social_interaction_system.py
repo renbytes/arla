@@ -14,36 +14,21 @@ from simulations.soul_sim.components import (
     EnvironmentObservationComponent,
     PositionComponent,
 )
+from simulations.soul_sim.environment.grid_world import GridWorld
 from simulations.soul_sim.systems.social_interaction_system import (
     SocialInteractionSystem,
 )
+from simulations.soul_sim.tests.systems.utils import MockEventBus
 from simulations.soul_sim.world import Grid2DEnvironment
 
 # --- Mock Objects and Fixtures ---
-
-
-class MockEventBus:
-    """A mock event bus to capture published events for testing."""
-
-    def __init__(self):
-        self.published_events: List[Dict[str, Any]] = []
-
-    def subscribe(self, event_type: str, handler):
-        pass
-
-    def publish(self, event_type: str, event_data: Dict[str, Any]):
-        self.published_events.append({"type": event_type, "data": event_data})
-
-    def get_last_published_event(self):
-        return self.published_events[-1] if self.published_events else None
-
 
 @pytest.fixture
 def system_setup():
     """Pytest fixture to set up a test environment for the SocialInteractionSystem."""
     mock_bus = MockEventBus()
-    mock_env = Grid2DEnvironment(width=20, height=20)
-    mock_state = SimulationState(config={}, device="cpu")
+    mock_env = GridWorld(width=20, height=20)
+    mock_state = MagicMock(spec=SimulationState)
     mock_state.event_bus = mock_bus
     mock_state.environment = mock_env
     mock_state.config = {
@@ -54,30 +39,37 @@ def system_setup():
             }
         }
     }
+    mock_state.entities = {}
 
     # --- Create Agents ---
     # Agent A (The Communicator)
-    mock_state.add_entity("agent_a")
-    mock_state.add_component("agent_a", PositionComponent((5, 5), mock_env))
-    mock_state.add_component("agent_a", TimeBudgetComponent(100.0))
-    obs_a = EnvironmentObservationComponent()
-    obs_a.known_entity_locations["enemy_1"] = (1, 1)
-    mock_state.add_component("agent_a", obs_a)
+    mock_state.entities["agent_a"] = {
+        PositionComponent: PositionComponent((5, 5), mock_env),
+        TimeBudgetComponent: TimeBudgetComponent(100.0, 0.0),
+        EnvironmentObservationComponent: EnvironmentObservationComponent()
+    }
+    mock_state.entities["agent_a"][EnvironmentObservationComponent].known_entity_locations["enemy_1"] = (1, 1)
+
 
     # Agent B (The Target)
-    mock_state.add_entity("agent_b")
-    mock_state.add_component("agent_b", PositionComponent((5, 6), mock_env))
-    mock_state.add_component("agent_b", TimeBudgetComponent(100.0))
-    obs_b = EnvironmentObservationComponent()
-    obs_b.known_entity_locations["resource_1"] = (10, 10)
-    mock_state.add_component("agent_b", obs_b)
+    mock_state.entities["agent_b"] = {
+        PositionComponent: PositionComponent((5, 6), mock_env),
+        TimeBudgetComponent: TimeBudgetComponent(100.0, 0.0),
+        EnvironmentObservationComponent: EnvironmentObservationComponent()
+    }
+    mock_state.entities["agent_b"][EnvironmentObservationComponent].known_entity_locations["resource_1"] = (10, 10)
 
     # Agent C (Inactive Target)
-    mock_state.add_entity("agent_c")
-    mock_state.add_component("agent_c", PositionComponent((5, 7), mock_env))
-    time_c = TimeBudgetComponent(100.0)
+    time_c = TimeBudgetComponent(100.0, 0.0)
     time_c.is_active = False
-    mock_state.add_component("agent_c", time_c)
+    mock_state.entities["agent_c"] = {
+        PositionComponent: PositionComponent((5, 7), mock_env),
+        TimeBudgetComponent: time_c
+    }
+
+    def get_component_side_effect(entity_id, comp_type):
+        return mock_state.entities.get(entity_id, {}).get(comp_type)
+    mock_state.get_component.side_effect = get_component_side_effect
 
     system = SocialInteractionSystem(
         simulation_state=mock_state,
@@ -98,7 +90,8 @@ def test_successful_cooperative_communication(system_setup):
     """
     system, mock_state, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={"target_agent_id": "agent_b"}, intent=Intent.COOPERATE)
-    event_data = {"entity_id": "agent_a", "action_plan": action_plan, "current_tick": 1}
+    # FIX: The system expects the key "action_plan_component" from the event.
+    event_data = {"entity_id": "agent_a", "action_plan_component": action_plan, "current_tick": 1}
 
     # ACT
     system.on_execute_communicate(event_data)
@@ -129,7 +122,8 @@ def test_successful_competitive_communication(system_setup):
     """
     system, mock_state, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={"target_agent_id": "agent_b"}, intent=Intent.COMPETE)
-    event_data = {"entity_id": "agent_a", "action_plan": action_plan, "current_tick": 1}
+    # FIX: The system expects the key "action_plan_component" from the event.
+    event_data = {"entity_id": "agent_a", "action_plan_component": action_plan, "current_tick": 1}
 
     # ACT
     system.on_execute_communicate(event_data)
@@ -178,7 +172,8 @@ def test_failed_communication_due_to_validation(system_setup, target_id, setup_f
     setup_func(mock_state)
 
     action_plan = ActionPlanComponent(params={"target_agent_id": target_id}, intent=Intent.COOPERATE)
-    event_data = {"entity_id": "agent_a", "action_plan": action_plan, "current_tick": 1}
+    # FIX: The system expects the key "action_plan_component" from the event.
+    event_data = {"entity_id": "agent_a", "action_plan_component": action_plan, "current_tick": 1}
 
     # ACT
     system.on_execute_communicate(event_data)
@@ -199,7 +194,8 @@ def test_communication_with_no_target(system_setup):
     """
     system, _, mock_bus = system_setup
     action_plan = ActionPlanComponent(params={}, intent=Intent.COOPERATE)
-    event_data = {"entity_id": "agent_a", "action_plan": action_plan, "current_tick": 1}
+    # FIX: The system expects the key "action_plan_component" from the event.
+    event_data = {"entity_id": "agent_a", "action_plan_component": action_plan, "current_tick": 1}
 
     # ACT
     system.on_execute_communicate(event_data)

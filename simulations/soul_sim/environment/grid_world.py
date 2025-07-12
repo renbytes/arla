@@ -100,3 +100,23 @@ class GridWorld(EnvironmentInterface):
             "impassable_tiles": list(self.impassable_tiles),
             "entity_positions": {eid: list(pos) for eid, pos in self._entity_positions.items()}
         }
+
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        """
+        Restores the environment's state from a dictionary snapshot.
+        """
+        self.width = data.get("width", self.width)
+        self.height = data.get("height", self.height)
+        self.impassable_tiles = set(tuple(tile) for tile in data.get("impassable_tiles", []))
+
+        # Clear existing state
+        self._spatial_index.clear()
+        self._entity_positions.clear()
+
+        # Repopulate from snapshot
+        entity_positions = data.get("entity_positions", {})
+        for entity_id, pos_list in entity_positions.items():
+            pos_tuple = tuple(pos_list)
+            self.update_entity_position(entity_id, None, pos_tuple)
+
+        print(f"Restored GridWorld state with {len(self._entity_positions)} entities.")

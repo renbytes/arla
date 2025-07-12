@@ -201,8 +201,8 @@ class ReflectionSystem(System):
         start_tick = events[0]["current_tick"]
         event_summaries = []
         for e in events:
-            # The key is 'action_plan_component', not 'action_plan'
-            action_plan = e.get("action_plan_component")
+            # FIX: The event published by ActionSystem uses the key "action_plan".
+            action_plan = e.get("action_plan")
             if action_plan and hasattr(action_plan, "action_type") and hasattr(action_plan.action_type, "name"):
                 event_summaries.append(f"Tick {e['current_tick']}: action {action_plan.action_type.name}")
 

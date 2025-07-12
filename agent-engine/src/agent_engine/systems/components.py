@@ -1,9 +1,10 @@
 # src/agent_engine/systems/components.py
 
 from typing import Any, Dict, List, Tuple
-import torch
 
+import torch
 from agent_core.core.ecs.component import Component
+
 from agent_engine.policy.learned_utility import UtilityNetwork
 
 
@@ -43,11 +44,11 @@ class QLearningComponent(Component):
                 errors.append(f"Network parameter '{name}' contains infinite values.")
 
         # 2. Check for logical consistency of epsilon
-        if not (0.0 <= self.current_epsilon <= 1.0):
-            errors.append(f"current_epsilon is out of bounds [0.0, 1.0]. Got: {self.current_epsilon}")
-
+        # Check for NaN first to avoid a redundant error message.
         if torch.isnan(torch.tensor(self.current_epsilon)):
             errors.append("current_epsilon is NaN.")
+        elif not (0.0 <= self.current_epsilon <= 1.0):
+            errors.append(f"current_epsilon is out of bounds [0.0, 1.0]. Got: {self.current_epsilon}")
 
         # Return True if no errors were found
         return len(errors) == 0, errors

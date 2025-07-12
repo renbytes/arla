@@ -5,7 +5,7 @@ allowing for different world structures (e.g., 2D Grid, Graph, etc.).
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Set, Tuple, Any  # Added Any for SpatialIndex placeholder
+from typing import Any, Dict, List, Optional, Set, Tuple  # Added Any for SpatialIndex placeholder
 
 
 # Placeholder for SpatialIndex if it's not a separate, shared component.
@@ -97,4 +97,12 @@ class EnvironmentInterface(ABC):
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the environment's state to a dictionary."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        """
+        Restores the environment's state from a dictionary snapshot.
+        This is the counterpart to to_dict().
+        """
         raise NotImplementedError

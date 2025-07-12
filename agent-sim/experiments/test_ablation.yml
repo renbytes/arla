@@ -64,6 +64,28 @@ variations:
             enable_emotion_clustering: true
             enable_social_memory: true
 
+  - name: "No Emotions"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: true
+            enable_identity_inference: true
+            enable_goal_modulation: true
+            enable_emotion_clustering: false
+            enable_social_memory: true
+
+  - name: "No Memory"
+    overrides:
+      agent:
+        cognitive:
+          architecture_flags:
+            enable_reflection: true
+            enable_identity_inference: true
+            enable_goal_modulation: true
+            enable_emotion_clustering: true
+            enable_social_memory: false
+
   - name: "Minimal Cognition"
     overrides:
       agent:
