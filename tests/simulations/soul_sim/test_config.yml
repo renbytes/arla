@@ -1,0 +1,114 @@
+action_modules:
+  - "simulations.soul_sim.actions.move_action"
+  - "simulations.soul_sim.actions.combat_action"
+
+logging:
+  components_to_log: []
+
+simulation:
+  steps: 100
+  log_directory: "data/test_logs"
+  database_directory: "data/test_db"
+  database_file: "test_sim.db"
+  enable_debug_logging: false
+  random_seed: 42
+
+llm:
+  provider: "mock"
+  completion_model: "mock-model"
+  embedding_model: "mock-embedding"
+  temperature: 0.1
+  max_tokens: 100
+  reflection_prompt_prefix: "test"
+
+agent:
+  foundational:
+    num_agents: 10
+    lifespan_std_dev_percent: 0.1
+    vitals:
+      initial_time_budget: 1000.0
+      initial_health: 100.0
+      initial_resources: 100.0
+    attributes:
+      initial_attack_power: 10.0
+      initial_speed: 1
+  cognitive:
+    architecture_flags: { enable_reflection: true, enable_emotion_clustering: true, enable_goal_modulation: true, enable_identity_inference: true, enable_social_memory: true }
+    embeddings: { identity_dim: 128, main_embedding_dim: 128, schema_embedding_dim: 128 }
+  costs:
+    actions: { base: 1.0, communicate: 1.0, extract: 1.0, combat: 1.0, flee: 1.0, reflect: 1.0, nest: 1.0 }
+  dynamics:
+    decay: { time_budget_per_step: 0.1, health_per_step: 0.1, resources_per_step: 0.1 }
+    regeneration: { health_from_mining: 0.0, time_from_mining: 0.0, health_from_farming: 0.1, resource_depletion_yield_bonus: 1.5 }
+    growth: { time_bonus: 1.0, attack_bonus: 0.1 }
+  emotional_dynamics:
+    temporal: { valence_decay_rate: 0.95, arousal_decay_rate: 0.90, valence_learning_rate: 0.2, arousal_learning_rate: 0.3 }
+    noise_std: 0.0
+    appraisal_weights: { goal_relevance: 0.7, agency: 0.5, social_feedback: 0.3 }
+  identity_dynamics:
+    domain_learning_rates: { social: 0.1, competence: 0.15 }
+    domain_validation_weights: { social: 0.6, competence: 0.4 }
+    update_strength_cap: 0.3
+    identity_coherence_minimum: 0.4
+
+environment:
+  grid_world_size: [10, 10]
+  num_single_resources: 5
+  num_double_resources: 2
+  num_triple_resources: 1
+  resource_respawn_single: 50
+  resource_respawn_double: 100
+  resource_respawn_triple: 200
+  farm_threshold_resources: 50.0
+  farm_yield_per_step: 0.5
+  farm_creation_cost_resources: 25.0
+  farm_maintenance_cost_per_step: 0.1
+  farm_protection_bonus_attack: 2.0
+  combat_time_stolen_percent: 0.1
+  combat_time_loss_percent: 0.05
+
+learning:
+  q_learning:
+    initial_epsilon: 0.5
+    epsilon_decay_rate: 0.999
+    min_epsilon: 0.05
+    alpha: 0.001
+    gamma: 0.99
+    state_feature_dim: 16
+    action_feature_dim: 13
+  rewards:
+    base_reward: 0.0
+    move_reward_base: -0.1
+    communicate_reward_base: 0.5
+    combat_reward_hit: 5.0
+    combat_reward_defeat: 20.0
+    flee_reward_success: 2.0
+    action_bonus_for_active_engagement: 1.0
+    exploration_bonus: 0.1
+    collaboration_bonus_per_agent: 2.0
+    combat_penalty_defeated: -10.0
+    flee_penalty_blocked: -5.0
+    proximity_reward_weight: 0.2
+    nest_resource_cost: 100.0
+    decay_reduction_per_nest: 0.1
+    max_decay_reduction: 0.5
+  memory:
+    short_term_memory_maxlen: 10
+    affective_buffer_maxlen: 200
+    emotion_cluster_min_data: 50
+    reflection_interval: 25
+    cognitive_dissonance_threshold: 0.7
+  failed_state:
+    threshold: 0.5
+    penalty_weight: 1.2
+    decay_rate: 0.95
+  identity:
+    update_factor: 0.1
+    affect_mod_positive_action_arousal: 0.1
+    affect_mod_positive_action_surprise: 0.2
+    self_schema_update_periods: 10
+    competence_bonus_multiplier: 1.1
+  critical_state:
+    health_threshold_percent: 0.2
+    time_threshold_percent: 0.1
+    resource_threshold: 5.0
