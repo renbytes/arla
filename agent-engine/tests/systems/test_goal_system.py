@@ -1,6 +1,7 @@
 # tests/systems/test_goal_system.py
 
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -34,32 +35,14 @@ def mock_simulation_state():
     }
 
     mem_comp = MemoryComponent()
+    # CORRECTED: Added a 6th memory to ensure the check passes comfortably.
     mem_comp.episodic_memory = [
-        {
-            "outcome": 0.8,
-            "action": {"action_type": "EXTRACT"},
-            "outcome_details": {"status": "SUCCESS"},
-        },
-        {
-            "outcome": 0.9,
-            "action": {"action_type": "EXTRACT"},
-            "outcome_details": {"status": "SUCCESS"},
-        },
-        {
-            "outcome": 0.7,
-            "action": {"action_type": "EXTRACT"},
-            "outcome_details": {"status": "SUCCESS"},
-        },
-        {
-            "outcome": 0.8,
-            "action": {"action_type": "EXTRACT"},
-            "outcome_details": {"status": "SUCCESS"},
-        },
-        {
-            "outcome": 0.9,
-            "action": {"action_type": "EXTRACT"},
-            "outcome_details": {"status": "SUCCESS"},
-        },
+        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {"outcome": 0.7, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
     ]
 
     id_comp = MagicMock(spec=IdentityComponent)
@@ -108,26 +91,31 @@ def goal_system(
     mock_openai_key,
 ):
     """Provides an initialized GoalSystem with all dependencies mocked."""
-    # Mock all the OpenAI and KMeans functionality to prevent network calls
+    # Note: We capture the patch object as mock_kmeans
     with (
-        patch("agent_engine.systems.goal_system.get_embedding_with_cache") as mock_get_embedding,
+        patch("agent_engine.systems.goal_system.get_embedding_with_cache"),
         patch("agent_engine.systems.goal_system.KMeans") as mock_kmeans,
     ):
-        # Configure the embedding mock to return predictable vectors
-        mock_get_embedding.return_value = np.random.rand(4).astype(np.float32)
-
-        # Mock the KMeans clustering algorithm
+        # 1. Create a mock for the KMeans instance that is returned by fit()
         mock_kmeans_instance = MagicMock()
+        # 2. Set the attributes that the application code will access
         mock_kmeans_instance.n_clusters = 1
-        mock_kmeans_instance.labels_ = np.zeros(5)  # All memories in one cluster
+        # The number of labels must match the number of memories (6)
+        mock_kmeans_instance.labels_ = np.zeros(6, dtype=int)
+
+        # 3. Configure the mock KMeans class to return our instance when fit() is called
         mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
 
-        # The system uses the event bus from the simulation state
+        # --- The rest of the fixture is unchanged ---
         mock_simulation_state.event_bus = mock_event_bus
 
+        mock_config = SimpleNamespace(
+            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+            llm=SimpleNamespace(embedding_model="test-model"),
+        )
         system = GoalSystem(
             simulation_state=mock_simulation_state,
-            config={"goal_invention_min_successes": 5, "llm": {}},
+            config=mock_config,
             cognitive_scaffold=mock_cognitive_scaffold,
         )
         yield system
@@ -136,7 +124,7 @@ def goal_system(
 # --- Test Cases ---
 
 
-def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitive_scaffold):
+def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitive_scaffold, mocker):
     """
     Tests the main event handler to ensure it orchestrates the goal update cycle.
     """
@@ -147,6 +135,22 @@ def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitiv
         "current_tick": 100,
     }
     goal_comp = mock_simulation_state.entities["agent1"][GoalComponent]
+
+    # CORRECTED: We mock the embedding function for this specific test
+    # to ensure the new goal is scored higher than the existing one.
+    def embedding_side_effect(text, *args, **kwargs):
+        # If we are embedding the new goal name, return a specific vector
+        if "acquire resources" in text:
+            return np.array([1.0, 0.0, 0.0, 0.0])
+        # If we are embedding the context, return a very similar vector
+        elif "My situation" in text:
+            return np.array([0.9, 0.1, 0.0, 0.0])
+        # For anything else (like the old goal), return a different vector
+        else:
+            return np.array([0.0, 1.0, 0.0, 0.0])
+
+    # Patch the function where it is used inside the goal_system module
+    mocker.patch("agent_engine.systems.goal_system.get_embedding_with_cache", side_effect=embedding_side_effect)
 
     # Act
     goal_system.on_update_goals_event(event_data)

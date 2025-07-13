@@ -19,7 +19,7 @@ from agent_core.environment.state_node_encoder_interface import (
     StateNodeEncoderInterface,
 )
 
-# Imports from agent_engine
+# Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
 
@@ -49,7 +49,7 @@ class CausalGraphSystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: Any,
         state_node_encoder: StateNodeEncoderInterface,
     ):
@@ -117,7 +117,6 @@ class CausalGraphSystem(System):
         if not hasattr(mem_comp, "causal_graph") or mem_comp.causal_graph is None:
             mem_comp.causal_graph = {}
 
-        # Safely access the previous state node, which is a dynamic attribute.
         previous_node = getattr(mem_comp, "previous_state_node", None)
 
         if previous_node is not None:
@@ -133,8 +132,6 @@ class CausalGraphSystem(System):
             mem_comp.causal_graph[action_outcome_node].get(current_state_node, 0.0) + link_weight
         )
 
-        # Cache the current state for the next tick. Mypy is ignored because
-        # this attribute is not formally declared on the MemoryComponent class.
         mem_comp.previous_state_node = current_state_node
 
     async def update(self, current_tick: int) -> None:
@@ -142,15 +139,16 @@ class CausalGraphSystem(System):
         if (current_tick + 1) % 10 != 0:
             return
 
+        # Use direct attribute access. Assumes this key exists in the config.
+        decay_rate = self.config.learning.memory.causal_decay_rate
+
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
-        decay_rate = self.config.get("learning", {}).get("causal_decay_rate", 0.95)
 
         for components_dict in target_entities.values():
             mem_comp = cast(MemoryComponent, components_dict.get(MemoryComponent))
             if not mem_comp or not hasattr(mem_comp, "causal_graph") or mem_comp.causal_graph is None:
                 continue
 
-            # Iterate over copies to allow for safe modification during iteration
             for cause_node, effects in list(mem_comp.causal_graph.items()):
                 for effect_node, weight in list(effects.items()):
                     new_weight = weight * decay_rate

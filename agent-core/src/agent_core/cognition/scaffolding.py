@@ -1,7 +1,7 @@
 # src/agent_core/cognition/scaffolding.py
 
 import asyncio
-from typing import Any, Coroutine, Dict
+from typing import Any, Coroutine
 
 # We keep the query_llm import here, but the client itself will be initialized lazily.
 from agent_core.cognition.ai_models.openai_client import query_llm
@@ -13,7 +13,14 @@ class CognitiveScaffold:
     This class handles prompt construction, querying, and comprehensive logging.
     """
 
-    def __init__(self, simulation_id: str, config: Dict[str, Any], db_logger: Any) -> None:
+    def __init__(self, simulation_id: str, config: Any, db_logger: Any) -> None:
+        """Initializes the scaffold.
+
+        Args:
+            simulation_id: The unique ID for the simulation run.
+            config: A validated Pydantic configuration object.
+            db_logger: A database logger instance.
+        """
         self.db_logger = db_logger
         self.simulation_id = simulation_id
         self.config = config
@@ -22,7 +29,9 @@ class CognitiveScaffold:
         """
         The single, unified method for all LLM calls.
         """
-        response_text, tokens_used, cost = query_llm(prompt, llm_config=self.config.get("llm", {}))
+        # Pass the 'llm' sub-model directly to the query function.
+        # This assumes the main config object has an `llm` attribute.
+        response_text, tokens_used, cost = query_llm(prompt, llm_config=self.config.llm)
 
         # Uses the injected logger, which will be the real one during a simulation.
         log_coro = self.db_logger.log_scaffold_interaction(

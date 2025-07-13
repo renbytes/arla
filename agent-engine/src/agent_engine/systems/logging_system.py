@@ -18,7 +18,7 @@ class LoggingSystem(System):
     def __init__(
         self,
         simulation_state: Any,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: Any,
         exporters: List[ExporterInterface],
     ):
@@ -32,8 +32,9 @@ class LoggingSystem(System):
         event_bus.subscribe("action_executed", self.on_action_executed)
         event_bus.subscribe("q_learning_update", self.on_q_learning_update)
 
-        # This logic is for logging agent states, which is different from metrics
-        self.component_paths_to_log = self.config.get("logging", {}).get("components_to_log", [])
+        # Use direct attribute access for the 'logging' section,
+        # which is a dictionary in our Pydantic model.
+        self.component_paths_to_log = self.config.logging.get("components_to_log", [])
         self.component_types_to_log: List[Type[Component]] = self._import_component_types()
 
     def _import_component_types(self) -> List[Type[Component]]:

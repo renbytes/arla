@@ -1,4 +1,4 @@
-# src/simulations/soul_sim/systems/decay_system.py
+# src/agent_engine/systems/decay_system.py
 """
 Applies passive decay to agent vitals and handles inactivation from depletion.
 """
@@ -8,8 +8,7 @@ from typing import Dict, List, Type, cast
 from agent_core.core.ecs.component import Component, TimeBudgetComponent
 from agent_engine.simulation.system import System
 
-# Import world-specific components from the current simulation package
-from ..components import HealthComponent, InventoryComponent
+from simulations.soul_sim.components import HealthComponent, InventoryComponent
 
 
 class DecaySystem(System):
@@ -25,11 +24,10 @@ class DecaySystem(System):
         """
         Periodically decays vitals for all active entities and handles inactivation.
         """
-        # Get decay rates from config for efficiency
-        decay_config = self.config.get("agent", {}).get("dynamics", {}).get("decay", {})
-        time_decay = decay_config.get("time_budget_per_step", 0.1)
-        health_decay = decay_config.get("health_per_step", 0.0)
-        resource_decay = decay_config.get("resources_per_step", 0.0)
+        # Get decay rates from the validated Pydantic config model
+        time_decay = self.config.agent.dynamics.decay.time_budget_per_step
+        health_decay = self.config.agent.dynamics.decay.health_per_step
+        resource_decay = self.config.agent.dynamics.decay.resources_per_step
 
         # Get all entities that have the required vitals to decay
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)

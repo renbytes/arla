@@ -1,5 +1,6 @@
 # agent-engine/tests/systems/test_q_learning_system.py
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -82,18 +83,13 @@ def mock_event_bus():
 def q_learning_system(mock_registry, mock_simulation_state, mock_state_encoder, mock_event_bus):
     """Provides an initialized QLearningSystem with all dependencies mocked."""
     mock_simulation_state.event_bus = mock_event_bus
+    mock_config = SimpleNamespace(learning=SimpleNamespace(q_learning=SimpleNamespace(gamma=0.99)))
+    mock_simulation_state.config = mock_config
 
-    # Mock the action registry to return a mock action
-    mock_action_class = MagicMock()
-    mock_action_instance = MagicMock(spec=ActionInterface)
-    mock_action_instance.generate_possible_params.return_value = [{}]
-    mock_action_instance.get_feature_vector.return_value = [0.0] * 5
-    mock_action_class.return_value = mock_action_instance
-    mock_registry.get_all_actions.return_value = [mock_action_class]
-
+    # Added the missing cognitive_scaffold and state_encoder arguments
     system = QLearningSystem(
         simulation_state=mock_simulation_state,
-        config=mock_simulation_state.config,
+        config=mock_config,
         cognitive_scaffold=MagicMock(),
         state_encoder=mock_state_encoder,
     )

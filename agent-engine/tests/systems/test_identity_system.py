@@ -8,6 +8,7 @@ symbol used inside the production module –
 unit-testing and eliminates the 401 error spam.
 """
 
+from types import SimpleNamespace
 from typing import Any, Dict, Iterator
 from unittest.mock import MagicMock, patch
 
@@ -84,12 +85,13 @@ def identity_system(
     # We still need a patch for the external network call
     with patch("agent_engine.systems.identity_system.get_embedding_with_cache") as mock_get_embedding:
         mock_get_embedding.return_value = np.ones(4, dtype=np.float32)
+        mock_config = SimpleNamespace(
+            llm=SimpleNamespace(),
+            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+        )
         system = IdentitySystem(
             simulation_state=mock_simulation_state,
-            config={
-                "llm": {},
-                "agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}},
-            },
+            config=mock_config,
             cognitive_scaffold=mock_cognitive_scaffold,
         )
         yield system

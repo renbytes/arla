@@ -18,7 +18,10 @@ def event_bus():
 @pytest.fixture
 def debug_event_bus():
     """Provides an EventBus instance with debug logging enabled."""
-    return EventBus(config={"enable_debug_logging": True})
+    # Create a mock object that mimics the nested Pydantic config structure.
+    mock_config = MagicMock()
+    mock_config.simulation.enable_debug_logging = True
+    return EventBus(config=mock_config)
 
 
 # --- Test Cases ---

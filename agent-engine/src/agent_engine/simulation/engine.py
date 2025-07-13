@@ -6,7 +6,7 @@ A world-agnostic simulation engine that orchestrates the main ECS loop.
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, cast
+from typing import Any, List, Optional, Type
 
 import numpy as np
 
@@ -20,7 +20,6 @@ from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_persist.store import FileStateStore
-from omegaconf import DictConfig, OmegaConf
 
 # Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
@@ -30,27 +29,28 @@ from agent_engine.simulation.system import SystemManager
 class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
-    decisions, and updating all registered systems.
-    It is decoupled from any
+    decisions, and updating all registered systems. It is decoupled from any
     specific world implementation or game rules.
     """
 
     def __init__(
         self,
-        config: DictConfig,
+        config: Any,  # Now accepts a validated Pydantic model
         environment: EnvironmentInterface,
         scenario_loader: ScenarioLoaderInterface,
         action_generator: ActionGeneratorInterface,
         decision_selector: DecisionSelectorInterface,
         component_factory: ComponentFactoryInterface,
-        db_logger: Any,  # TYPE HINT CHANGED
+        db_logger: Any,
         task_id: str = "local_run",
         experiment_id: Optional[str] = None,
         run_id: Optional[str] = None,
     ):
-        self.config: Dict[str, Any] = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
+        # The config is now a Pydantic model, not a dict
+        self.config = config
         self.device = "cpu"
-        self.save_path = Path(self.config.get("simulation", {}).get("log_directory", "logs")) / "snapshots"
+        # Use direct attribute access on the validated config object
+        self.save_path = Path(self.config.simulation.log_directory) / "snapshots"
         self.db_logger = db_logger
 
         # --- Injected Dependencies ---
@@ -63,7 +63,7 @@ class SimulationManager:
         self._setup_simulation_ids(run_id, task_id, experiment_id)
         self._setup_rng()
 
-        # Initialize core services and state
+        # Initialize core services and state, passing the validated config object
         self.event_bus = EventBus(self.config)
         self.simulation_state = SimulationState(self.config, self.device)
         self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config, db_logger=self.db_logger)
@@ -83,12 +83,12 @@ class SimulationManager:
         Executes the main ECS simulation loop asynchronously.
         Args:
             start_step: The tick to start the simulation from (for resuming).
-
             end_step: The tick to end the simulation on. If None, runs for the
                       number of steps specified in the config.
         """
         if end_step is None:
-            num_steps = self.config.get("simulation", {}).get("steps", 100)
+            # Use direct attribute access
+            num_steps = self.config.simulation.steps
         else:
             num_steps = end_step
 
@@ -130,7 +130,7 @@ class SimulationManager:
     def save_state(self, tick: int) -> None:
         """Saves the current simulation state to a file."""
         print(f"--- Saving state at tick {tick} ---")
-        snapshot = self.simulation_state.to_snapshot()  # UPDATED
+        snapshot = self.simulation_state.to_snapshot()
         filepath = self.save_path / self.simulation_id / f"snapshot_tick_{tick}.json"
         store = FileStateStore(filepath)
         store.save(snapshot)
@@ -138,7 +138,6 @@ class SimulationManager:
     def load_state(self, filepath: str) -> None:
         """
         Loads the entire simulation state from a checkpoint file.
-
         This replaces the existing self.simulation_state with a new one.
         """
         print(f"--- Loading state from {filepath} ---")
@@ -199,7 +198,8 @@ class SimulationManager:
 
     def _setup_rng(self) -> None:
         """Initializes random number generators."""
-        seed = self.config.get("simulation", {}).get("random_seed")
+        # Use direct attribute access
+        seed = self.config.simulation.random_seed
         if seed is not None:
             self.main_rng = np.random.default_rng(seed)
         else:

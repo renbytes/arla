@@ -15,7 +15,7 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
     AffectComponent,
-    Component,
+    Component,  # CORRECTED: This import is restored
     EmotionComponent,
     GoalComponent,
     IdentityComponent,
@@ -48,11 +48,10 @@ class QLearningSystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: Any,
         state_encoder: StateEncoderInterface,
     ):
-        # NOTE: The super call is now valid due to the inheritance fix.
         super().__init__(simulation_state, config, cognitive_scaffold)
 
         event_bus = simulation_state.event_bus
@@ -68,7 +67,6 @@ class QLearningSystem(System):
         """
         Caches the current state features for each learning agent.
         """
-        # NOTE: This call is now valid because self.simulation_state is concrete.
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
@@ -96,13 +94,12 @@ class QLearningSystem(System):
             return
 
         target_id = action_plan.params.get("target_agent_id")
-
         new_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config, target_id)
-
         action_features = action_plan.action_type.get_feature_vector(
             entity_id, self.simulation_state, action_plan.params
         )
 
+        # CORRECTED: Revert to four separate, explicit calls to avoid mypy confusion.
         id_comp = self.simulation_state.get_component(entity_id, IdentityComponent)
         affect_comp = self.simulation_state.get_component(entity_id, AffectComponent)
         goal_comp = self.simulation_state.get_component(entity_id, GoalComponent)
@@ -145,7 +142,6 @@ class QLearningSystem(System):
         current_tick: int,
     ) -> None:
         """Pure Q-learning logic using the Bellman equation."""
-        q_config = self.config.get("learning", {}).get("q_learning", {})
         device = self.simulation_state.device
 
         old_state_t = torch.tensor(old_state, dtype=torch.float32).unsqueeze(0).to(device)
@@ -179,7 +175,7 @@ class QLearningSystem(System):
                     if next_q_values.numel() > 0:
                         max_next_q = torch.max(next_q_values).item()
 
-        gamma = q_config.get("gamma", 0.99)
+        gamma = self.config.learning.q_learning.gamma
         target_q = reward_t + gamma * max_next_q
 
         loss = q_comp.loss_fn(current_q.squeeze(), target_q.detach())

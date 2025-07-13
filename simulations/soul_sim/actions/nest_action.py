@@ -19,14 +19,15 @@ class NestAction(ActionInterface):
     name = "Nest"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("nest_base_cost", 25.0)
+        return simulation_state.config.agent.costs.actions.nest
 
     def generate_possible_params(
         self, entity_id: str, simulation_state: "SimulationState", current_tick: int
     ) -> List[Dict[str, Any]]:
         inv_comp = simulation_state.get_component(entity_id, InventoryComponent)
-        if isinstance(inv_comp, InventoryComponent) and inv_comp.current_resources >= simulation_state.config.get(
-            "nest_resource_cost", 120.0
+        if (
+            isinstance(inv_comp, InventoryComponent)
+            and inv_comp.current_resources >= simulation_state.config.learning.rewards.nest_resource_cost
         ):
             return [{"intent": Intent.SOLITARY}]
         return []

@@ -3,7 +3,7 @@
 Validates LLM-generated inferences against symbolic logic and episode data.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 # Imports from agent_core
 from agent_core.cognition.ai_models.openai_client import get_embedding_with_cache
@@ -11,7 +11,6 @@ from agent_core.cognition.scaffolding import CognitiveScaffold
 
 # Imports from agent-engine
 from agent_engine.cognition.reflection.episode import Episode
-from agent_engine.utils.config_utils import get_config_value
 from agent_engine.utils.math_utils import safe_cosine_similarity
 
 
@@ -23,7 +22,7 @@ class RuleValidator:
     def __init__(
         self,
         episode: Episode,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: CognitiveScaffold,
         agent_id: str,
         current_tick: int,
@@ -51,12 +50,9 @@ class RuleValidator:
         if not inference or not self.episode.events:
             return 0.0
 
-        embedding_dim = get_config_value(
-            config=self.config,
-            path="agent.cognitive.embeddings.main_embedding_dim",
-            default=1536,
-        )
-        llm_config = self.config.get("llm", {})
+        # Use direct attribute access
+        embedding_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
+        llm_config = self.config.llm
 
         reflection_embedding = get_embedding_with_cache(inference, embedding_dim, llm_config)
 

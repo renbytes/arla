@@ -54,7 +54,7 @@ class ReflectionSystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: Any,
         narrative_context_provider: NarrativeContextProviderInterface,
     ):
@@ -89,7 +89,8 @@ class ReflectionSystem(System):
 
     async def update(self, current_tick: int) -> None:
         """Periodically triggers the reflection process for active agents."""
-        reflection_interval = self.config.get("learning", {}).get("memory", {}).get("reflection_interval", 50)
+        # Use direct attribute access on the validated Pydantic model
+        reflection_interval = self.config.learning.memory.reflection_interval
         if not (current_tick > 0 and current_tick % reflection_interval == 0):
             return
 
@@ -181,7 +182,6 @@ class ReflectionSystem(System):
         confidence = 0.8  # Simplified for now
         final_account = context.get("llm_final_account", "")
 
-        # Event for systems that need the validated text
         self.event_bus.publish(
             "reflection_validated",
             {
@@ -191,12 +191,10 @@ class ReflectionSystem(System):
                 "current_tick": tick,
             },
         )
-        # Event for systems that need the narrative to update goals
         self.event_bus.publish(
             "update_goals_event",
             {"entity_id": entity_id, "narrative": final_account, "current_tick": tick},
         )
-        # Event for systems that need the full context (like IdentitySystem)
         self.event_bus.publish(
             "reflection_completed",
             {"tick": tick, "entity_id": entity_id, "context": context},
@@ -210,7 +208,6 @@ class ReflectionSystem(System):
         start_tick = events[0]["current_tick"]
         event_summaries = []
         for e in events:
-            # The event published by ActionSystem uses the key "action_plan".
             action_plan = e.get("action_plan")
             if action_plan and hasattr(action_plan, "action_type") and hasattr(action_plan.action_type, "name"):
                 event_summaries.append(f"Tick {e['current_tick']}: action {action_plan.action_type.name}")
@@ -232,7 +229,5 @@ class ReflectionSystem(System):
         )
         theme = theme_raw.strip().replace('"', "") if theme_raw else "unknown_theme"
 
-        # Access the .details attribute directly instead of using .get().
-        # Use a safe list comprehension to handle cases where an outcome might be missing.
         processed_events = [outcome.details for e in events if (outcome := e.get("action_outcome")) is not None]
         return Episode(start_tick=start_tick, end_tick=tick, theme=theme, events=processed_events)

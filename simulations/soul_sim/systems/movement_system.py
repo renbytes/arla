@@ -61,27 +61,20 @@ class MovementSystem(System):
 
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         if not isinstance(pos_comp, PositionComponent):
-            # Cannot move without a position
             return
 
         old_pos = pos_comp.position
         direction = action_plan.params.get("direction")
         if not isinstance(direction, int):
-            # Invalid action parameters
             return
 
         env = self.simulation_state.environment
         if not env or not hasattr(env, "height") or not hasattr(env, "width"):
-            # Environment not set up correctly
             return
 
-        # This moved the agent
         new_pos = _apply_move_logic(old_pos, direction, (env.height, env.width))
-
-        # This gives spacial awareness, and thus which actions are available given the surroundings
         env.update_entity_position(entity_id, old_pos, new_pos)
 
-        # Update the component state
         pos_comp.position = new_pos
         pos_comp.history.append(new_pos)
 
@@ -89,18 +82,18 @@ class MovementSystem(System):
         if is_new_tile:
             pos_comp.visited_positions.add(new_pos)
 
-        # Determine outcome
         success = new_pos != old_pos
         base_reward = 0.0
         if success:
             status = "fled_successfully" if is_flee else "moved"
             if is_new_tile:
-                # The RewardCalculator will add the subjective exploration bonus
-                # This base reward is for the objective act of discovering new territory
-                base_reward = self.config.get("learning", {}).get("rewards", {}).get("exploration_base_reward", 0.1)
+                # Use direct attribute access on the validated Pydantic model.
+                # Note: The original config key was 'exploration_base_reward',
+                # but the schema key is 'exploration_bonus'. Using the schema key.
+                base_reward = self.config.learning.rewards.exploration_bonus
         else:
             status = "movement_blocked"
-            base_reward = -0.02  # Small penalty for bumping into a wall
+            base_reward = -0.02
 
         details = {
             "status": status,

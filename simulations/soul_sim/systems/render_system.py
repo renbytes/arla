@@ -31,7 +31,8 @@ class RenderSystem(System):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        log_dir = self.config.get("simulation", {}).get("log_directory", "logs")
+        # Use direct attribute access on the validated Pydantic model
+        log_dir = self.config.simulation.log_directory
         self.image_frames_dir = os.path.join(log_dir, "frames")
         os.makedirs(self.image_frames_dir, exist_ok=True)
         self.frames_to_render: List[str] = []
@@ -181,7 +182,7 @@ class RenderSystem(System):
             print("RenderSystem: No frames were rendered to create a GIF.")
             return
 
-        log_dir = self.config.get("simulation", {}).get("log_directory", "logs")
+        log_dir = self.config.simulation.log_directory
         gif_path = os.path.join(log_dir, "simulation_output.gif")
 
         print(f"\nCreating simulation GIF from {len(self.frames_to_render)} frames...")

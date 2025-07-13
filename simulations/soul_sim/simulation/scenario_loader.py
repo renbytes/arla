@@ -3,8 +3,6 @@
 import json
 from typing import Any, Dict
 
-from agent_core.agents.actions.action_registry import action_registry
-from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.component import (
     ActionOutcomeComponent,
     ActionPlanComponent,
@@ -28,7 +26,6 @@ from agent_engine.cognition.identity.domain_identity import (
 )
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.systems.components import QLearningComponent
-from agent_engine.utils.config_utils import get_config_value
 
 from simulations.soul_sim.components import (
     CombatComponent,
@@ -49,7 +46,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
     by creating agents with pre-defined, robust component archetypes.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Any):
         self.config = config
         self.simulation_state: SimulationState = None  # Injected by SimulationManager
         self.scenario_data: Dict[str, Any] = {}
@@ -60,7 +57,8 @@ class ScenarioLoader(ScenarioLoaderInterface):
         if not self.simulation_state:
             raise RuntimeError("SimulationState must be set before calling load().")
 
-        scenario_path = self.config.get("scenario_path")
+        # Use direct attribute access on the validated Pydantic model
+        scenario_path = self.config.scenario_path
         if not scenario_path:
             raise ValueError("Scenario path not found in configuration.")
 
@@ -137,16 +135,15 @@ class ScenarioLoader(ScenarioLoaderInterface):
                     self.simulation_state.environment.update_entity_position(entity_id, None, initial_pos)
                     agent_counter += 1
 
-        # Moved this print statement outside the conditional to ensure it always runs.
         print(f"--- Created {agent_counter} agents. ---")
 
     def _create_resources(self):
         """Initializes resource entities by calling the random generator."""
-        # Get resource counts from the main YAML config
-        num_single = get_config_value(self.config, "environment.num_single_resources", 10)
-        num_double = get_config_value(self.config, "environment.num_double_resources", 5)
-        num_triple = get_config_value(self.config, "environment.num_triple_resources", 2)
-        seed = get_config_value(self.config, "simulation.random_seed", None)
+        # Use direct attribute access on the validated Pydantic model
+        num_single = self.config.environment.num_single_resources
+        num_double = self.config.environment.num_double_resources
+        num_triple = self.config.environment.num_triple_resources
+        seed = self.config.simulation.random_seed
 
         # Generate the dictionary of resources with random positions
         resources_to_create = init_resources(
@@ -168,7 +165,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
             )
 
             # Create a clean dictionary for the component's constructor
-            # This prevents passing unexpected arguments like 'id' or 'pos'.
             component_params = {
                 "resource_type": res_data["type"],
                 "initial_health": res_data["initial_health"],
@@ -187,14 +183,12 @@ class ScenarioLoader(ScenarioLoaderInterface):
 
     def _prepare_component_kwargs(self, initial_pos: tuple) -> Dict[str, Any]:
         """Gathers all possible constructor arguments for any component from the config."""
-        main_emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
+        # Use direct attribute access on the validated Pydantic model
+        main_emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
 
         # Calculate the true dimensions of the feature vectors dynamically.
-        # State features from SoulSimStateEncoder
-        state_feature_dim = 16
-
-        # Action features from create_standard_feature_vector
-        action_feature_dim = len(action_registry.action_ids) + len(Intent) + 1 + 5
+        state_feature_dim = self.config.learning.q_learning.state_feature_dim
+        action_feature_dim = self.config.learning.q_learning.action_feature_dim
 
         # Internal state features from get_internal_state_features_for_entity
         internal_state_dim = (
@@ -206,29 +200,17 @@ class ScenarioLoader(ScenarioLoaderInterface):
             "initial_pos": initial_pos,
             "environment": self.simulation_state.environment,
             "TimeBudgetComponent": {
-                "initial_time_budget": get_config_value(self.config, "agent.foundational.vitals.initial_time_budget"),
-                "lifespan_std_dev_percent": get_config_value(
-                    self.config, "agent.foundational.lifespan_std_dev_percent"
-                ),
+                "initial_time_budget": self.config.agent.foundational.vitals.initial_time_budget,
+                "lifespan_std_dev_percent": self.config.agent.foundational.lifespan_std_dev_percent,
             },
-            "HealthComponent": {
-                "initial_health": get_config_value(self.config, "agent.foundational.vitals.initial_health")
-            },
-            "InventoryComponent": {
-                "initial_resources": get_config_value(self.config, "agent.foundational.vitals.initial_resources")
-            },
-            "CombatComponent": {
-                "attack_power": get_config_value(self.config, "agent.foundational.attributes.initial_attack_power")
-            },
-            "AffectComponent": {
-                "affective_buffer_maxlen": get_config_value(self.config, "learning.memory.affective_buffer_maxlen")
-            },
+            "HealthComponent": {"initial_health": self.config.agent.foundational.vitals.initial_health},
+            "InventoryComponent": {"initial_resources": self.config.agent.foundational.vitals.initial_resources},
+            "CombatComponent": {"attack_power": self.config.agent.foundational.attributes.initial_attack_power},
+            "AffectComponent": {"affective_buffer_maxlen": self.config.learning.memory.affective_buffer_maxlen},
             "GoalComponent": {"embedding_dim": main_emb_dim},
             "IdentityComponent": {"multi_domain_identity": MultiDomainIdentity(embedding_dim=main_emb_dim)},
             "SocialMemoryComponent": {
-                "schema_embedding_dim": get_config_value(
-                    self.config, "agent.cognitive.embeddings.schema_embedding_dim"
-                ),
+                "schema_embedding_dim": self.config.agent.cognitive.embeddings.schema_embedding_dim,
                 "device": self.simulation_state.device,
             },
             "QLearningComponent": {
@@ -236,7 +218,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
                 "state_feature_dim": state_feature_dim,
                 "internal_state_dim": internal_state_dim,
                 "action_feature_dim": action_feature_dim,
-                "q_learning_alpha": get_config_value(self.config, "learning.q_learning.alpha"),
+                "q_learning_alpha": self.config.learning.q_learning.alpha,
                 "device": self.simulation_state.device,
             },
         }

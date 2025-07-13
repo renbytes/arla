@@ -20,7 +20,6 @@ from numpy.typing import NDArray
 
 # Imports from agent_core
 from agent_engine.cognition.identity.domain_identity import IdentityDomain
-from agent_engine.utils.config_utils import get_config_value
 
 # Forward references for type hinting to avoid circular imports
 if TYPE_CHECKING:
@@ -36,7 +35,7 @@ class SimulationState(AbstractSimulationState):
     Consolidates all simulation data into a single, world-agnostic container.
     """
 
-    def __init__(self, config: Dict[str, Any], device: Any) -> None:
+    def __init__(self, config: Any, device: Any) -> None:
         self.config = config
         self.device = device
         self.entities: Dict[str, Dict[Type[Component], Component]] = {}
@@ -47,7 +46,7 @@ class SimulationState(AbstractSimulationState):
         self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
         self.main_rng: Optional[np.random.Generator] = None
         self.current_tick: int = 0
-        self.db_logger: Optional[Any] = None  # TYPE HINT CHANGED
+        self.db_logger: Optional[Any] = None
 
     @property
     def event_bus(self) -> Optional["EventBus"]:
@@ -62,11 +61,11 @@ class SimulationState(AbstractSimulationState):
     def from_snapshot(
         cls,
         snapshot: SimulationSnapshot,
-        config: Dict[str, Any],
+        config: Any,
         component_factory: ComponentFactoryInterface,
         environment: "EnvironmentInterface",
         event_bus: "EventBus",
-        db_logger: Any,  # TYPE HINT CHANGED
+        db_logger: Any,
     ) -> "SimulationState":
         """Creates a new SimulationState instance from a snapshot."""
         # Initialize a new state object
@@ -155,9 +154,8 @@ class SimulationState(AbstractSimulationState):
     ) -> NDArray[np.float32]:
         features: List[NDArray[np.float32]] = []
         flags: List[float] = []
-        main_embedding_dim = get_config_value(
-            self.config, "agent.cognitive.embeddings.main_embedding_dim", default=1536
-        )
+        # Use direct attribute access on the validated config object
+        main_embedding_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
 
         if emo_comp and aff_comp:
             features.append(

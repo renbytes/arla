@@ -24,7 +24,7 @@ class ExtractAction(ActionInterface):
     name = "Extract"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("extract_base_cost", 5.0)
+        return simulation_state.config.agent.costs.actions.extract
 
     def generate_possible_params(
         self, entity_id: str, simulation_state: "SimulationState", current_tick: int
@@ -58,8 +58,9 @@ class ExtractAction(ActionInterface):
                 else:
                     params_list.append({"resource_id": resource_id, "intent": Intent.SOLITARY})
 
-        if not inv_comp.farming_mode and inv_comp.current_resources >= simulation_state.config.get(
-            "farm_threshold_resources", 5.0
+        if (
+            not inv_comp.farming_mode
+            and inv_comp.current_resources >= simulation_state.config.environment.farm_threshold_resources
         ):
             params_list.append({"establish_farm": True, "intent": Intent.SOLITARY})
 

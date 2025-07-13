@@ -23,7 +23,7 @@ class CombatAction(ActionInterface):
     name = "Combat"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("combat_base_cost", 10.0)
+        return simulation_state.config.agent.costs.actions.combat
 
     def generate_possible_params(
         self, entity_id: str, simulation_state: "SimulationState", current_tick: int
