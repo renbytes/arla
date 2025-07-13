@@ -41,12 +41,15 @@ def mock_dependencies(mocker):
 @pytest.fixture
 def scaffold(mock_dependencies):
     """Provides a CognitiveScaffold instance with mocked dependencies."""
-    # The config can be simple for this test
-    config = {"llm": {"temperature": 0.5}}
-    # Pass the required db_logger from the mocked dependencies
+    # Create a mock object that mimics the Pydantic config structure.
+    mock_config = MagicMock()
+    # Set the .llm attribute that the scaffold's query() method expects.
+    mock_config.llm = {"temperature": 0.5}
+
+    # Pass the mock config to the constructor.
     scaffold_instance = CognitiveScaffold(
         simulation_id="sim_123",
-        config=config,
+        config=mock_config,
         db_logger=mock_dependencies["db_logger"],
     )
     return scaffold_instance

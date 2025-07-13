@@ -1,4 +1,4 @@
-# simulations/soul_sim/simulation/component_factory.py
+# simulations/soul_sim/component_factory.py
 
 from typing import Any, Dict
 
@@ -15,7 +15,7 @@ class SoulSimComponentFactory(ComponentFactoryInterface):
     It handles components that require special constructor arguments, like the environment.
     """
 
-    def __init__(self, environment: EnvironmentInterface, config: Dict[str, Any]):
+    def __init__(self, environment: EnvironmentInterface, config: Any):
         self.environment = environment
         self.config = config
 
@@ -29,10 +29,9 @@ class SoulSimComponentFactory(ComponentFactoryInterface):
             return component_class(environment=self.environment, **data)
 
         if component_type.endswith("IdentityComponent"):
-            # IdentityComponent needs a MultiDomainIdentity object
-            embedding_dim = (
-                self.config.get("agent", {}).get("cognitive", {}).get("embeddings", {}).get("identity_dim", 1536)
-            )
+            # IdentityComponent needs a MultiDomainIdentity object.
+            # Use direct attribute access on the validated Pydantic config model.
+            embedding_dim = self.config.agent.cognitive.embeddings.identity_dim
             mdi = MultiDomainIdentity(embedding_dim=embedding_dim)
             return component_class(multi_domain_identity=mdi, **data)
 

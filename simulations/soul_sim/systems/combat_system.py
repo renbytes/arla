@@ -93,9 +93,10 @@ class CombatSystem(System):
                 )
 
         # --- 4. Create and Publish Outcome ---
-        base_reward = self.config.get("learning", {}).get("rewards", {}).get("combat_reward_hit", 0.1)
+        # Use direct attribute access on the validated Pydantic model
+        base_reward = self.config.learning.rewards.combat_reward_hit
         if was_defeated:
-            base_reward += self.config.get("learning", {}).get("rewards", {}).get("combat_reward_defeat", 10.0)
+            base_reward += self.config.learning.rewards.combat_reward_defeat
 
         details = {
             "status": "defeated_entity" if was_defeated else "hit_target",
@@ -111,22 +112,18 @@ class CombatSystem(System):
         """Checks if combat is possible. Returns a failure reason string or None."""
         if not attacker_comps or not defender_comps:
             return "Attacker or defender does not exist."
-
         attacker_pos = attacker_comps.get(PositionComponent)
         defender_pos = defender_comps.get(PositionComponent)
         if not isinstance(attacker_pos, PositionComponent) or not isinstance(defender_pos, PositionComponent):
             return "Attacker or defender is missing a PositionComponent."
-
         if not self.simulation_state.environment:
             return "Environment not loaded"
 
         if self.simulation_state.environment.distance(attacker_pos.position, defender_pos.position) > 1:
             return "Target is too far away."
-
         defender_time = defender_comps.get(TimeBudgetComponent)
         if not isinstance(defender_time, TimeBudgetComponent) or not defender_time.is_active:
             return "Target is inactive."
-
         return None
 
     def _publish_outcome(self, entity_id: str, plan: Any, outcome: ActionOutcome, tick: int):

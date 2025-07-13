@@ -19,19 +19,16 @@ class ReflectAction(ActionInterface):
     name = "Reflect"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("reflect_cost", 15.0)
+        return simulation_state.config.agent.costs.actions.reflect
 
     def generate_possible_params(
         self, entity_id: str, simulation_state: "SimulationState", current_tick: int
     ) -> List[Dict[str, Any]]:
-        simulation_config = simulation_state.config.get("simulation", {})
-        total_steps = simulation_config.get("steps", 500)
+        total_steps = simulation_state.config.simulation.steps
         if current_tick >= total_steps - 1:
             return []
 
-        learning_config = simulation_state.config.get("learning", {})
-        memory_config = learning_config.get("memory", {})
-        dissonance_threshold = memory_config.get("cognitive_dissonance_threshold", 0.75)
+        dissonance_threshold = simulation_state.config.learning.memory.cognitive_dissonance_threshold
 
         affect_comp = simulation_state.get_component(entity_id, AffectComponent)
         if isinstance(affect_comp, AffectComponent) and affect_comp.cognitive_dissonance > dissonance_threshold:

@@ -2,6 +2,7 @@
 
 import math
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -56,9 +57,14 @@ def rule_validator(sample_episode, mock_cognitive_scaffold, mock_openai_key):
 
         mock_get_embedding.side_effect = embedding_side_effect
 
+        mock_config = SimpleNamespace(
+            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+            llm=SimpleNamespace(),  # Add llm attribute for the second access
+        )
+
         validator = RuleValidator(
             episode=sample_episode,
-            config={"agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}}},
+            config=mock_config,
             cognitive_scaffold=mock_cognitive_scaffold,
             agent_id="agent1",
             current_tick=100,

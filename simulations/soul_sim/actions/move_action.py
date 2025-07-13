@@ -19,7 +19,7 @@ class MoveAction(ActionInterface):
     name = "Move"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("action_base_cost", 1.0)
+        return simulation_state.config.agent.costs.actions.base
 
     def generate_possible_params(
         self, entity_id: str, simulation_state: "SimulationState", current_tick: int

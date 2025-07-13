@@ -1,5 +1,6 @@
 # tests/systems/test_causal_graph_system.py
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -63,9 +64,12 @@ def causal_graph_system(mock_simulation_state, mock_state_node_encoder, mock_eve
     """Provides an initialized CausalGraphSystem with all dependencies mocked."""
     mock_simulation_state.event_bus = mock_event_bus
 
+    # CORRECTED: Create a structured config object
+    mock_config = SimpleNamespace(learning=SimpleNamespace(memory=SimpleNamespace(causal_decay_rate=0.9)))
+
     system = CausalGraphSystem(
         simulation_state=mock_simulation_state,
-        config={"learning": {"causal_decay_rate": 0.9}},
+        config=mock_config,
         cognitive_scaffold=MagicMock(),
         state_node_encoder=mock_state_node_encoder,
     )

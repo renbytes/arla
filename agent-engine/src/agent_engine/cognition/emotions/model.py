@@ -1,4 +1,4 @@
-# emotion/model.py
+# agent-engine/src/agent_engine/cognition/emotions/model.py
 
 
 from typing import Any, Dict, Optional
@@ -16,12 +16,14 @@ from .appraisal_theory import (
 class EmotionalDynamics:
     """Psychologically-grounded emotional state updates with proper temporal dynamics"""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.valence_decay = config.get("valence_decay_rate", 0.95)
-        self.arousal_decay = config.get("arousal_decay_rate", 0.90)
-        self.valence_learning_rate = config.get("valence_learning_rate", 0.2)
-        self.arousal_learning_rate = config.get("arousal_learning_rate", 0.3)
-        self.emotional_noise = config.get("emotional_noise_std", 0.02)
+    def __init__(self, config: Any):
+        # Use direct attribute access on the validated Pydantic model
+        temporal_config = config.agent.emotional_dynamics.temporal
+        self.valence_decay = temporal_config["valence_decay_rate"]
+        self.arousal_decay = temporal_config["arousal_decay_rate"]
+        self.valence_learning_rate = temporal_config["valence_learning_rate"]
+        self.arousal_learning_rate = temporal_config["arousal_learning_rate"]
+        self.emotional_noise = config.agent.emotional_dynamics.noise_std
 
         self.appraisal_processor = AppraisalProcessor(config)
 
@@ -36,9 +38,6 @@ class EmotionalDynamics:
     ) -> Dict[str, Any]:
         """
         Update emotional state using appraisal theory and proper temporal dynamics
-
-        Implements: v_{t+1} = α_v * v_t + β_v * appraise(δ_t, goal_t, agency_t) + ε_v
-                      a_{t+1} = α_a * a_t + β_a * |δ_t| * importance(context_t)
         """
 
         # Perform cognitive appraisal
@@ -84,16 +83,3 @@ class EmotionalDynamics:
             "target_arousal": target_arousal,
         }
         return updated_emotion
-
-
-# Backward compatibility function
-def update_emotion(emotion: Dict[str, float], prediction_error: float) -> Dict[str, Any]:
-    """Legacy function for backward compatibility - use EmotionalDynamics instead"""
-    dynamics = EmotionalDynamics({})
-    return dynamics.update_emotion_with_appraisal(
-        current_emotion=emotion,
-        prediction_error=prediction_error,
-        current_goal=None,
-        action_success=prediction_error > 0,
-        social_context={},
-    )

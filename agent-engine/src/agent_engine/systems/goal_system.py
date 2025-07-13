@@ -20,10 +20,9 @@ from agent_core.core.ecs.component import (
 from agent_core.core.ecs.event_bus import EventBus
 from sklearn.cluster import KMeans
 
-# Imports from agent-engine
+# Imports from agent_engine
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
-from agent_engine.utils.config_utils import get_config_value
 from agent_engine.utils.math_utils import safe_cosine_similarity
 
 
@@ -38,7 +37,7 @@ class GoalSystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: "CognitiveScaffold",
     ) -> None:
         super().__init__(simulation_state, config, cognitive_scaffold)
@@ -82,7 +81,9 @@ class GoalSystem(System):
         goal_comp = cast(GoalComponent, components.get(GoalComponent))
 
         successful_actions = [m for m in mem_comp.episodic_memory if m.get("outcome", 0) > 0.1]
-        if len(successful_actions) < self.config.get("goal_invention_min_successes", 5):
+
+        # TODO: 'goal_invention_min_successes' is not in the config schema. Using a hardcoded default.
+        if len(successful_actions) < 5:
             return
 
         summaries = [
@@ -91,8 +92,8 @@ class GoalSystem(System):
             for m in successful_actions
         ]
 
-        emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
-        llm_cfg = self.config.get("llm", {})
+        emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
+        llm_cfg = self.config.llm
         embeddings = np.array(
             [e for s in summaries if (e := get_embedding_with_cache(s, emb_dim, llm_cfg)) is not None]
         )
@@ -104,7 +105,8 @@ class GoalSystem(System):
         kmeans = KMeans(n_clusters=num_clusters, random_state=tick, n_init="auto").fit(embeddings)
 
         for i in range(kmeans.n_clusters):
-            cluster_indices = np.where(kmeans.labels_ == i)[0]
+            # Use np.atleast_1d to prevent errors with scalar labels.
+            cluster_indices = np.where(np.atleast_1d(kmeans.labels_) == i)[0]
             if not cluster_indices.size:
                 continue
 
@@ -117,8 +119,7 @@ class GoalSystem(System):
             )
             prompt = f"""
                 The following actions were successful:
-                {sample_summaries}.
-                What is a concise, 2-3 word,
+                {sample_summaries}. What is a concise, 2-3 word,
                 high-level goal that describes this pattern of success?
                 (e.g., 'Assert Dominance', 'Secure Territory', 'Forge Alliances').
             """
@@ -144,8 +145,9 @@ class GoalSystem(System):
         tick: int,
     ) -> None:
         """Adds a new goal or updates the success history of an existing one."""
-        emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
-        llm_cfg = self.config.get("llm", {})
+        # Use direct attribute access
+        emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
+        llm_cfg = self.config.llm
 
         if name in goal_comp.symbolic_goals_data:
             goal_comp.symbolic_goals_data[name]["success_history"].extend([1.0] * success_count)
@@ -173,22 +175,20 @@ class GoalSystem(System):
         if not goal_comp.symbolic_goals_data:
             return None
 
-        emb_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
+        # Use direct attribute access
+        emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
+        llm_cfg = self.config.llm
+
         context = f"""
             My situation: {narrative}.
             My traits: {identity_comp.salient_traits_cache}.
             My emotion: {emotion_comp.current_emotion_category}.
         """
 
-        ctx_emb = get_embedding_with_cache(context, emb_dim, self.config.get("llm", {}))
+        ctx_emb = get_embedding_with_cache(context, emb_dim, llm_cfg)
         if ctx_emb is None:
-            # Assign to a locally-typed variable before returning
-            # to resolve the mypy inference issue.
-            current_goal: Optional[str] = goal_comp.current_symbolic_goal
-            return current_goal
+            return goal_comp.current_symbolic_goal
 
-        # Explicitly annotate the types for 'best_goal' and 'max_score'.
-        # This prevents mypy from getting confused and inferring 'Any'.
         best_goal: Optional[str] = None
         max_score: float = -float("inf")
 
@@ -209,8 +209,6 @@ class GoalSystem(System):
         id_sim = safe_cosine_similarity(id_emb, goal_emb)
         success_rate = np.mean(data.get("success_history", [0.5]))
 
-        # Weights determine the importance of context vs. past success vs. identity
-        # Cast to float to satisfy mypy, as numpy ops can return np.float64
         return float((ctx_sim * 2.0) + (success_rate * 1.5) + (id_sim * 1.0))
 
     async def update(self, current_tick: int) -> None:

@@ -54,9 +54,10 @@ class SocialInteractionSystem(System):
             self._exchange_information(entity_id, target_id)
 
         # --- 3. Create and Publish Outcome ---
-        base_reward = self.config.get("learning", {}).get("rewards", {}).get("communicate_reward_base", 0.05)
+        # Use direct attribute access on the validated Pydantic model
+        base_reward = self.config.learning.rewards.communicate_reward_base
         if action_plan.intent == Intent.COOPERATE:
-            base_reward += self.config.get("learning", {}).get("rewards", {}).get("collaboration_bonus_per_agent", 0.1)
+            base_reward += self.config.learning.rewards.collaboration_bonus_per_agent
 
         details = {
             "status": "communicated",
@@ -78,19 +79,15 @@ class SocialInteractionSystem(System):
 
         if not comm_comps or not target_comps:
             return "Communicator or target does not exist."
-
         comm_pos = comm_comps.get(PositionComponent)
         target_pos = target_comps.get(PositionComponent)
         if not isinstance(comm_pos, PositionComponent) or not isinstance(target_pos, PositionComponent):
             return "Communicator or target is missing a PositionComponent."
-
         if self.simulation_state.environment.distance(comm_pos.position, target_pos.position) > 2:
             return "Target is too far away."
-
         target_time = target_comps.get(TimeBudgetComponent)
         if not isinstance(target_time, TimeBudgetComponent) or not target_time.is_active:
             return "Target is inactive."
-
         return None
 
     def _exchange_information(self, entity_id: str, target_id: str):
@@ -101,7 +98,6 @@ class SocialInteractionSystem(System):
         if isinstance(comm_obs, EnvironmentObservationComponent) and isinstance(
             target_obs, EnvironmentObservationComponent
         ):
-            # A simple merge of location data. More complex logic could be added here.
             comm_obs.known_entity_locations.update(target_obs.known_entity_locations)
             target_obs.known_entity_locations.update(comm_obs.known_entity_locations)
 

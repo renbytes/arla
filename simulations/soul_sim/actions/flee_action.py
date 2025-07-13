@@ -19,7 +19,7 @@ class FleeAction(ActionInterface):
     name = "Flee"
 
     def get_base_cost(self, simulation_state: "SimulationState") -> float:
-        return simulation_state.config.get("agent", {}).get("flee_base_cost", 2.0)
+        return simulation_state.config.agent.costs.actions.flee
 
     def _find_nearby_threats(self, entity_id: str, my_pos: tuple, simulation_state: "SimulationState") -> List[tuple]:
         pos_comp = simulation_state.get_component(entity_id, PositionComponent)

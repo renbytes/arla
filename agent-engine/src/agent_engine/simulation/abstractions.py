@@ -1,7 +1,7 @@
 # src/agent_engine/simulation/abstractions.py
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Type
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Type
 
 from agent_core.core.ecs.base import CognitiveComponent
 
@@ -26,7 +26,7 @@ class CognitiveSystem(ABC):
     def __init__(
         self,
         simulation_state: "SimulationState",
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: "CognitiveScaffold",
     ):
         self.simulation_state = simulation_state

@@ -16,7 +16,6 @@ from agent_core.core.ecs.event_bus import EventBus
 from agent_engine.cognition.identity.domain_identity import IdentityDomain
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import System
-from agent_engine.utils.config_utils import get_config_value
 from agent_engine.utils.math_utils import safe_normalize_vector
 
 
@@ -31,7 +30,7 @@ class IdentitySystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,
         cognitive_scaffold: Any,
     ) -> None:
         super().__init__(simulation_state, config, cognitive_scaffold)
@@ -81,8 +80,9 @@ class IdentitySystem(System):
         Calculates a new trait embedding and calls the update method on the
         IdentityComponent's model, passing the generic context through.
         """
-        llm_config = self.config.get("llm", {})
-        embedding_dim = get_config_value(self.config, "agent.cognitive.embeddings.main_embedding_dim", 1536)
+        # Use direct attribute access on the validated Pydantic model
+        llm_config = self.config.llm
+        embedding_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
         all_inferred_traits_cache = {}
 
         for domain, traits in inferred_traits_by_domain.items():

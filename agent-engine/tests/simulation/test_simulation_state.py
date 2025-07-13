@@ -1,5 +1,6 @@
 # agent-engine/tests/simulation/test_simulation_state.py
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -29,9 +30,11 @@ from agent_persist.models import SimulationSnapshot
 
 @pytest.fixture
 def config():
-    """Provides a sample config for the simulation state."""
-    # Use a small, non-standard embedding dim to ensure it's read from config
-    return {"agent": {"cognitive": {"embeddings": {"main_embedding_dim": 4}}}}
+    """Provides a mock config object using SimpleNamespace for clear attribute access."""
+    # This creates a simple nested object that allows `config.agent.cognitive...` access
+    return SimpleNamespace(
+        agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4)))
+    )
 
 
 @pytest.fixture
@@ -131,7 +134,8 @@ class TestInternalStateFeatures:
     @pytest.fixture
     def full_components(self, config):
         """Provides a full set of mock cognitive components."""
-        embedding_dim = config["agent"]["cognitive"]["embeddings"]["main_embedding_dim"]
+        # Use attribute access on the mock config object
+        embedding_dim = config.agent.cognitive.embeddings.main_embedding_dim
 
         affect_comp = AffectComponent(affective_buffer_maxlen=10)
         affect_comp.prediction_delta_magnitude = 0.5
@@ -153,7 +157,7 @@ class TestInternalStateFeatures:
         """
         # Arrange
         affect_comp, emotion_comp, goal_comp, id_comp = full_components
-        embedding_dim = config["agent"]["cognitive"]["embeddings"]["main_embedding_dim"]
+        embedding_dim = config.agent.cognitive.embeddings.main_embedding_dim
         num_domains = len(IdentityDomain)
         # affect/emo + goal + identity + flags
         expected_len = 4 + embedding_dim + (embedding_dim * num_domains) + 3
@@ -179,7 +183,7 @@ class TestInternalStateFeatures:
         """
         # Arrange
         _, _, goal_comp, id_comp = full_components
-        embedding_dim = config["agent"]["cognitive"]["embeddings"]["main_embedding_dim"]
+        embedding_dim = config.agent.cognitive.embeddings.main_embedding_dim
         num_domains = len(IdentityDomain)
         expected_len = 4 + embedding_dim + (embedding_dim * num_domains) + 3
 
@@ -202,7 +206,7 @@ class TestInternalStateFeatures:
         The resulting vector should be all zeros except for the flags.
         """
         # Arrange
-        embedding_dim = config["agent"]["cognitive"]["embeddings"]["main_embedding_dim"]
+        embedding_dim = config.agent.cognitive.embeddings.main_embedding_dim
         num_domains = len(IdentityDomain)
         expected_len = 4 + embedding_dim + (embedding_dim * num_domains) + 3
 

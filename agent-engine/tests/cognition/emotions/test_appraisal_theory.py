@@ -1,5 +1,7 @@
 # tests/cognition/emotions/test_appraisal_theory.py
 
+from types import SimpleNamespace
+
 import pytest
 
 # Subject under test
@@ -16,13 +18,15 @@ from agent_engine.cognition.emotions.appraisal_theory import (
 @pytest.fixture
 def appraisal_processor():
     """Provides a default AppraisalProcessor instance."""
-    # Using default weights for testing
-    config = {
-        "appraisal_goal_weight": 0.7,
-        "appraisal_agency_weight": 0.5,
-        "appraisal_social_weight": 0.3,
-    }
-    return AppraisalProcessor(config)
+    # Create a mock config with the nested structure the class now expects.
+    mock_config = SimpleNamespace(
+        agent=SimpleNamespace(
+            emotional_dynamics=SimpleNamespace(
+                appraisal_weights=SimpleNamespace(goal_relevance=0.7, agency=0.5, social_feedback=0.3)
+            )
+        )
+    )
+    return AppraisalProcessor(mock_config)
 
 
 @pytest.fixture

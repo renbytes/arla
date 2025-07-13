@@ -49,7 +49,7 @@ class AffectSystem(System):
     def __init__(
         self,
         simulation_state: SimulationState,
-        config: Dict[str, Any],
+        config: Any,  # Expects a Pydantic model
         cognitive_scaffold: Any,
         vitality_metrics_provider: VitalityMetricsProviderInterface,
         controllability_provider: ControllabilityProviderInterface,
@@ -135,7 +135,8 @@ class AffectSystem(System):
         )
         affect_comp.affective_experience_buffer.append(exp)
 
-        min_data = self.config.get("learning", {}).get("memory", {}).get("emotion_cluster_min_data", 50)
+        # Use direct attribute access on the validated config object
+        min_data = self.config.learning.memory.emotion_cluster_min_data
         if len(affect_comp.affective_experience_buffer) >= min_data:
             discover_emotions(
                 affect_comp=affect_comp,
@@ -191,7 +192,6 @@ class AffectSystem(System):
 
     def _get_social_context(self, entity_id: str, plan: Any, outcome: ActionOutcome) -> Dict[str, Any]:
         """Pure helper to construct the social context for appraisal."""
-        # Simplified for now, but `env` is available via `self.simulation_state.environment`
         return {}
 
     async def update(self, current_tick: int) -> None:

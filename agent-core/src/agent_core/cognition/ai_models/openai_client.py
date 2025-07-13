@@ -1,4 +1,4 @@
-# src/cognition/ai_models/openai_client.py
+# src/agent_core/cognition/ai_models/openai_client.py
 
 import os
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,16 +9,12 @@ from openai import OpenAI, OpenAIError
 
 load_dotenv()
 
-# Change the client to be a lazily-initialized global variable.
-# This prevents the client from being created at import time, which solves the test collection error.
-_client: OpenAI | None = None
+# This remains a lazily-initialized global variable.
+_client: Optional[OpenAI] = None
 
 
 def get_client() -> OpenAI:
-    """
-    Initializes and returns the OpenAI client instance on demand.
-    This prevents test collection from failing when the API key is not set.
-    """
+    """Initializes and returns the OpenAI client instance on demand."""
     global _client
     if _client is None:
         api_key = os.environ.get("OPENAI_API_KEY")
@@ -30,19 +26,13 @@ def get_client() -> OpenAI:
     return _client
 
 
-# The rest of the functions in this file are modified to call get_client()
-
 embedding_cache: Dict[Tuple[str, str], np.ndarray] = {}
 
 
-def get_embedding_with_cache(
-    text: str, embedding_dim: int, llm_config: Optional[Dict[str, Any]] = None
-) -> Optional[np.ndarray]:
-    """
-    Gets an embedding for a single text string, using a cache to avoid repeat API calls.
-    """
-    config = llm_config if llm_config else {}
-    model_name = config.get("embedding_model", "text-embedding-ada-002")
+def get_embedding_with_cache(text: str, embedding_dim: int, llm_config: Optional[Any] = None) -> Optional[np.ndarray]:
+    """Gets an embedding for a single text string, using a cache to avoid repeat API calls."""
+    # Use direct attribute access on the Pydantic model
+    model_name = llm_config.embedding_model if llm_config else "text-embedding-ada-002"
     cache_key = (text, model_name)
 
     if cache_key in embedding_cache:
@@ -58,8 +48,6 @@ def get_embedding_with_cache(
 
 class EmbeddingValidationError(Exception):
     """Raised when embedding validation fails."""
-
-    pass
 
 
 def validate_embedding(embedding: Any, expected_dim: int, name: str = "embedding") -> bool:
@@ -80,12 +68,12 @@ def validate_embedding(embedding: Any, expected_dim: int, name: str = "embedding
 
 
 def get_embedding_from_llm(
-    text: str, expected_embedding_dim: int, llm_config: Optional[Dict[str, Any]] = None
+    text: str, expected_embedding_dim: int, llm_config: Optional[Any] = None
 ) -> Optional[np.ndarray]:
     """Gets an embedding with proper validation."""
-    client = get_client()  # Get client via the new function
-    config = llm_config if llm_config else {}
-    model_name = config.get("embedding_model", "text-embedding-ada-002")
+    client = get_client()
+    # Use direct attribute access
+    model_name = llm_config.embedding_model if llm_config else "text-embedding-ada-002"
 
     try:
         response = client.embeddings.create(input=text, model=model_name)
@@ -99,18 +87,14 @@ def get_embedding_from_llm(
         return None
 
 
-def get_embeddings_from_llm_batch(
-    texts: List[str], llm_config: Optional[Dict[str, Any]] = None
-) -> Optional[List[np.ndarray]]:
-    """
-    Gets embeddings for a list of texts in a single, efficient API call.
-    """
+def get_embeddings_from_llm_batch(texts: List[str], llm_config: Optional[Any] = None) -> Optional[List[np.ndarray]]:
+    """Gets embeddings for a list of texts in a single, efficient API call."""
     if not texts:
         return []
 
-    client = get_client()  # Get client via the new function
-    config = llm_config if llm_config else {}
-    model_name = config.get("embedding_model", "text-embedding-ada-002")
+    client = get_client()
+    # Use direct attribute access
+    model_name = llm_config.embedding_model if llm_config else "text-embedding-ada-002"
 
     try:
         response = client.embeddings.create(input=texts, model=model_name)
@@ -120,16 +104,15 @@ def get_embeddings_from_llm_batch(
         return None
 
 
-def query_llm(prompt_text: str, llm_config: Optional[Dict[str, Any]] = None) -> tuple[str, int, float]:
-    """
-    Queries the LLM, returning the response, token usage, and estimated cost.
-    """
-    client = get_client()  # Get client via the new function
-    config = llm_config if llm_config else {}
-    model_name = config.get("completion_model", "gpt-4.1-nano")
-    temp = config.get("temperature", 0.1)
-    max_tok = config.get("max_tokens", 700)
-    prompt_prefix = config.get("reflection_prompt_prefix", "In 300 words or less, ")
+def query_llm(prompt_text: str, llm_config: Optional[Any] = None) -> tuple[str, int, float]:
+    """Queries the LLM, returning the response, token usage, and estimated cost."""
+    client = get_client()
+
+    # Use direct attribute access on the Pydantic model, providing defaults if it's None
+    model_name = llm_config.completion_model if llm_config else "gpt-4.1-nano"
+    temp = llm_config.temperature if llm_config else 0.1
+    max_tok = llm_config.max_tokens if llm_config else 700
+    prompt_prefix = llm_config.reflection_prompt_prefix if llm_config else "In 300 words or less, "
 
     pricing = {
         "gpt-4o-mini": {"prompt": 0.15 / 1_000_000, "completion": 0.60 / 1_000_000},

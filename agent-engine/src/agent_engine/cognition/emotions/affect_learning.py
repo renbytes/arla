@@ -1,4 +1,4 @@
-# src/cognition/emotions/affect_learning.py
+# src/agent_engine/cognition/emotions/affect_learning.py
 
 from typing import Any, Dict, List, Optional, Tuple, cast
 
@@ -39,18 +39,16 @@ def name_experience_cluster(
             """
         )
 
-    # Use an f-string to inject the samples into the template
     final_prompt = prompt_template.format(summaries="; ".join(prompt_samples))
 
     try:
-        # The query method is guaranteed to return a string, token usage, and cost.
         name: str = (
             cognitive_scaffold.query(
                 agent_id=agent_id,
                 purpose=purpose,
                 prompt=final_prompt,
                 current_tick=current_tick,
-            )[0]
+            )
             .strip()
             .replace('"', "")
         )
@@ -60,17 +58,19 @@ def name_experience_cluster(
         return "unnamed"
 
 
-def _cluster_experiences(affect_comp: Any, config: Dict[str, Any]) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-    """Performs KMeans clustering on the affective experience buffer."""
-    learning_memory_config = config.get("learning", {}).get("memory", {})
-    data_vectors_list = [exp.vector for exp in affect_comp.affective_experience_buffer]
+def _cluster_experiences(
+    experiences: List[AffectiveExperience], config: Any
+) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+    """Performs KMeans clustering on a list of AffectiveExperience objects."""
+    data_vectors_list = [exp.vector for exp in experiences]
 
-    if not data_vectors_list:  # Handle empty list case
+    if not data_vectors_list:
         return None, None
 
     data_vectors = np.array(data_vectors_list)
 
-    num_clusters_raw = len(data_vectors) // (learning_memory_config.get("emotion_cluster_min_data", 50) // 4)
+    min_data_for_clustering = config.learning.memory.emotion_cluster_min_data
+    num_clusters_raw = len(data_vectors) // (min_data_for_clustering // 4)
     num_clusters = max(2, num_clusters_raw)
     num_clusters = min(num_clusters, 5)
 
@@ -90,39 +90,39 @@ def discover_emotions(
     cognitive_scaffold: Any,
     agent_id: str,
     current_tick: int,
-    config: Dict[str, Any],
+    config: Any,
 ) -> None:
     """
     Performs unsupervised clustering on the agent's affective experience buffer
     to discover and name emotion categories.
     """
-    learning_memory_config = config.get("learning", {}).get("memory", {})
-
-    if len(affect_comp.affective_experience_buffer) < learning_memory_config["emotion_cluster_min_data"]:
+    if len(affect_comp.affective_experience_buffer) < config.learning.memory.emotion_cluster_min_data:
         return
 
-    labels, centroids = _cluster_experiences(affect_comp, config)
+    # Convert buffer to a list ONCE to avoid iterator exhaustion
+    experience_list = list(affect_comp.affective_experience_buffer)
+
+    labels, centroids = _cluster_experiences(experience_list, config)
     if labels is None or centroids is None:
         return
 
-    # Define the specific prompt for naming EMOTIONS
     emotion_prompt_template = """I experienced a series of internal states and actions like these:
-            {summaries}. What is a concise, single-word emotion or
+            {summaries}.
+            What is a concise, single-word emotion or
             feeling that best describes this cluster of experiences?
             Only return the word, e.g., 'joy', 'frustration', 'calm'."""
 
     new_clusters = {}
     for i, centroid in enumerate(centroids):
+        # Find the indices of experiences belonging to the current cluster
         cluster_indices = np.where(labels == i)[0]
         if not cluster_indices.size:
             continue
 
-        buffer_list = list(affect_comp.affective_experience_buffer)
-        sample_experiences = [
-            buffer_list[j] for j in np.random.choice(len(buffer_list), min(5, len(cluster_indices)), replace=False)
-        ]
+        # Sample from the indices of the CURRENT CLUSTER, not the whole buffer
+        sample_indices = np.random.choice(cluster_indices, size=min(5, len(cluster_indices)), replace=False)
+        sample_experiences = [experience_list[j] for j in sample_indices]
 
-        # Pass the new context down to the helper function
         emotion_name = name_experience_cluster(
             experiences=sample_experiences,
             cognitive_scaffold=cognitive_scaffold,

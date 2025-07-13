@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,8 +13,12 @@ from simulations.soul_sim.components import HealthComponent, PositionComponent
 
 @pytest.fixture
 def factory_setup():
+    """Provides a ComponentFactory with a mock environment and a structured config object."""
     mock_env = MagicMock()
-    mock_config = {"agent": {"cognitive": {"embeddings": {"identity_dim": 4}}}}
+    # Create a nested object that mimics the Pydantic model's structure
+    mock_config = SimpleNamespace(
+        agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(identity_dim=4)))
+    )
     factory = SoulSimComponentFactory(environment=mock_env, config=mock_config)
     return factory, mock_env
 

@@ -9,12 +9,12 @@ from typing import Any, Coroutine
 class AsyncRunner:
     """Thread-safe async operation runner for database operations"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._start_event_loop()
 
-    def _start_event_loop(self):
+    def _start_event_loop(self) -> None:
         """Start a dedicated event loop in a separate thread."""
 
         def run_loop():
@@ -47,7 +47,7 @@ class AsyncRunner:
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result(timeout=30)
 
-    def close(self):
+    def close(self) -> None:
         """Clean shutdown of the async runner."""
         if self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self._loop.stop)

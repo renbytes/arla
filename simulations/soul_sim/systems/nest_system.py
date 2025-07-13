@@ -44,13 +44,15 @@ class NestSystem(System):
             return
 
         # --- 2. Resolve Nest Creation ---
-        nest_cost = self.config.get("agent", {}).get("nest_resource_cost", 120.0)
+        # Use direct attribute access on the validated Pydantic model
+        nest_cost = self.config.learning.rewards.nest_resource_cost
 
         if inv_comp.current_resources >= nest_cost:
             inv_comp.current_resources -= nest_cost
             nest_comp.locations.append(pos_comp.position)
 
-            base_reward = self.config.get("learning", {}).get("rewards", {}).get("nest_creation_bonus", 5.0)
+            # NOTE: 'nest_creation_bonus' is not in the config schema. Using a hardcoded default.
+            base_reward = 5.0
             success = True
             message = f"Successfully built a nest at {pos_comp.position}."
             details = {
@@ -59,7 +61,7 @@ class NestSystem(System):
                 "total_nests": len(nest_comp.locations),
             }
         else:
-            base_reward = -0.1  # Penalty for trying to build without resources
+            base_reward = -0.1
             success = False
             message = "Failed to build nest: not enough resources."
             details = {"status": "failed_insufficient_resources"}

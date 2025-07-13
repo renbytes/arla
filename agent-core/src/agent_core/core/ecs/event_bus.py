@@ -25,9 +25,20 @@ def _handle_task_exception(task: asyncio.Task) -> None:
 class EventBus:
     """A simple event bus for decoupling communication between systems."""
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: Any) -> None:
+        """Initializes the event bus.
+
+        Args:
+            config: A configuration object (e.g., a Pydantic model) that has a
+                    `simulation.enable_debug_logging` attribute.
+        """
         self._subscribers: Dict[str, List[EventHandler]] = defaultdict(list)
-        self.debug_logging = config.get("enable_debug_logging", False)
+        # Use direct attribute access on the validated config object
+        self.debug_logging = (
+            config.simulation.enable_debug_logging
+            if hasattr(config, "simulation") and hasattr(config.simulation, "enable_debug_logging")
+            else False
+        )
 
     def subscribe(self, event_type: str, handler: EventHandler) -> None:
         """Subscribes a handler function to an event type."""
