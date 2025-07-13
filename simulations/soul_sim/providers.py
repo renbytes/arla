@@ -40,8 +40,6 @@ from agent_core.policy.reward_calculator_interface import RewardCalculatorInterf
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
 from agent_engine.systems.components import QLearningComponent
 
-# Import your soul-sim specific components here
-# These imports will need to be adjusted to their actual location in your project
 from .components import (
     FailedStatesComponent,
     HealthComponent,
@@ -150,8 +148,9 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
 class SoulSimRewardCalculator(RewardCalculatorInterface):
     """Calculates final, subjective rewards for actions in the soul_sim world."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config.get("learning", {}).get("rewards", {})
+    def __init__(self, config: Any):
+        # FIX: Use attribute access on the Pydantic model, not .get()
+        self.config = config.learning.rewards
 
     def calculate_final_reward(
         self,
@@ -170,16 +169,15 @@ class SoulSimRewardCalculator(RewardCalculatorInterface):
         # 1. Add objective world bonuses FIRST
         bonus = 0.0
         if outcome_details.get("status") == "defeated_entity":
-            bonus = self.config.get("combat_victory", 10.0)
+            bonus = self.config.combat_reward_defeat
         elif outcome_details.get("explored_new_tile", False):
-            bonus = self.config.get("exploration_bonus", 0.5)
+            bonus = self.config.exploration_bonus
 
         if bonus != 0.0:
             current_reward += bonus
             breakdown["bonus"] = bonus
 
         # 2. Apply the agent's subjective value multiplier LAST
-        # TODO: decouple this from agent-core, which should not be so coupled with world-specific details
         if isinstance(vs := entity_components.get(ValueSystemComponent), ValueSystemComponent):
             multiplier = 1.0
             if action_id == "combat":
@@ -207,7 +205,7 @@ class SoulSimStateEncoder(StateEncoderInterface):
         self,
         simulation_state: "SimulationState",
         entity_id: str,
-        config: Dict[str, Any],
+        config: Any,
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """
@@ -222,16 +220,22 @@ class SoulSimStateEncoder(StateEncoderInterface):
 
         features.append(health_comp.normalized if health_comp else 0.0)
         features.append(time_comp.current_time_budget / time_comp.max_time_budget if time_comp else 0.0)
-        features.append(
-            inventory_comp.current_resources / 100.0 if inventory_comp else 0.0
-        )  # Normalize by a reasonable max
+        features.append(inventory_comp.current_resources / 100.0 if inventory_comp else 0.0)
 
-        # Environment-related features (example)
-        # In a real implementation, you would query the environment for nearby entities.
-        features.extend([0.0] * 5)  # Placeholder for nearby enemies
-        features.extend([0.0] * 5)  # Placeholder for nearby resources
+        # Environment-related features
+        features.extend([0.0] * 5)
+        features.extend([0.0] * 5)
 
-        return np.array(features, dtype=np.float32)
+        feature_vector = np.array(features, dtype=np.float32)
+
+        expected_size = config.learning.q_learning.state_feature_dim
+        if feature_vector.size != expected_size:
+            final_vector = np.zeros(expected_size, dtype=np.float32)
+            size_to_copy = min(feature_vector.size, expected_size)
+            final_vector[:size_to_copy] = feature_vector[:size_to_copy]
+            return final_vector
+
+        return feature_vector
 
 
 class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
@@ -241,7 +245,7 @@ class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
         self,
         entity_id: str,
         components: Dict[Type[Component], Component],
-        config: Dict[str, Any],
+        config: Any,
     ) -> Dict[str, float]:
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
@@ -254,9 +258,7 @@ class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
             else 0.0
         )
 
-        # Normalize resources based on a config value, e.g., max expected resources
         max_res = 100.0
-        # Changed 'resources' to 'current_resources'
         resources_norm = (inventory_comp.current_resources / max_res) if inventory_comp else 0.0
 
         return {
@@ -294,7 +296,6 @@ class SoulSimStateNodeEncoder(StateNodeEncoderInterface):
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         pos_comp = cast(PositionComponent, components.get(PositionComponent))
 
-        # Discretize continuous values into categories
         if health_comp.normalized > 0.7:
             health_status = "high_health"
         elif health_comp.normalized > 0.3:
@@ -302,8 +303,6 @@ class SoulSimStateNodeEncoder(StateNodeEncoderInterface):
         else:
             health_status = "low_health"
 
-        # Use the position component to create a location-specific node
-        # This makes the causal graph much more powerful.
         pos_tuple = pos_comp.position if pos_comp else (0, 0)
         location_node = f"at_{pos_tuple[0]}_{pos_tuple[1]}"
 
@@ -326,9 +325,6 @@ class SoulSimNarrativeContextProvider(NarrativeContextProviderInterface):
             f"and I have {inventory_comp.current_resources:.0f} resources. "
         )
 
-        # In a real implementation, you would add summaries of recent events,
-        # social interactions, and goal status.
-        # The provider returns a dictionary, which will be passed to other systems
         return {
             "narrative": narrative,
             "resource_level": inventory_comp.current_resources,

@@ -58,7 +58,6 @@ def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overr
     The main entry point for running a soul-sim simulation.
     This function is called by the generic Celery task.
     """
-    # This synchronous wrapper calls the main async function
     asyncio.run(setup_and_run(run_id, task_id, experiment_id, config_overrides))
 
 
@@ -73,15 +72,12 @@ async def setup_and_run(
 
     print(f"--- [{task_id}] Initializing Soul-Sim ---")
 
-    # 1. Load, merge, and validate the final configuration into a Pydantic model
+    # 1. Load, merge, and validate the final configuration
     try:
         base_config = OmegaConf.load("simulations/soul_sim/config/base_config.yml")
         final_config_dict = OmegaConf.to_container(OmegaConf.merge(base_config, config_overrides), resolve=True)
         if not isinstance(final_config_dict, dict):
             raise TypeError("Resolved config is not a dictionary.")
-
-        # This is the single point of validation.
-        # The `config` object is now a validated Pydantic model.
         config = SoulSimAppConfig(**final_config_dict)
         print(f"[{task_id}] Configuration validated successfully.")
     except Exception as e:
@@ -89,16 +85,11 @@ async def setup_and_run(
         raise
 
     # 2. Initialize world-specific singletons and providers
-    # Pass the validated config object, not a dictionary
     action_registry.load_actions_from_paths(config.action_modules)
-
     db_manager = AsyncDatabaseManager()
     database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
     mlflow_exporter = MLflowExporter()
-
     environment = GridWorld(width=config.environment.grid_world_size[0], height=config.environment.grid_world_size[1])
-
-    # Instantiate all providers needed by the systems
     providers = {
         "action_generator": SoulSimActionGenerator(),
         "decision_selector": SoulSimDecisionSelector(),
@@ -109,14 +100,10 @@ async def setup_and_run(
         "state_node_encoder": SoulSimStateNodeEncoder(),
         "vitality_metrics_provider": SoulSimVitalityMetricsProvider(),
     }
-
-    # Instantiate the ScenarioLoader and ComponentFactory
-    # Pass the validated config object
     scenario_loader_instance = ScenarioLoader(config)
     component_factory = SoulSimComponentFactory(environment=environment, config=config)
 
-    # 3. Create the generic SimulationManager from the agent-engine
-    # Pass the validated config object
+    # 3. Create the generic SimulationManager
     manager = SimulationManager(
         config=config,
         environment=environment,
@@ -130,26 +117,36 @@ async def setup_and_run(
         experiment_id=experiment_id,
     )
 
-    # 4. Load initial state (either from checkpoint or scenario file)
+    # 4. Load initial state
     starting_tick = 0
     if checkpoint_path and os.path.exists(checkpoint_path):
         manager.load_state(checkpoint_path)
         starting_tick = manager.simulation_state.current_tick + 1
     else:
-        # Inject the created simulation_state into the loader before calling load
         scenario_loader_instance.simulation_state = manager.simulation_state
         scenario_loader_instance.load()
 
     # 5. Register all systems with the manager
-    # Core Cognitive Systems
-    manager.register_system(QLearningSystem, state_encoder=providers["state_encoder"])
+    # --- FIX: Register systems with inter-dependencies in the correct order ---
+
+    # Register CausalGraphSystem first because QLearningSystem depends on it.
+    manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
+    causal_system_instance = manager.system_manager.get_system(CausalGraphSystem)
+
+    # Now, register QLearningSystem and inject the CausalGraphSystem instance.
+    manager.register_system(
+        QLearningSystem,
+        state_encoder=providers["state_encoder"],
+        causal_graph_system=causal_system_instance,
+    )
+
+    # Register the rest of the systems
     manager.register_system(ActionSystem, reward_calculator=providers["reward_calculator"])
     manager.register_system(
         AffectSystem,
         vitality_metrics_provider=providers["vitality_metrics_provider"],
         controllability_provider=providers["controllability_provider"],
     )
-    manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
     manager.register_system(
         ReflectionSystem,
         narrative_context_provider=providers["narrative_context_provider"],
@@ -174,13 +171,12 @@ async def setup_and_run(
         calculators=[vitals_calculator],
         exporters=[database_emitter, mlflow_exporter],
     )
-    manager.register_system(RenderSystem)  # Add the render system
+    manager.register_system(RenderSystem)
 
     # 6. Run the simulation
     print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick} ---")
     await manager.run(start_step=starting_tick)
     print(f"--- [{task_id}] Simulation loop finished for run: {run_id} ---")
 
-    # Finalize any systems that need it (like rendering the GIF)
     if render_system := manager.system_manager.get_system(RenderSystem):
         render_system.finalize()

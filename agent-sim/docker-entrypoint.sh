@@ -5,12 +5,11 @@ set -e
 
 # Wait for the database to be ready
 # This requires installing netcat (e.g., `apt-get install -y netcat`) in your Dockerfile
-# while ! nc -z postgres 5432; do
-#   echo "Waiting for postgres..."
-#   sleep 1
-# done
-# echo "PostgreSQL started"
-
+while ! nc -z postgres 5432; do
+  echo "Waiting for postgres..."
+  sleep 1
+done
+echo "PostgreSQL started"
 
 # Run the database initialization script
 echo "--- Running database initialization ---"

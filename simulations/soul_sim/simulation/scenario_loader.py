@@ -3,6 +3,8 @@
 import json
 from typing import Any, Dict
 
+from agent_core.agents.actions.action_registry import action_registry
+from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.component import (
     ActionOutcomeComponent,
     ActionPlanComponent,
@@ -57,7 +59,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
         if not self.simulation_state:
             raise RuntimeError("SimulationState must be set before calling load().")
 
-        # Use direct attribute access on the validated Pydantic model
         scenario_path = self.config.scenario_path
         if not scenario_path:
             raise ValueError("Scenario path not found in configuration.")
@@ -73,7 +74,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
     def _define_archetypes(self):
         """
         Defines agent archetypes using lists of component-creation functions.
-        This is more robust than parsing component paths from YAML.
         """
         core_components = [
             lambda kwargs: PositionComponent(kwargs["initial_pos"], kwargs["environment"]),
@@ -119,7 +119,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
                 component_factory_funcs = self.archetypes.get(archetype_name)
 
                 if not component_factory_funcs:
-                    print(f"Warning: Archetype '{archetype_name}' not found. Agent group will be skipped.")
                     continue
 
                 for _ in range(group.get("count", 0)):
@@ -139,13 +138,11 @@ class ScenarioLoader(ScenarioLoaderInterface):
 
     def _create_resources(self):
         """Initializes resource entities by calling the random generator."""
-        # Use direct attribute access on the validated Pydantic model
         num_single = self.config.environment.num_single_resources
         num_double = self.config.environment.num_double_resources
         num_triple = self.config.environment.num_triple_resources
         seed = self.config.simulation.random_seed
 
-        # Generate the dictionary of resources with random positions
         resources_to_create = init_resources(
             environment=self.simulation_state.environment,
             num_single=num_single,
@@ -154,17 +151,13 @@ class ScenarioLoader(ScenarioLoaderInterface):
             seed=seed,
         )
 
-        # Create entities from the generated dictionary
         for res_id, res_data in resources_to_create.items():
             self.simulation_state.add_entity(res_id)
             pos = tuple(res_data["pos"])
-
             self.simulation_state.add_component(
-                res_id,
-                PositionComponent(position=pos, environment=self.simulation_state.environment),
+                res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
             )
 
-            # Create a clean dictionary for the component's constructor
             component_params = {
                 "resource_type": res_data["type"],
                 "initial_health": res_data["initial_health"],
@@ -183,19 +176,17 @@ class ScenarioLoader(ScenarioLoaderInterface):
 
     def _prepare_component_kwargs(self, initial_pos: tuple) -> Dict[str, Any]:
         """Gathers all possible constructor arguments for any component from the config."""
-        # Use direct attribute access on the validated Pydantic model
         main_emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
-
-        # Calculate the true dimensions of the feature vectors dynamically.
         state_feature_dim = self.config.learning.q_learning.state_feature_dim
-        action_feature_dim = self.config.learning.q_learning.action_feature_dim
 
-        # Internal state features from get_internal_state_features_for_entity
-        internal_state_dim = (
-            4  # affect/emotion
-            + main_emb_dim  # goal embedding
-            + (len(IdentityDomain) * main_emb_dim)  # all identity domains
-        )
+        # Dynamically calculate the action feature vector size
+        num_actions = len(action_registry.action_ids)
+        num_intents = len(Intent)
+        num_params = 5  # As defined in create_standard_feature_vector
+        action_feature_dim = num_actions + num_intents + 1 + num_params
+
+        internal_state_dim = 4 + main_emb_dim + (len(IdentityDomain) * main_emb_dim) + 3
+
         return {
             "initial_pos": initial_pos,
             "environment": self.simulation_state.environment,
@@ -214,7 +205,6 @@ class ScenarioLoader(ScenarioLoaderInterface):
                 "device": self.simulation_state.device,
             },
             "QLearningComponent": {
-                # Use the dynamically calculated dimensions instead of placeholders
                 "state_feature_dim": state_feature_dim,
                 "internal_state_dim": internal_state_dim,
                 "action_feature_dim": action_feature_dim,
