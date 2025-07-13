@@ -17,40 +17,34 @@ class DecaySystem(System):
     handles entity inactivation when vitals are depleted.
     """
 
-    # Define the components this system operates on in its update loop
     REQUIRED_COMPONENTS: List[Type[Component]] = [TimeBudgetComponent, HealthComponent]
 
     async def update(self, current_tick: int) -> None:
         """
         Periodically decays vitals for all active entities and handles inactivation.
         """
-        # Get decay rates from the validated Pydantic config model
         time_decay = self.config.agent.dynamics.decay.time_budget_per_step
         health_decay = self.config.agent.dynamics.decay.health_per_step
         resource_decay = self.config.agent.dynamics.decay.resources_per_step
 
-        # Get all entities that have the required vitals to decay
         target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
 
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
 
-            # Only process active agents
             if not time_comp.is_active:
                 continue
 
-            # --- Apply Decay ---
-            health_comp = cast(HealthComponent, components.get(HealthComponent))
-
             time_comp.current_time_budget -= time_decay
-            health_comp.current_health -= health_decay
+            cast(HealthComponent, components.get(HealthComponent)).current_health -= health_decay
 
-            # Optional resource decay
             if isinstance(inv_comp := components.get(InventoryComponent), InventoryComponent):
                 inv_comp.current_resources = max(0, inv_comp.current_resources - resource_decay)
 
-            # --- Check for Inactivation ---
-            if time_comp.current_time_budget <= 0 or health_comp.current_health <= 0:
+            if (
+                time_comp.current_time_budget <= 0
+                or cast(HealthComponent, components.get(HealthComponent)).current_health <= 0
+            ):
                 self._inactivate_entity(entity_id, components, current_tick)
 
     def _inactivate_entity(
@@ -63,15 +57,18 @@ class DecaySystem(System):
         time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
         health_comp = cast(HealthComponent, components.get(HealthComponent))
 
-        # Set vitals to zero to prevent negative values
+        # --- FIX: Determine the reason BEFORE modifying the state ---
+        reason = "health depletion"
+        if time_comp.current_time_budget <= 0:
+            reason = "time budget depletion"
+
+        # Now, modify the state
         time_comp.current_time_budget = 0
         health_comp.current_health = 0
         time_comp.is_active = False
 
-        reason = "time budget depletion" if time_comp.current_time_budget <= 0 else "health depletion"
         print(f"INFO: Entity {entity_id} became inactive due to {reason} at tick {current_tick}.")
 
-        # Notify other systems that this entity is now inactive
         if self.event_bus:
             self.event_bus.publish(
                 "entity_inactivated",

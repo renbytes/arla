@@ -90,7 +90,7 @@ ignore = [
 # This ignores the "variable should be lowercase" error (N806)
 # specifically in test files, which is a common and useful exception.
 [tool.ruff.lint.per-file-ignores]
-"*/tests/*" = ["N806"]
+"tests/" = ["N806"]
 
 # `ruff format`
 [tool.ruff.format]
@@ -144,11 +144,7 @@ pythonpath = [
   "simulations"
 ]
 testpaths = [
-    "agent-core/tests",
-    "agent-engine/tests",
-    "agent-concurrent/tests",
-    "agent-persist/tests",
-    "agent-sim/tests",
+    "tests"
 ]
 asyncio_mode = "auto"
 addopts = "--tb=short -v"

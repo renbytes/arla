@@ -13,13 +13,11 @@ ROOT = "."
 
 # 1. CONFIGURE WHICH PACKAGES TO SEARCH
 #    The script will look for directories at the root that start with these prefixes.
-SEARCH_PREFIXES = [
-    "agent-core",
-]
+SEARCH_PREFIXES = ["tests"]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
 #    Within each found package, only these sub-folders will be searched.
-INCLUDE_SUBDIRS = ["src", "tests", "soul_sim"]
+INCLUDE_SUBDIRS = ["agent-"]
 
 # 3. CONFIGURE WHICH FILE TYPES TO INCLUDE
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
