@@ -46,7 +46,7 @@ from simulations.soul_sim.providers import (
 @pytest.fixture(scope="module")
 def pydantic_config():
     """Loads a stable, test-specific config into a validated Pydantic model."""
-    conf = OmegaConf.load("tests/test_config.yml")
+    conf = OmegaConf.load("tests/simulations/soul_sim/test_config.yml")
     return SoulSimAppConfig(**OmegaConf.to_container(conf, resolve=True))
 
 

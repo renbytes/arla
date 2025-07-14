@@ -119,6 +119,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
                 component_factory_funcs = self.archetypes.get(archetype_name)
 
                 if not component_factory_funcs:
+                    print(f"Warning: Archetype '{archetype_name}' not found. Agent group will be skipped.")
                     continue
 
                 for _ in range(group.get("count", 0)):

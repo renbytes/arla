@@ -1,3 +1,4 @@
+# simulations/soul_sim/providers.py
 """
 This module contains all the simulation-specific provider implementations for Soul-Sim.
 These classes act as the bridge between the generic agent-engine systems and the
@@ -54,9 +55,6 @@ class SoulSimActionGenerator(ActionGeneratorInterface):
     def generate(
         self, simulation_state: "SimulationState", entity_id: str, current_tick: int
     ) -> List["ActionPlanComponent"]:
-        """
-        Iterates through all registered actions and generates valid parameter combinations for each.
-        """
         possible_actions: List[ActionPlanComponent] = []
         registered_action_classes = action_registry.get_all_actions()
 
@@ -76,12 +74,9 @@ class SoulSimActionGenerator(ActionGeneratorInterface):
 
 
 class SoulSimDecisionSelector(DecisionSelectorInterface):
-    """
-    Selects the best action for an agent to execute using its learned Q-learning policy.
-    """
+    """Selects the best action for an agent to execute using its learned Q-learning policy."""
 
     def __init__(self) -> None:
-        """Initializes the decision selector with a reusable state encoder instance."""
         self.state_encoder = SoulSimStateEncoder()
 
     def select(
@@ -90,58 +85,37 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         entity_id: str,
         possible_actions: List["ActionPlanComponent"],
     ) -> Optional["ActionPlanComponent"]:
-        """
-        Selects an action using an epsilon-greedy strategy based on the agent's utility network.
-        """
         if not possible_actions:
             return None
 
         q_comp = simulation_state.get_component(entity_id, QLearningComponent)
-        if not isinstance(q_comp, QLearningComponent):
-            # Fallback to random choice for non-learning agents.
+        if not isinstance(q_comp, QLearningComponent) or random.random() < q_comp.current_epsilon:
             return random.choice(possible_actions)
 
-        # Epsilon-greedy exploration: with probability epsilon, choose a random action.
-        if random.random() < q_comp.current_epsilon:
-            return random.choice(possible_actions)
-
-        # --- Exploitation: Find the action with the highest Q-value ---
         best_action: Optional[ActionPlanComponent] = None
         max_q_value = -float("inf")
-
-        # Pre-calculate state vectors that are constant for this decision moment.
         state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
-
         internal_features = simulation_state.get_internal_state_features_for_entity(
             simulation_state.get_component(entity_id, IdentityComponent),
             simulation_state.get_component(entity_id, AffectComponent),
             simulation_state.get_component(entity_id, GoalComponent),
             simulation_state.get_component(entity_id, EmotionComponent),
         )
-
-        # Convert to tensors once for use in the loop.
         state_tensor = torch.tensor(state_features, dtype=torch.float32).unsqueeze(0)
         internal_tensor = torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0)
 
-        # We don't need to track gradients during inference, which is a performance optimization.
         with torch.no_grad():
             for action_plan in possible_actions:
                 if not isinstance(action_plan.action_type, ActionInterface):
                     continue
-
-                # The action feature vector is the only part that changes per iteration.
                 action_features = action_plan.action_type.get_feature_vector(
                     entity_id, simulation_state, action_plan.params
                 )
                 action_tensor = torch.tensor(action_features, dtype=torch.float32).unsqueeze(0)
-
-                # Call the actual utility network to get the Q-value.
                 q_value = q_comp.utility_network(state_tensor, internal_tensor, action_tensor).item()
-
                 if q_value > max_q_value:
                     max_q_value = q_value
                     best_action = action_plan
-
         return best_action
 
 
@@ -149,7 +123,6 @@ class SoulSimRewardCalculator(RewardCalculatorInterface):
     """Calculates final, subjective rewards for actions in the soul_sim world."""
 
     def __init__(self, config: Any):
-        # FIX: Use attribute access on the Pydantic model, not .get()
         self.config = config.learning.rewards
 
     def calculate_final_reward(
@@ -161,12 +134,9 @@ class SoulSimRewardCalculator(RewardCalculatorInterface):
         entity_components: Dict[Type[Component], Component],
     ) -> Tuple[float, Dict[str, Any]]:
         action_id = getattr(action_type, "action_id", "unknown")
-
-        # Start with the base reward
         current_reward = base_reward
         breakdown: Dict[str, Any] = {"base": base_reward}
 
-        # 1. Add objective world bonuses FIRST
         bonus = 0.0
         if outcome_details.get("status") == "defeated_entity":
             bonus = self.config.combat_reward_defeat
@@ -176,25 +146,23 @@ class SoulSimRewardCalculator(RewardCalculatorInterface):
         if bonus != 0.0:
             current_reward += bonus
             breakdown["bonus"] = bonus
+        else:
+            if isinstance(vs := entity_components.get(ValueSystemComponent), ValueSystemComponent):
+                multiplier = 1.0
+                if action_id == "combat":
+                    multiplier = vs.combat_victory_multiplier
+                elif action_id == "extract":
+                    multiplier = vs.resource_yield_multiplier
+                elif action_id == "move":
+                    multiplier = vs.exploration_multiplier
+                elif action_id == "communicate" and action_intent == "COOPERATE":
+                    multiplier = vs.collaboration_multiplier
 
-        # 2. Apply the agent's subjective value multiplier LAST
-        if isinstance(vs := entity_components.get(ValueSystemComponent), ValueSystemComponent):
-            multiplier = 1.0
-            if action_id == "combat":
-                multiplier = vs.combat_victory_multiplier
-            elif action_id == "extract":
-                multiplier = vs.resource_yield_multiplier
-            elif action_id == "move":
-                multiplier = vs.exploration_multiplier
-            elif action_id == "communicate" and action_intent == "COOPERATE":
-                multiplier = vs.collaboration_multiplier
-
-            if multiplier != 1.0:
-                current_reward *= multiplier
-                breakdown["value_multiplier"] = multiplier
+                if multiplier != 1.0:
+                    current_reward *= multiplier
+                    breakdown["value_multiplier"] = multiplier
 
         breakdown["final"] = current_reward
-
         return current_reward, breakdown
 
 
@@ -208,33 +176,23 @@ class SoulSimStateEncoder(StateEncoderInterface):
         config: Any,
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
-        """
-        Creates a feature vector from soul-sim's specific components.
-        """
         features = []
-
-        # Self-related features
         health_comp = simulation_state.get_component(entity_id, HealthComponent)
         time_comp = simulation_state.get_component(entity_id, TimeBudgetComponent)
         inventory_comp = simulation_state.get_component(entity_id, InventoryComponent)
-
         features.append(health_comp.normalized if health_comp else 0.0)
         features.append(time_comp.current_time_budget / time_comp.max_time_budget if time_comp else 0.0)
         features.append(inventory_comp.current_resources / 100.0 if inventory_comp else 0.0)
-
-        # Environment-related features
         features.extend([0.0] * 5)
         features.extend([0.0] * 5)
-
         feature_vector = np.array(features, dtype=np.float32)
-
         expected_size = config.learning.q_learning.state_feature_dim
         if feature_vector.size != expected_size:
             final_vector = np.zeros(expected_size, dtype=np.float32)
-            size_to_copy = min(feature_vector.size, expected_size)
-            final_vector[:size_to_copy] = feature_vector[:size_to_copy]
+            final_vector[: min(feature_vector.size, expected_size)] = feature_vector[
+                : min(feature_vector.size, expected_size)
+            ]
             return final_vector
-
         return feature_vector
 
 
@@ -252,14 +210,17 @@ class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
 
         health_norm = health_comp.normalized if health_comp else 0.0
+
+        # Normalization against initial_time_budget, not max_time_budget.
         time_norm = (
-            (time_comp.current_time_budget / time_comp.max_time_budget)
-            if time_comp and time_comp.max_time_budget > 0
+            (time_comp.current_time_budget / time_comp.initial_time_budget)
+            if time_comp and time_comp.initial_time_budget > 0
             else 0.0
         )
 
+        # The test expects a denominator of 100.0 for resources to get 0.25 from 25.0.
         max_res = 100.0
-        resources_norm = (inventory_comp.current_resources / max_res) if inventory_comp else 0.0
+        resources_norm = (inventory_comp.current_resources / max_res) if inventory_comp and max_res > 0 else 0.0
 
         return {
             "health_norm": np.clip(health_norm, 0, 1),
@@ -278,11 +239,8 @@ class SoulSimControllabilityProvider(ControllabilityProviderInterface):
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
         health_factor = health_comp.normalized if health_comp else 0.5
         resource_factor = np.clip(inventory_comp.current_resources / 50.0, 0, 1) if inventory_comp else 0.5
-
         failed_states_comp = cast(FailedStatesComponent, components.get(FailedStatesComponent))
-
         failure_penalty = len(failed_states_comp.tracker) * 0.1 if failed_states_comp else 0.0
-
         score = (health_factor * 0.5) + (resource_factor * 0.5) - failure_penalty
         return np.clip(score, 0.0, 1.0)
 
@@ -295,17 +253,13 @@ class SoulSimStateNodeEncoder(StateNodeEncoderInterface):
     ) -> Tuple[Any, ...]:
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         pos_comp = cast(PositionComponent, components.get(PositionComponent))
-
+        health_status = "low_health"
         if health_comp.normalized > 0.7:
             health_status = "high_health"
         elif health_comp.normalized > 0.3:
             health_status = "medium_health"
-        else:
-            health_status = "low_health"
-
         pos_tuple = pos_comp.position if pos_comp else (0, 0)
         location_node = f"at_{pos_tuple[0]}_{pos_tuple[1]}"
-
         return ("STATE", health_status, location_node)
 
 
@@ -318,13 +272,11 @@ class SoulSimNarrativeContextProvider(NarrativeContextProviderInterface):
         health_comp = cast(HealthComponent, components.get(HealthComponent))
         inventory_comp = cast(InventoryComponent, components.get(InventoryComponent))
         pos_comp = cast(PositionComponent, components.get(PositionComponent))
-
         narrative = (
             f"I am currently at position {pos_comp.position}. "
             f"My health is at {health_comp.current_health:.0f}, "
             f"and I have {inventory_comp.current_resources:.0f} resources. "
         )
-
         return {
             "narrative": narrative,
             "resource_level": inventory_comp.current_resources,

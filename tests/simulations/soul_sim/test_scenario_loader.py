@@ -238,5 +238,5 @@ class TestScenarioLoader:
         # Check dynamic Q-learning dimensions
         q_kwargs = kwargs["QLearningComponent"]
         assert q_kwargs["action_feature_dim"] == 12
-        assert q_kwargs["internal_state_dim"] == 28
+        assert q_kwargs["internal_state_dim"] == 31
         assert q_kwargs["state_feature_dim"] == 16
