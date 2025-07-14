@@ -1,17 +1,90 @@
 # src/agent_engine/cognition/reflection/validation.py
 """
-Validates LLM-generated inferences against symbolic logic and episode data.
+Validates LLM-generated inferences and formal causal models.
 """
 
-from typing import Any
+from typing import Any, Optional
 
-# Imports from agent_core
 from agent_core.cognition.ai_models.openai_client import get_embedding_with_cache
 from agent_core.cognition.scaffolding import CognitiveScaffold
-
-# Imports from agent-engine
 from agent_engine.cognition.reflection.episode import Episode
 from agent_engine.utils.math_utils import safe_cosine_similarity
+from dowhy import CausalModel
+
+
+class CausalModelValidator:
+    """
+    Validates a dowhy CausalModel using refutation methods to ensure its
+    conclusions are robust.
+    """
+
+    def __init__(self, causal_model: CausalModel):
+        self.model = causal_model
+        self.estimand = self.model.identify_effect(proceed_when_unidentifiable=True)
+        self.estimate = self.model.estimate_effect(self.estimand, method_name="backdoor.linear_regression")
+
+    def check_robustness(self) -> dict:
+        """
+        Runs a suite of refutation tests on the causal model.
+
+        Returns:
+            A dictionary containing the results and confidence scores from each test.
+        """
+        results = {
+            "random_common_cause": self._refute_with_random_common_cause(),
+            "placebo_treatment": self._refute_with_placebo_treatment(),
+            "data_subset": self._refute_with_data_subset(),
+        }
+        return results
+
+    def _refute_with_random_common_cause(self) -> Optional[float]:
+        """
+        Tests how sensitive the model is to an unobserved common cause.
+        A robust model's estimate should not change significantly.
+        Returns a confidence score from 0.0 to 1.0.
+        """
+        try:
+            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="add_unobserved_common_cause")
+            # Confidence is high if the new estimate is close to the original
+            original_value = self.estimate.value
+            new_value = refute.new_effect
+            confidence = 1.0 - min(1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6))
+            return confidence
+        except Exception as e:
+            print(f"Causal refutation (random common cause) failed: {e}")
+            return None
+
+    def _refute_with_placebo_treatment(self) -> Optional[float]:
+        """
+        Replaces the actual treatment (action) with a placebo.
+        A robust model should show a near-zero effect for the placebo.
+        Returns a confidence score from 0.0 to 1.0.
+        """
+        try:
+            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="placebo_treatment_refuter")
+            # Confidence is high if the placebo effect is close to zero
+            confidence = 1.0 - min(1.0, abs(refute.new_effect))
+            return confidence
+        except Exception as e:
+            print(f"Causal refutation (placebo treatment) failed: {e}")
+            return None
+
+    def _refute_with_data_subset(self) -> Optional[float]:
+        """
+        Retrains the model on a random subset of the data.
+        A robust model should yield a similar estimate.
+        Returns a confidence score from 0.0 to 1.0.
+        """
+        try:
+            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="data_subset_refuter")
+            # Confidence is high if the new estimate is close to the original
+            original_value = self.estimate.value
+            new_value = refute.new_effect
+            confidence = 1.0 - min(1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6))
+            return confidence
+        except Exception as e:
+            print(f"Causal refutation (data subset) failed: {e}")
+            return None
 
 
 class RuleValidator:

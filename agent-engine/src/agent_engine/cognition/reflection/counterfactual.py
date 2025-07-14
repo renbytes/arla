@@ -1,19 +1,18 @@
 # src/agent_engine/cognition/reflection/counterfactual.py
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, Optional, cast
 
-# Imports from agent_core
-from agent_core.cognition.scaffolding import CognitiveScaffold
-
-# Imports from arla-engine
+from agent_core.core.ecs.component import MemoryComponent
 from agent_engine.cognition.reflection.episode import Episode
+from agent_engine.simulation.simulation_state import SimulationState
 
 
 @dataclass
 class CounterfactualEpisode:
     """
-    Represents a "what if" scenario based on a real past event.
+    Represents a "what if" scenario based on a real past event, now generated
+    using a formal causal model.
     """
 
     original_episode_theme: str
@@ -25,62 +24,48 @@ class CounterfactualEpisode:
 
 def generate_counterfactual(
     episode: Episode,
-    cognitive_scaffold: "CognitiveScaffold",
+    simulation_state: SimulationState,
     agent_id: str,
-    current_tick: int,
-) -> List[CounterfactualEpisode]:
+    alternative_action: str,
+) -> Optional[CounterfactualEpisode]:
     """
-    Takes a past episode and generates a counterfactual "what if" scenario
-    by querying the LLM.
+    Takes a past episode and generates a formal counterfactual "what if"
+    scenario by querying the agent's CausalModel using a precise event_id.
     """
-    if not episode.events:
-        return []
+    # FIX: Cast the generic component to the specific MemoryComponent type
+    mem_comp = cast(MemoryComponent, simulation_state.get_component(agent_id, MemoryComponent))
 
-    # Find the event with the most significant outcome (positive or negative)
+    if not episode.events or not mem_comp or not hasattr(mem_comp, "causal_model") or not mem_comp.causal_model:
+        return None
+
     key_event = max(episode.events, key=lambda e: abs(e.get("reward", 0.0)))
+    target_event_id = key_event.get("event_id")
+    if not target_event_id:
+        return None
 
-    # Construct a prompt for the LLM
-    llm_prompt = (
-        f"Consider the following event from an agent's life in a simulation:\n"
-        f"Event: At tick {key_event.get('tick')}, the agent performed the action "
-        f"'{key_event.get('action_type')}' which resulted in the outcome "
-        f"'{key_event.get('status')}' and a reward of {key_event.get('reward', 0.0):.2f}.\n\n"
-        "Question: What might have happened if, instead of that action, the agent had performed a "
-        "completely different action (e.g., COMMUNICATE instead of COMBAT, or REST instead of EXTRACT)?\n"
-        "Provide a plausible alternative action and predict the likely outcome in one sentence.\n\n"
-        "Format the response as:\n"
-        "ALTERNATIVE ACTION: [Action Name]\n"
-        "PREDICTED OUTCOME: [Predicted outcome sentence]"
+    factual_instance = next(
+        (record for record in mem_comp.causal_data if record.get("event_id") == target_event_id), None
     )
 
+    if not factual_instance:
+        return None
+
     try:
-        response = cognitive_scaffold.query(
-            agent_id=agent_id,
-            purpose="counterfactual_generation",
-            prompt=llm_prompt,
-            current_tick=current_tick,
+        counterfactual_estimate = mem_comp.causal_model.whatif(
+            factual_instance, treatment_value=alternative_action, outcome_name="outcome"
         )
 
-        lines = response.splitlines()
-        alt_action = "Unknown"
-        pred_outcome = "Prediction failed."
+        predicted_reward = counterfactual_estimate.value
+        predicted_outcome_str = f"The reward would have been approximately {predicted_reward:.2f}."
 
-        for line in lines:
-            if "ALTERNATIVE ACTION:" in line:
-                alt_action = line.split(":", 1)[1].strip()
-            elif "PREDICTED OUTCOME:" in line:
-                pred_outcome = line.split(":", 1)[1].strip()
-
-        return [
-            CounterfactualEpisode(
-                original_episode_theme=episode.theme,
-                original_action=key_event.get("action", {}),
-                counterfactual_action=alt_action,
-                predicted_outcome=pred_outcome,
-                confidence=0.8,  # Confidence is heuristic for now
-            )
-        ]
+        return CounterfactualEpisode(
+            original_episode_theme=episode.theme,
+            original_action=key_event.get("action", {}),
+            counterfactual_action=alternative_action,
+            predicted_outcome=predicted_outcome_str,
+            confidence=0.9,
+        )
 
     except Exception as e:
-        print(f"Error generating counterfactual for {agent_id}: {e}")
-        return []
+        print(f"Error generating formal counterfactual for {agent_id}: {e}")
+        return None

@@ -9,9 +9,9 @@ import numpy as np
 from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.base import CognitiveComponent
 
-# This block is the key to breaking the circular dependency.
-# It allows type hints to work without creating a runtime import.
 if TYPE_CHECKING:
+    from dowhy import CausalModel
+
     from agent_core.core.schemas import (
         Belief,
         CounterfactualEpisode,
@@ -90,25 +90,33 @@ class Component(CognitiveComponent):
 
 
 class MemoryComponent(Component):
-    """Stores episodic, short-term, and causal memories."""
+    """
+    Stores episodic, short-term, and causal memories. This component has been
+    updated to support formal causal reasoning with the `dowhy` library.
+    """
 
     def __init__(self) -> None:
         self.episodic_memory: List[Dict[str, Any]] = []
         self.short_term_memory: deque[Dict[str, Any]] = deque(maxlen=10)
-        self.causal_graph: Dict[Tuple[Any, ...], Dict[Tuple[Any, ...], float]] = defaultdict(lambda: defaultdict(float))
         self.last_llm_reflection_summary: str = ""
         self.counterfactual_memories: List["CounterfactualEpisode"] = []
-        self.previous_state_node: Optional[Tuple[Any, ...]] = None
+
+        # Attributes for formal causal reasoning
+        self.causal_data: List[Dict[str, Any]] = []
+        self.causal_model: Optional["CausalModel"] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's state, reflecting the new causal structure."""
         return {
             "episodic_memory_count": len(self.episodic_memory),
-            "causal_graph_nodes": len(self.causal_graph),
+            "causal_data_points": len(self.causal_data),
+            "has_causal_model": self.causal_model is not None,
             "counterfactual_count": len(self.counterfactual_memories),
         }
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        if not isinstance(self.episodic_memory, list) or not isinstance(self.causal_graph, dict):
+        """Validates the new memory structures."""
+        if not isinstance(self.episodic_memory, list) or not isinstance(self.causal_data, list):
             return False, ["Memory structures have incorrect types."]
         return True, []
 
@@ -144,26 +152,26 @@ class IdentityComponent(Component):
 
 
 class ValidationComponent(Component):
-    """Stores confidence scores for an agent's reflections."""
+    """
+    Stores confidence scores for an agent's reflections and its causal model.
+    """
 
     def __init__(self) -> None:
         self.reflection_confidence_scores: Dict[int, float] = {}
+        self.causal_model_confidence: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"confidence_scores": self.reflection_confidence_scores}
+        return {
+            "confidence_scores": self.reflection_confidence_scores,
+            "causal_model_confidence": self.causal_model_confidence,
+        }
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         if not isinstance(self.reflection_confidence_scores, dict):
-            return False, [
-                f"reflection_confidence_scores is not a dict but a {type(self.reflection_confidence_scores)}"
-            ]
+            return False, ["reflection_confidence_scores is not a dict"]
+        if not isinstance(self.causal_model_confidence, float):
+            return False, ["causal_model_confidence is not a float"]
         return True, []
-
-    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
-        if not isinstance(self.reflection_confidence_scores, dict):
-            self.reflection_confidence_scores = {}
-            return True
-        return False
 
 
 class GoalComponent(Component):
@@ -372,8 +380,6 @@ class TimeBudgetComponent(Component):
         if self.is_active and self.current_time_budget <= 0:
             self.is_active = False
             fixed = True
-        # This auto-fix logic is a bit tricky: if inactive but has some time,
-        # it might be a bug. Setting to 0 if it's very low.
         if (
             not self.is_active
             and self.current_time_budget > 0
