@@ -13,11 +13,11 @@ ROOT = "."
 
 # 1. CONFIGURE WHICH PACKAGES TO SEARCH
 #    The script will look for directories at the root that start with these prefixes.
-SEARCH_PREFIXES = ["tests"]
+SEARCH_PREFIXES = ["agent-"]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
 #    Within each found package, only these sub-folders will be searched.
-INCLUDE_SUBDIRS = ["agent-"]
+INCLUDE_SUBDIRS = [""]
 
 # 3. CONFIGURE WHICH FILE TYPES TO INCLUDE
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
