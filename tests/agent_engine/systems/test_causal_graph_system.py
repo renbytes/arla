@@ -45,7 +45,11 @@ async def test_on_action_executed_logs_data(system_setup):
 
     # 1. Simulate the update call to cache the pre-action state
     mock_state.get_entities_with_components.return_value = {agent_id: mock_state.entities[agent_id]}
-    mock_encoder.encode_state_for_causal_graph.return_value = ("STATE", "health_ok", "loc_A")
+    mock_encoder.encode_state_for_causal_graph.return_value = (
+        "STATE",
+        "health_ok",
+        "loc_A",
+    )
     await system.update(current_tick=10)
 
     # 2. Fire the event with a correctly specced mock that has the 'action_id' attribute

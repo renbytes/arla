@@ -37,12 +37,36 @@ def mock_simulation_state():
     mem_comp = MemoryComponent()
     # CORRECTED: Added a 6th memory to ensure the check passes comfortably.
     mem_comp.episodic_memory = [
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.7, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.7,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
     ]
 
     id_comp = MagicMock(spec=IdentityComponent)
@@ -150,7 +174,10 @@ def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitiv
             return np.array([0.0, 1.0, 0.0, 0.0])
 
     # Patch the function where it is used inside the goal_system module
-    mocker.patch("agent_engine.systems.goal_system.get_embedding_with_cache", side_effect=embedding_side_effect)
+    mocker.patch(
+        "agent_engine.systems.goal_system.get_embedding_with_cache",
+        side_effect=embedding_side_effect,
+    )
 
     # Act
     goal_system.on_update_goals_event(event_data)

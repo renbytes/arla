@@ -155,6 +155,7 @@ class ReflectionSystem(System):
             components=components,
             simulation_state=self.simulation_state,
             current_tick=tick,
+            config=self.config,
         )
 
         narrative = context.get("narrative", "")

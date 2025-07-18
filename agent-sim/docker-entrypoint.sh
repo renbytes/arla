@@ -3,11 +3,14 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Install local packages now that the volume is mounted
+echo "--- Installing local packages ---"
+pip install --no-cache-dir -r requirements-local.txt
+
 # Wait for the database to be ready
-# This requires installing netcat (e.g., `apt-get install -y netcat`) in your Dockerfile
 while ! nc -z postgres 5432; do
-  echo "Waiting for postgres..."
-  sleep 1
+    echo "Waiting for postgres..."
+    sleep 1
 done
 echo "PostgreSQL started"
 
@@ -16,7 +19,5 @@ echo "--- Running database initialization ---"
 python -m agent_sim.infrastructure.database.init_db
 
 # The database is now ready.
-# `exec "$@"` runs the command passed to the script. In a Dockerfile,
-# this will be the CMD instruction (e.g., starting the celery worker).
 echo "--- DB initialization complete. Starting worker... ---"
 exec "$@"

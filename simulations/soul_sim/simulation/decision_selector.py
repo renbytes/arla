@@ -5,10 +5,6 @@ import torch
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
-    AffectComponent,
-    EmotionComponent,
-    GoalComponent,
-    IdentityComponent,
 )
 from agent_engine.systems.components import QLearningComponent
 
@@ -18,7 +14,6 @@ from .state_encoder import SoulSimStateEncoder
 class SoulSimDecisionSelector(DecisionSelectorInterface):
     """
     Selects an agent's action using a Q-learning policy.
-
     This selector uses an epsilon-greedy strategy. With a probability of
     epsilon, it **explores** by choosing a random action. Otherwise, it **exploits**
     its current knowledge by selecting the action with the highest predicted
@@ -38,12 +33,10 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
     ) -> Optional[ActionPlanComponent]:
         """
         Evaluates possible actions and selects one based on the Q-learning policy.
-
         Args:
             simulation_state: The current state of the simulation.
             entity_id: The ID of the agent making the decision.
             possible_actions: A list of valid ActionPlanComponent objects.
-
         Returns:
             The chosen ActionPlanComponent, or None if no action is possible.
         """
@@ -62,19 +55,9 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         # single decision moment. We calculate these feature vectors once before the loop.
         state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
 
-        # Gather all cognitive components needed for the internal state vector
-        id_comp, aff_comp, goal_comp, emo_comp = (
-            simulation_state.get_component(entity_id, c)
-            for c in [
-                IdentityComponent,
-                AffectComponent,
-                GoalComponent,
-                EmotionComponent,
-            ]
-        )
-        internal_features = simulation_state.get_internal_state_features_for_entity(
-            id_comp, aff_comp, goal_comp, emo_comp
-        )
+        # Get the agent's components to pass to the internal state encoder
+        entity_components = simulation_state.entities.get(entity_id, {})
+        internal_features = self.state_encoder.encode_internal_state(entity_components, simulation_state.config)
 
         # Convert to tensors once for use in the loop
         state_t = torch.tensor(state_features, dtype=torch.float32).unsqueeze(0)

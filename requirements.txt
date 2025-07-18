@@ -4,27 +4,6 @@
 #
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
-file:./agent-concurrent
-    # via
-    #   agent-engine
-    #   agent-sim
-    #   arla-monorepo-workspace (pyproject.toml)
-file:./agent-core
-    # via
-    #   agent-engine
-    #   agent-sim
-    #   arla-monorepo-workspace (pyproject.toml)
-file:./agent-engine
-    # via
-    #   agent-sim
-    #   arla-monorepo-workspace (pyproject.toml)
-file:./agent-persist
-    # via
-    #   agent-engine
-    #   agent-sim
-    #   arla-monorepo-workspace (pyproject.toml)
-file:./agent-sim
-    # via arla-monorepo-workspace (pyproject.toml)
 alembic==1.16.4
     # via
     #   arla-monorepo-workspace (pyproject.toml)

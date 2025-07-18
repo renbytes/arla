@@ -16,7 +16,10 @@ from agent_core.core.ecs.component import (
 from agent_engine.simulation.system import System
 from agent_engine.systems.components import QLearningComponent
 
-from ..components import ConceptualSpaceComponent, PositionComponent
+from simulations.emergence_sim.components import (
+    ConceptualSpaceComponent,
+    PositionComponent,
+)
 
 
 class SymbolNegotiationSystem(System):
@@ -41,7 +44,7 @@ class SymbolNegotiationSystem(System):
         On each tick, identifies pairs of nearby, active agents and initiates
         a round of the Naming Game between them.
         """
-        all_agents = self.simulation_state.get_entities_with_components(*self.REQUIRED_COMPONENTS)
+        all_agents = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
 
         # Filter for active agents and shuffle for random pairing
         active_agent_ids = [

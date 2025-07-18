@@ -100,13 +100,9 @@ class QLearningSystem(System):
             entity_id, self.simulation_state, action_plan.params
         )
 
-        # FIX: Cast each component to its specific type before passing to the function
-        internal_features = self.simulation_state.get_internal_state_features_for_entity(
-            cast(IdentityComponent, self.simulation_state.get_component(entity_id, IdentityComponent)),
-            cast(AffectComponent, self.simulation_state.get_component(entity_id, AffectComponent)),
-            cast(GoalComponent, self.simulation_state.get_component(entity_id, GoalComponent)),
-            cast(EmotionComponent, self.simulation_state.get_component(entity_id, EmotionComponent)),
-        )
+        entity_components = self.simulation_state.entities.get(entity_id, {})
+        internal_features = self.state_encoder.encode_internal_state(entity_components, self.config)
+
         possible_next_actions = self._generate_possible_action_plans(entity_id, current_tick)
 
         self._perform_learning_step(
@@ -175,7 +171,11 @@ class QLearningSystem(System):
         if self.event_bus:
             self.event_bus.publish(
                 "q_learning_update",
-                {"entity_id": entity_id, "q_loss": loss.item(), "current_tick": current_tick},
+                {
+                    "entity_id": entity_id,
+                    "q_loss": loss.item(),
+                    "current_tick": current_tick,
+                },
             )
 
     def _generate_possible_action_plans(self, entity_id: str, current_tick: int) -> List[ActionPlanComponent]:

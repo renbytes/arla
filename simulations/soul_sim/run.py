@@ -89,7 +89,10 @@ async def setup_and_run(
     db_manager = AsyncDatabaseManager()
     database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
     mlflow_exporter = MLflowExporter()
-    environment = GridWorld(width=config.environment.grid_world_size[0], height=config.environment.grid_world_size[1])
+    environment = GridWorld(
+        width=config.environment.grid_world_size[0],
+        height=config.environment.grid_world_size[1],
+    )
     providers = {
         "action_generator": SoulSimActionGenerator(),
         "decision_selector": SoulSimDecisionSelector(),

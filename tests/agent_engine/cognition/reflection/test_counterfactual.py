@@ -40,7 +40,13 @@ def test_generate_counterfactual_success(mock_simulation_state):
         start_tick=0,
         end_tick=10,
         theme="test_theme",
-        events=[{"reward": 10.0, "event_id": "event_123", "action": {"action_type": "action_a"}}],
+        events=[
+            {
+                "reward": 10.0,
+                "event_id": "event_123",
+                "action": {"action_type": "action_a"},
+            }
+        ],
     )
 
     result = generate_counterfactual(

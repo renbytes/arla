@@ -100,25 +100,32 @@ class ActionSystem(System):
                 },
             )
 
-        print(f"""   Entity {entity_id}
+        print(
+            f"""   Entity {entity_id}
               executed {action_plan.action_type.name}.
-              Final Reward: {final_reward:.3f}""")
+              Final Reward: {final_reward:.3f}"""
+        )
 
     def _update_entity_components(self, entity_id: str, outcome: ActionOutcome, plan: ActionPlanComponent) -> None:
         """Helper to update the agent's components after an action."""
-        if isinstance(cc := self.simulation_state.get_component(entity_id, CompetenceComponent), CompetenceComponent):
+        if isinstance(
+            cc := self.simulation_state.get_component(entity_id, CompetenceComponent),
+            CompetenceComponent,
+        ):
             if isinstance(plan.action_type, ActionInterface):
                 cc.action_counts[plan.action_type.action_id] += 1
 
         if isinstance(
-            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent), ActionOutcomeComponent
+            aoc := self.simulation_state.get_component(entity_id, ActionOutcomeComponent),
+            ActionOutcomeComponent,
         ):
             aoc.success = outcome.success
             aoc.reward = outcome.reward
             aoc.details = outcome.details
 
         if isinstance(
-            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent), TimeBudgetComponent
+            time_comp := self.simulation_state.get_component(entity_id, TimeBudgetComponent),
+            TimeBudgetComponent,
         ):
             if isinstance(plan.action_type, ActionInterface):
                 action_cost = plan.action_type.get_base_cost(self.simulation_state)

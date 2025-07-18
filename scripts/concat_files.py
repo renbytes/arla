@@ -13,11 +13,18 @@ ROOT = "."
 
 # 1. CONFIGURE WHICH PACKAGES TO SEARCH
 #    The script will look for directories at the root that start with these prefixes.
-SEARCH_PREFIXES = ["agent-"]
+SEARCH_PREFIXES = [
+    "agent-core",
+    "agent-engine",
+    "agent-sim",
+    "agent-concurrent",
+    "agent-persist",
+    "simulations",
+]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
 #    Within each found package, only these sub-folders will be searched.
-INCLUDE_SUBDIRS = [""]
+INCLUDE_SUBDIRS = []
 
 # 3. CONFIGURE WHICH FILE TYPES TO INCLUDE
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
@@ -43,32 +50,35 @@ def _gather_files(
     include_exts: set[str],
     exclude: set[str],
 ) -> List[Path]:
-    """Finds all target files based on the configuration."""
+    """Finds all target files based on the configuration.
+
+    If `include_subdirs` is empty, the entire package directory under each
+    matching prefix is searched recursively.
+    """
     files: List[Path] = []
 
-    # 1. Find all 'agent-*' directories at the root
+    # 1. Find all package dirs at the root that match the prefixes
     package_dirs = [d for d in root.iterdir() if d.is_dir() and any(d.name.startswith(p) for p in prefixes)]
 
-    # 2. Build a list of the 'src' and 'tests' directories to search
-    search_paths: List[Path] = []
-    for pkg_dir in package_dirs:
-        for subdir_name in include_subdirs:
-            path_to_search = pkg_dir / subdir_name
-            if path_to_search.exists() and path_to_search.is_dir():
-                search_paths.append(path_to_search)
+    # 2. Determine which directories to search
+    if include_subdirs:  # user specified sub-folders
+        search_paths: List[Path] = []
+        for pkg_dir in package_dirs:
+            for subdir_name in include_subdirs:
+                path_to_search = pkg_dir / subdir_name
+                if path_to_search.is_dir():
+                    search_paths.append(path_to_search)
+    else:  # empty => search entire package
+        search_paths = list(package_dirs)
 
     # 3. Recursively find all files in the target search paths
     for base in search_paths:
         for path in base.rglob("*"):
-            # Ensure the path isn't in an excluded directory (e.g. __pycache__)
             if any(part in exclude for part in path.relative_to(root).parts):
                 continue
-
-            # Check if it's a file and has the correct extension
             if path.is_file() and (not include_exts or path.suffix.lower() in include_exts):
                 files.append(path)
 
-    # Sort files alphabetically across the entire project for consistent output
     return sorted(files, key=lambda p: p.relative_to(root).as_posix())
 
 

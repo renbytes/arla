@@ -21,8 +21,6 @@ from .models import (
     SimulationRun,
 )
 
-DB_OPERATION_LOCK = asyncio.Lock()
-
 
 class AsyncDatabaseManager:
     """Asynchronous database manager using SQLAlchemy's async features."""
@@ -32,6 +30,7 @@ class AsyncDatabaseManager:
         self.session_factory: Optional[async_sessionmaker[AsyncSession]] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread_id: Optional[int] = None
+        self._lock: Optional[asyncio.Lock] = None
         self._initialize_engine()
 
     def _initialize_engine(self) -> None:
@@ -51,7 +50,13 @@ class AsyncDatabaseManager:
         """Context manager for database sessions with proper error handling"""
         if self.session_factory is None:
             raise RuntimeError("Database session factory not initialized.")
-        async with DB_OPERATION_LOCK:  # Serialize all database operations
+
+        # Lazily create the lock on first use. This ensures it's
+        # bound to the currently running event loop for the Celery task.
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+
+        async with self._lock:  # Use the instance-level lock
             async with self.session_factory() as session:
                 try:
                     yield session

@@ -11,7 +11,11 @@ from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.simulation.simulation_state import SimulationState
 from omegaconf import OmegaConf
 
-from simulations.soul_sim.components import CombatComponent, HealthComponent, PositionComponent
+from simulations.soul_sim.components import (
+    CombatComponent,
+    HealthComponent,
+    PositionComponent,
+)
 from simulations.soul_sim.config.schemas import SoulSimAppConfig
 from simulations.soul_sim.systems.combat_system import CombatSystem
 

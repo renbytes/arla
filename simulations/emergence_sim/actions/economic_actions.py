@@ -8,6 +8,8 @@ about the origins of money and credit.
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
+import numpy as np
+
 # Imports from the core library, defining the base class and interfaces
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
@@ -29,29 +31,36 @@ def _create_emergence_feature_vector(
     base_cost: float,
     params: Dict[str, Any],
     param_feature_map: Dict[str, Any],
+    config: Any,  # Add config as an argument
 ) -> List[float]:
-    """
-    Helper function to create a standardized action feature vector for this simulation.
-    This mirrors the utility function found in other simulation packages.
-    """
+    """Helper function to create a standardized action feature vector."""
     action_ids = action_registry.action_ids
     action_one_hot = [1.0 if aid == action_id else 0.0 for aid in action_ids]
 
     intents = list(Intent)
     intent_one_hot = [1.0 if i == intent else 0.0 for i in intents]
 
-    time_cost_feature = [base_cost / 10.0]  # Normalize cost
+    time_cost_feature = [base_cost / 10.0]
 
-    # Placeholder for parameter features, can be expanded
-    param_features = [0.0] * 5
+    param_features = [0.0] * 5  # Keep this small, as padding will handle the final size
     for param_name, mapping in param_feature_map.items():
         if param_name in params:
             idx, value, normalizer = mapping
-            # Ensure value is numeric before division
             numeric_value = value if isinstance(value, (int, float)) else 0.0
             param_features[idx] = float(numeric_value) / float(normalizer) if normalizer != 0 else 0.0
 
-    return action_one_hot + intent_one_hot + time_cost_feature + param_features
+    # Combine all features
+    features = action_one_hot + intent_one_hot + time_cost_feature + param_features
+
+    # Pad the feature vector to the exact dimension from the config
+    final_dim = config.learning.q_learning.action_feature_dim
+    padded_features = np.zeros(final_dim, dtype=np.float32)
+
+    # Ensure we don't try to copy more features than the final dimension allows
+    num_features_to_copy = min(len(features), final_dim)
+    padded_features[:num_features_to_copy] = features[:num_features_to_copy]
+
+    return padded_features.tolist()
 
 
 @action_registry.register
@@ -131,7 +140,8 @@ class GiveResourceAction(ActionInterface):
             params.get("intent", Intent.COOPERATE),
             self.get_base_cost(simulation_state),
             params,
-            {"amount": (0, params.get("amount", 1.0), 10.0)},  # Normalize amount
+            {},
+            config=simulation_state.config,  # Pass the config object here
         )
 
 
@@ -210,4 +220,5 @@ class RequestResourceAction(ActionInterface):
             self.get_base_cost(simulation_state),
             params,
             {"amount": (0, params.get("amount", 1.0), 10.0)},
+            config=simulation_state.config,
         )

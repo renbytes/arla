@@ -8,7 +8,11 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 from agent_engine.simulation.simulation_state import SimulationState
 
-from simulations.soul_sim.components import InventoryComponent, PositionComponent, ResourceComponent
+from simulations.soul_sim.components import (
+    InventoryComponent,
+    PositionComponent,
+    ResourceComponent,
+)
 from simulations.soul_sim.systems.resource_system import ResourceSystem
 
 

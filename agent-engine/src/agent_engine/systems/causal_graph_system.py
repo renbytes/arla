@@ -6,6 +6,7 @@ and provides methods for causal inference using do-calculus.
 
 from typing import Any, Dict, List, Optional, Type, cast
 
+import agent_core.agents.actions.action_registry as core_action_registry
 import pandas as pd
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.base_action import ActionOutcome
@@ -17,7 +18,9 @@ from agent_core.core.ecs.component import (
     MemoryComponent,
 )
 from agent_core.core.ecs.event_bus import EventBus
-from agent_core.environment.state_node_encoder_interface import StateNodeEncoderInterface
+from agent_core.environment.state_node_encoder_interface import (
+    StateNodeEncoderInterface,
+)
 from dowhy import CausalModel
 
 from agent_engine.simulation.simulation_state import SimulationState
@@ -31,7 +34,11 @@ class CausalGraphSystem(System):
     CausalModel, and exposes methods for estimating causal effects.
     """
 
-    REQUIRED_COMPONENTS: List[Type[Component]] = [MemoryComponent, EmotionComponent, GoalComponent]
+    REQUIRED_COMPONENTS: List[Type[Component]] = [
+        MemoryComponent,
+        EmotionComponent,
+        GoalComponent,
+    ]
 
     def __init__(
         self,
@@ -46,16 +53,6 @@ class CausalGraphSystem(System):
         if self.event_bus:
             self.event_bus.subscribe("action_executed", self.on_action_executed)
 
-        self.causal_graph_dot = """
-        digraph {
-            U [label="Unobserved Confounders"];
-            state -> action;
-            action -> outcome;
-            state -> outcome;
-            U -> state;
-            U -> outcome;
-        }
-        """
         self._pre_action_states: Dict[str, tuple] = {}
 
     def on_action_executed(self, event_data: Dict[str, Any]) -> None:
@@ -132,11 +129,10 @@ class CausalGraphSystem(System):
         if isinstance(action_plan.action_type, ActionInterface):
             action_name = action_plan.action_type.action_id
 
-        # NEW: Extract the event_id from the outcome details
         event_id = outcome.details.get("event_id", None)
 
         return {
-            "event_id": event_id,  # Store the unique ID
+            "event_id": event_id,
             "state_health": pre_state[1],
             "state_location": pre_state[2],
             "action": action_name,
@@ -149,8 +145,14 @@ class CausalGraphSystem(System):
             return
 
         df = pd.DataFrame(mem_comp.causal_data)
-        if df.empty:
+        df.dropna(inplace=True)
+        if len(df) < 20:
             return
+
+        # Bootstrap the model by defining all possible actions as categories.
+        # This prevents "unknown category" errors when estimating the effect of a new action.
+        all_possible_actions = core_action_registry.action_registry.action_ids
+        df["action"] = pd.Categorical(df["action"], categories=all_possible_actions)
 
         common_causes = [col for col in df.columns if col.startswith("state_")]
 
@@ -159,7 +161,6 @@ class CausalGraphSystem(System):
                 data=df,
                 treatment="action",
                 outcome="outcome",
-                graph=self.causal_graph_dot,
                 common_causes=common_causes,
             )
             mem_comp.causal_model = model

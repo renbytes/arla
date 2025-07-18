@@ -15,7 +15,8 @@ from agent_core.core.ecs.component import (
     MemoryComponent,
 )
 from agent_engine.simulation.system import System
-from components import RitualComponent
+
+from simulations.emergence_sim.components import RitualComponent
 
 
 class RitualizationSystem(System):

@@ -28,6 +28,8 @@ class NarrativeContextProviderInterface(ABC):
         components: Dict[Type["Component"], "Component"],
         simulation_state: "SimulationState",
         current_tick: int,
+        config: Any,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Constructs a detailed narrative context from an entity's components

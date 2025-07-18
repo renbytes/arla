@@ -1,0 +1,14 @@
+{
+    "name": "Default Emergence Scenario",
+    "description": "A starting scenario with 10 agents randomly placed.",
+    "environment": {
+      "grid_size": [15, 15]
+    },
+    "agents": [
+      {
+        "archetype": "default",
+        "count": 10,
+        "placement": "random"
+      }
+    ]
+  }

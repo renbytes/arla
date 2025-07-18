@@ -13,7 +13,11 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import Component
 from agent_engine.simulation.system import System
 
-from ..components import DebtLedgerComponent, InventoryComponent, SocialCreditComponent
+from simulations.emergence_sim.components import (
+    DebtLedgerComponent,
+    InventoryComponent,
+    SocialCreditComponent,
+)
 
 
 class SocialCreditSystem(System):
@@ -141,7 +145,7 @@ class SocialCreditSystem(System):
         if current_tick % 20 != 0:  # Run this check every 20 ticks
             return
 
-        all_debtors = self.simulation_state.get_entities_with_components(*self.REQUIRED_COMPONENTS)
+        all_debtors = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
 
         for _, components in all_debtors.items():
             ledger = cast(DebtLedgerComponent, components[DebtLedgerComponent])

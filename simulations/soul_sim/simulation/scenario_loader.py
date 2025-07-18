@@ -156,7 +156,8 @@ class ScenarioLoader(ScenarioLoaderInterface):
             self.simulation_state.add_entity(res_id)
             pos = tuple(res_data["pos"])
             self.simulation_state.add_component(
-                res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
+                res_id,
+                PositionComponent(position=pos, environment=self.simulation_state.environment),
             )
 
             component_params = {

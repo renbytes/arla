@@ -37,7 +37,7 @@ llm:
   provider: "openai"
   completion_model: "gpt-4o-mini"
   embedding_model: "text-embedding-3-small"
-  temperature: 0.2
+  temperature: 0.0
   max_tokens: 500
   reflection_prompt_prefix: "You are an agent in a simulation. Reflect on your recent experiences to understand yourself better. In one paragraph, what have you learned about yourself and your values? "
 
@@ -129,7 +129,7 @@ environment:
 
 learning:
   q_learning:
-    initial_epsilon: 0.5
+    initial_epsilon: 0.9
     epsilon_decay_rate: 0.999
     min_epsilon: 0.05
     alpha: 0.001

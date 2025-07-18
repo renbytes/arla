@@ -11,9 +11,14 @@ from agent_core.core.ecs.component import ActionPlanComponent, TimeBudgetCompone
 from agent_engine.simulation.simulation_state import SimulationState
 from omegaconf import OmegaConf
 
-from simulations.soul_sim.components import EnvironmentObservationComponent, PositionComponent
+from simulations.soul_sim.components import (
+    EnvironmentObservationComponent,
+    PositionComponent,
+)
 from simulations.soul_sim.config.schemas import SoulSimAppConfig
-from simulations.soul_sim.systems.social_interaction_system import SocialInteractionSystem
+from simulations.soul_sim.systems.social_interaction_system import (
+    SocialInteractionSystem,
+)
 
 
 @pytest.fixture
@@ -98,7 +103,11 @@ def test_successful_competitive_communication(system_setup):
             "Target is too far away.",
         ),
         ("agent_c", lambda state: None, "Target is inactive."),
-        ("non_existent_agent", lambda state: None, "Communicator or target does not exist."),
+        (
+            "non_existent_agent",
+            lambda state: None,
+            "Communicator or target does not exist.",
+        ),
     ],
 )
 def test_failed_communication_due_to_validation(system_setup, target_id, setup_func, expected_reason):

@@ -8,15 +8,16 @@ enabling agents to propose symbols, guess meanings, and share narratives.
 import random
 from typing import TYPE_CHECKING, Any, Dict, List
 
-# Imports from the core library, defining the base class and interfaces
+import numpy as np
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.component import MemoryComponent
 
-# World-specific components needed for action generation
-# These would be defined in simulations/emergence_sim/components.py
-from ..components import ConceptualSpaceComponent, PositionComponent
+from simulations.emergence_sim.components import (
+    ConceptualSpaceComponent,
+    PositionComponent,
+)
 
 if TYPE_CHECKING:
     from agent_core.core.ecs.abstractions import SimulationState
@@ -28,29 +29,36 @@ def _create_emergence_feature_vector(
     base_cost: float,
     params: Dict[str, Any],
     param_feature_map: Dict[str, Any],
+    config: Any,
 ) -> List[float]:
-    """
-    Helper function to create a standardized action feature vector for this simulation.
-    This mirrors the utility function found in other simulation packages.
-    """
+    """Helper function to create a standardized action feature vector."""
     action_ids = action_registry.action_ids
     action_one_hot = [1.0 if aid == action_id else 0.0 for aid in action_ids]
 
     intents = list(Intent)
     intent_one_hot = [1.0 if i == intent else 0.0 for i in intents]
 
-    time_cost_feature = [base_cost / 10.0]  # Normalize cost
+    time_cost_feature = [base_cost / 10.0]
 
-    # Placeholder for parameter features, can be expanded
-    param_features = [0.0] * 5
+    param_features = [0.0] * 5  # Keep this small, as padding will handle the final size
     for param_name, mapping in param_feature_map.items():
         if param_name in params:
             idx, value, normalizer = mapping
-            # Ensure value is numeric before division
             numeric_value = value if isinstance(value, (int, float)) else 0.0
             param_features[idx] = float(numeric_value) / float(normalizer) if normalizer != 0 else 0.0
 
-    return action_one_hot + intent_one_hot + time_cost_feature + param_features
+    # Combine all features
+    features = action_one_hot + intent_one_hot + time_cost_feature + param_features
+
+    # Pad the feature vector to the exact dimension from the config
+    final_dim = config.learning.q_learning.action_feature_dim
+    padded_features = np.zeros(final_dim, dtype=np.float32)
+
+    # Ensure we don't try to copy more features than the final dimension allows
+    num_features_to_copy = min(len(features), final_dim)
+    padded_features[:num_features_to_copy] = features[:num_features_to_copy]
+
+    return padded_features.tolist()
 
 
 @action_registry.register
@@ -82,7 +90,10 @@ class ProposeSymbolAction(ActionInterface):
         # In a full implementation, this would find perceivable objects.
         # For now, we'll assume a placeholder method exists.
         # perceivable_objects = pos_comp.environment.get_objects_in_radius(pos_comp.position, 5)
-        perceivable_objects = [("object_1", (1, 1)), ("object_2", (2, 2))]  # Placeholder
+        perceivable_objects = [
+            ("object_1", (1, 1)),
+            ("object_2", (2, 2)),
+        ]  # Placeholder
 
         for obj_id, _obj_pos in perceivable_objects:
             # Agent can either use a known symbol or invent a new one
@@ -126,7 +137,8 @@ class ProposeSymbolAction(ActionInterface):
             params.get("intent", Intent.COOPERATE),
             self.get_base_cost(simulation_state),
             params,
-            {},  # No specific parameter features for now
+            {},
+            config=simulation_state.config,
         )
 
 
@@ -157,7 +169,10 @@ class GuessObjectAction(ActionInterface):
 
         # Agent generates a guess for each object it can perceive.
         # perceivable_objects = pos_comp.environment.get_objects_in_radius(pos_comp.position, 5)
-        perceivable_objects = [("object_1", (1, 1)), ("object_2", (2, 2))]  # Placeholder
+        perceivable_objects = [
+            ("object_1", (1, 1)),
+            ("object_2", (2, 2)),
+        ]  # Placeholder
 
         for obj_id, _obj_pos in perceivable_objects:
             params_list.append({"guessed_object_id": obj_id, "intent": Intent.COOPERATE})
@@ -190,6 +205,7 @@ class GuessObjectAction(ActionInterface):
             self.get_base_cost(simulation_state),
             params,
             {},
+            config=simulation_state.config,
         )
 
 
@@ -257,4 +273,5 @@ class ShareNarrativeAction(ActionInterface):
             self.get_base_cost(simulation_state),
             params,
             {},
+            config=simulation_state.config,
         )
