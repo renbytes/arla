@@ -5,7 +5,7 @@ import pytest
 # Subject under test
 from agent_engine.cognition.reflection.episode import Episode
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def sample_episode():
     return episode
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_episode_initialization(sample_episode):

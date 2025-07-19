@@ -18,7 +18,7 @@ from simulations.soul_sim.components import (
 # Subject under test
 from simulations.soul_sim.simulation.scenario_loader import ScenarioLoader
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -104,7 +104,7 @@ def scenario_file(tmp_path):
     return file_path
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 class TestScenarioLoader:

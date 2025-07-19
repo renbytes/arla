@@ -7,7 +7,7 @@ import pytest
 # Subject under test
 from agent_engine.simulation.system import System, SystemManager
 
-# --- Mocks and Fixtures ---
+# Mocks and Fixtures
 
 
 class MockSystemA(System):
@@ -53,7 +53,7 @@ def system_manager(mock_simulation_state, mock_cognitive_scaffold):
     )
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_register_system(system_manager):

@@ -1,0 +1,58 @@
+# agent-sim/experiments/emergence_study.yml
+
+experiment_name: "Emergence of Sociality Study"
+
+# Path to the new base configuration for this simulation
+base_config_path: "simulations/emergence_sim/config/emergence_config.yml"
+
+# The Python package for your new simulation
+simulation_package: "simulations.emergence_sim"
+
+# A list of scenarios to run. You will need to create this file.
+scenarios:
+  - "simulations/emergence_sim/scenarios/default.json"
+
+# Number of times to run each scenario for each variation
+runs_per_scenario: 3
+
+# Variations based on your Research Roadmap
+variations:
+  - name: "Phase I - Symbol Grounding"
+    overrides:
+      simulation:
+        systems:
+          enable_symbol_negotiation: true
+          enable_narrative_consensus: false
+          enable_ritualization: false
+          enable_social_credit: false
+          enable_normative_abstraction: false
+
+  - name: "Phase II - Narrative and Ritual"
+    overrides:
+      simulation:
+        systems:
+          enable_symbol_negotiation: true
+          enable_narrative_consensus: true
+          enable_ritualization: true
+          enable_social_credit: false
+          enable_normative_abstraction: false
+
+  - name: "Phase III - Economic Credit"
+    overrides:
+      simulation:
+        systems:
+          enable_symbol_negotiation: true
+          enable_narrative_consensus: true
+          enable_ritualization: true
+          enable_social_credit: true
+          enable_normative_abstraction: false
+
+  - name: "Full Model - Norm Abstraction"
+    overrides:
+      simulation:
+        systems:
+          enable_symbol_negotiation: true
+          enable_narrative_consensus: true
+          enable_ritualization: true
+          enable_social_credit: true
+          enable_normative_abstraction: true

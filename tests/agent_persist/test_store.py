@@ -9,7 +9,7 @@ from agent_persist.models import SimulationSnapshot
 # Subject under test
 from agent_persist.store import FileStateStore
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def store(tmp_path: Path) -> FileStateStore:
     return FileStateStore(file_path=test_file)
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_save_creates_file_and_directories(store: FileStateStore, snapshot_instance: SimulationSnapshot):

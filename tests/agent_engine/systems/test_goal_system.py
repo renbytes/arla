@@ -16,7 +16,7 @@ from agent_core.core.ecs.component import (
 # Subject under test
 from agent_engine.systems.goal_system import GoalSystem
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def mock_simulation_state():
     """Mocks the SimulationState and its contained components."""
     state = MagicMock()
 
-    # --- Mock Components ---
+    # Mock Components
     goal_comp = GoalComponent(embedding_dim=4)
     goal_comp.symbolic_goals_data = {
         "existing_goal": {
@@ -37,12 +37,36 @@ def mock_simulation_state():
     mem_comp = MemoryComponent()
     # CORRECTED: Added a 6th memory to ensure the check passes comfortably.
     mem_comp.episodic_memory = [
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.7, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.8, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
-        {"outcome": 0.9, "action": {"action_type": "EXTRACT"}, "outcome_details": {"status": "SUCCESS"}},
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.7,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.8,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
+        {
+            "outcome": 0.9,
+            "action": {"action_type": "EXTRACT"},
+            "outcome_details": {"status": "SUCCESS"},
+        },
     ]
 
     id_comp = MagicMock(spec=IdentityComponent)
@@ -106,7 +130,7 @@ def goal_system(
         # 3. Configure the mock KMeans class to return our instance when fit() is called
         mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
 
-        # --- The rest of the fixture is unchanged ---
+        # The rest of the fixture is unchanged
         mock_simulation_state.event_bus = mock_event_bus
 
         mock_config = SimpleNamespace(
@@ -121,7 +145,7 @@ def goal_system(
         yield system
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitive_scaffold, mocker):
@@ -150,7 +174,10 @@ def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitiv
             return np.array([0.0, 1.0, 0.0, 0.0])
 
     # Patch the function where it is used inside the goal_system module
-    mocker.patch("agent_engine.systems.goal_system.get_embedding_with_cache", side_effect=embedding_side_effect)
+    mocker.patch(
+        "agent_engine.systems.goal_system.get_embedding_with_cache",
+        side_effect=embedding_side_effect,
+    )
 
     # Act
     goal_system.on_update_goals_event(event_data)

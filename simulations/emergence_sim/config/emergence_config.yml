@@ -1,0 +1,112 @@
+# simulations/emergence_sim/config/emergence_config.yml
+
+# Core Simulation Setup
+simulation:
+  steps: 1000
+  log_directory: "data/logs/emergence_sim"
+  database_directory: "data/db"
+  database_file: "agent_sim.db"
+  enable_debug_logging: false
+  random_seed: 123
+  systems: # Flags to control which systems are active for each variation
+    enable_symbol_negotiation: true
+    enable_narrative_consensus: false
+    enable_ritualization: false
+    enable_social_credit: false
+    enable_normative_abstraction: false
+
+# Action and Component Definitions
+action_modules:
+  - "simulations.emergence_sim.actions.communication_actions"
+  - "simulations.emergence_sim.actions.economic_actions"
+  - "simulations.emergence_sim.actions.move_action"
+
+logging:
+  components_to_log:
+    - "agent_core.core.ecs.component.TimeBudgetComponent"
+    - "simulations.emergence_sim.components.PositionComponent"
+    - "simulations.emergence_sim.components.InventoryComponent"
+    - "simulations.emergence_sim.components.ConceptualSpaceComponent"
+    - "simulations.emergence_sim.components.RitualComponent"
+    - "simulations.emergence_sim.components.DebtLedgerComponent"
+    - "simulations.emergence_sim.components.SocialCreditComponent"
+
+# LLM and Agent Definitions
+llm:
+  provider: "openai"
+  completion_model: "gpt-4o-mini"
+  embedding_model: "text-embedding-3-small"
+  temperature: 0.0
+  max_tokens: 500
+  reflection_prompt_prefix: "You are an agent in a simulation. Reflect on your recent experiences. In one paragraph, what have you learned about your group and its rules? "
+
+agent:
+  foundational:
+    num_agents: 15 # Start with a smaller population
+    lifespan_std_dev_percent: 0.0
+    vitals:
+      initial_time_budget: 500.0
+      initial_health: 100.0 # Not used by systems, but can be a placeholder
+      initial_resources: 60.0
+    attributes:
+      initial_attack_power: 0.0 # Not relevant here
+      initial_speed: 1
+
+  cognitive:
+    embeddings:
+      main_embedding_dim: 1536
+      schema_embedding_dim: 128
+    # NOTE: The complex architecture_flags from soul_sim are replaced by the
+    # simpler `simulation.systems` flags above for this simulation.
+
+  costs:
+    actions: # Costs for your new actions
+      propose_symbol: 1.0
+      guess_object: 1.0
+      share_narrative: 2.0
+      give_resource: 1.0
+      request_resource: 1.0
+
+  emotional_dynamics:
+    temporal:
+      valence_decay_rate: 0.95
+      arousal_decay_rate: 0.90
+      valence_learning_rate: 0.2
+      arousal_learning_rate: 0.3
+    noise_std: 0.02
+    appraisal_weights:
+      goal_relevance: 0.7
+      agency: 0.5
+      social_feedback: 0.3
+
+  dynamics:
+    decay:
+      resources_per_step: 1.0
+
+# Environment and Learning
+environment:
+  grid_world_size: [15, 15]
+  # For the "naming game", you need objects with properties, not tiered resources.
+  # This will be handled by your environment implementation.
+  num_objects: 50
+
+learning:
+  q_learning:
+    initial_epsilon: 0.9
+    epsilon_decay_rate: 0.999
+    min_epsilon: 0.05
+    alpha: 0.001
+    gamma: 0.99
+    state_feature_dim: 16
+    internal_state_dim: 8
+    action_feature_dim: 15
+  memory:
+    short_term_memory_maxlen: 10
+    affective_buffer_maxlen: 200 # Still needed for affect-driven systems
+    emotion_cluster_min_data: 50
+    reflection_interval: 25 # Core reflection cycle is still needed
+    cognitive_dissonance_threshold: 0.7
+  rewards: # Simplified rewards for this simulation
+    base_reward: 0.0
+    move_reward_base: -0.1
+    give_resource_bonus: 1.0 # Small bonus for giving

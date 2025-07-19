@@ -67,7 +67,7 @@ The CLI is designed to run new experiments. To restore a specific run from a che
    from omegaconf import OmegaConf
    from simulations.soul_sim.run import setup_and_run
 
-   # --- CONFIGURATION ---
+   # CONFIGURATION
    # 1. Paste the path to your saved checkpoint file here
    CHECKPOINT_PATH = "data/logs/snapshots/sim_1721334681_a4c1b3f2/snapshot_tick_150.json"
 
@@ -82,7 +82,7 @@ The CLI is designed to run new experiments. To restore a specific run from a che
        Loads a base configuration, then runs the simulation starting
        from the specified checkpoint.
        """
-       print(f"--- Restoring simulation from: {CHECKPOINT_PATH} ---")
+       print(f"--- Restoring simulation from: {CHECKPOINT_PATH}")
 
        # Load the base configuration file.
        base_config = OmegaConf.load("simulations/soul_sim/config/base_config.yml")

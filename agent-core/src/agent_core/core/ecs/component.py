@@ -83,10 +83,10 @@ class Component(CognitiveComponent):
         return False  # Default: no auto-fix
 
 
-# --------------------------------------------------------------------------
-# --- Core Cognitive Components (World-Agnostic) ---
+# -----------------------------------------------------------------------
+# Core Cognitive Components (World-Agnostic)
 # These components define the internal, psychological state of an agent.
-# --------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 
 class MemoryComponent(Component):
@@ -285,18 +285,27 @@ class BeliefSystemComponent(Component):
     def __init__(self) -> None:
         self.belief_base: Dict[str, "Belief"] = {}
         self.rule_base: List[str] = []
+        self.social_norms: Dict[str, float] = {}
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "belief_count": len(self.belief_base),
             "rule_count": len(self.rule_base),
+            "social_norms": self.social_norms,
         }
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        return (
-            isinstance(self.belief_base, dict) and isinstance(self.rule_base, list),
-            [],
-        )
+        """Validates that all attributes have the correct type."""
+        errors: List[str] = []
+        if not isinstance(self.belief_base, dict):
+            errors.append("'belief_base' attribute must be a dictionary.")
+        if not isinstance(self.rule_base, list):
+            errors.append("'rule_base' attribute must be a list.")
+        if not isinstance(self.social_norms, dict):
+            errors.append("'social_norms' attribute must be a dictionary.")
+
+        # Returns True if the errors list is empty, along with the list itself.
+        return len(errors) == 0, errors
 
 
 class SocialMemoryComponent(Component):
@@ -334,11 +343,11 @@ class ValueSystemComponent(Component):
         return True, []
 
 
-# --------------------------------------------------------------------------
-# --- Agnostic Utility Components ---
+# -----------------------------------------------------------------------
+# Agnostic Utility Components
 # These components are necessary for the engine to function but are not
 # part of the agent's core cognitive state.
-# --------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 
 class TimeBudgetComponent(Component):

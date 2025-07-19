@@ -9,7 +9,7 @@ from agent_engine.cognition.emotions.appraisal_theory import AppraisalProcessor
 # Subject under test
 from agent_engine.cognition.emotions.model import EmotionalDynamics
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def mock_appraisal_processor(mocker):
     return mock_processor_class.return_value
 
 
-# --- Test Cases for EmotionalDynamics ---
+# Test Cases for EmotionalDynamics
 
 
 def test_initialization(default_config):

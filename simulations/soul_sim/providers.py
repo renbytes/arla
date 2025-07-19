@@ -25,7 +25,6 @@ from agent_core.core.ecs.component import (
     EmotionComponent,
     GoalComponent,
     IdentityComponent,
-    TimeBudgetComponent,
     ValueSystemComponent,
 )
 from agent_core.environment.controllability_provider_interface import (
@@ -39,6 +38,7 @@ from agent_core.environment.vitality_metrics_provider_interface import (
 )
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
+from agent_engine.cognition.identity.domain_identity import IdentityDomain
 from agent_engine.systems.components import QLearningComponent
 
 from .components import (
@@ -46,6 +46,7 @@ from .components import (
     HealthComponent,
     InventoryComponent,
     PositionComponent,
+    TimeBudgetComponent,
 )
 
 
@@ -76,7 +77,7 @@ class SoulSimActionGenerator(ActionGeneratorInterface):
 class SoulSimDecisionSelector(DecisionSelectorInterface):
     """Selects the best action for an agent to execute using its learned Q-learning policy."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         self.state_encoder = SoulSimStateEncoder()
 
     def select(
@@ -94,13 +95,12 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
 
         best_action: Optional[ActionPlanComponent] = None
         max_q_value = -float("inf")
+
+        # Encode states once
+        entity_components = simulation_state.entities.get(entity_id, {})
         state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
-        internal_features = simulation_state.get_internal_state_features_for_entity(
-            simulation_state.get_component(entity_id, IdentityComponent),
-            simulation_state.get_component(entity_id, AffectComponent),
-            simulation_state.get_component(entity_id, GoalComponent),
-            simulation_state.get_component(entity_id, EmotionComponent),
-        )
+        internal_features = self.state_encoder.encode_internal_state(entity_components, simulation_state.config)
+
         state_tensor = torch.tensor(state_features, dtype=torch.float32).unsqueeze(0)
         internal_tensor = torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0)
 
@@ -194,6 +194,62 @@ class SoulSimStateEncoder(StateEncoderInterface):
             ]
             return final_vector
         return feature_vector
+
+    def encode_internal_state(self, components: Dict[Type[Component], Component], config: Any) -> np.ndarray:
+        """Encodes an agent's internal, cognitive components into a feature vector."""
+        features: List[np.ndarray] = []
+        flags: List[float] = []
+
+        id_comp = cast(IdentityComponent, components.get(IdentityComponent))
+        aff_comp = cast(AffectComponent, components.get(AffectComponent))
+        goal_comp = cast(GoalComponent, components.get(GoalComponent))
+        emo_comp = cast(EmotionComponent, components.get(EmotionComponent))
+
+        main_embedding_dim = config.agent.cognitive.embeddings.main_embedding_dim
+
+        if emo_comp and aff_comp:
+            features.append(
+                np.array(
+                    [
+                        emo_comp.valence,
+                        emo_comp.arousal,
+                        aff_comp.prediction_delta_magnitude,
+                        aff_comp.predictive_delta_smooth,
+                    ],
+                    dtype=np.float32,
+                )
+            )
+            flags.append(1.0)
+        else:
+            features.append(np.zeros(4, dtype=np.float32))
+            flags.append(0.0)
+
+        if (
+            goal_comp
+            and goal_comp.current_symbolic_goal
+            and goal_comp.current_symbolic_goal in goal_comp.symbolic_goals_data
+        ):
+            embedding = goal_comp.symbolic_goals_data[goal_comp.current_symbolic_goal]["embedding"]
+            features.append(embedding.astype(np.float32))
+            flags.append(1.0)
+        else:
+            features.append(np.zeros(main_embedding_dim, dtype=np.float32))
+            flags.append(0.0)
+
+        if id_comp and hasattr(id_comp, "multi_domain_identity"):
+            flags.append(1.0)
+            domain_embeddings = [
+                id_comp.multi_domain_identity.get_domain_embedding(domain).astype(np.float32)
+                for domain in IdentityDomain
+            ]
+            features.append(np.concatenate(domain_embeddings))
+        else:
+            flags.append(0.0)
+            num_domains = len(IdentityDomain)
+            features.append(np.zeros(main_embedding_dim * num_domains, dtype=np.float32))
+
+        features.append(np.array(flags, dtype=np.float32))
+        return np.concatenate(features).astype(np.float32)
 
 
 class SoulSimVitalityMetricsProvider(VitalityMetricsProviderInterface):

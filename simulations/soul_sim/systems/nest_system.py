@@ -31,7 +31,7 @@ class NestSystem(System):
         entity_id = event_data["entity_id"]
         action_plan = event_data["action_plan_component"]
 
-        # --- 1. Get required components ---
+        # 1. Get required components
         inv_comp = self.simulation_state.get_component(entity_id, InventoryComponent)
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         nest_comp = self.simulation_state.get_component(entity_id, NestComponent)
@@ -43,7 +43,7 @@ class NestSystem(System):
         ):
             return
 
-        # --- 2. Resolve Nest Creation ---
+        # 2. Resolve Nest Creation
         # Use direct attribute access on the validated Pydantic model
         nest_cost = self.config.learning.rewards.nest_resource_cost
 
@@ -66,7 +66,7 @@ class NestSystem(System):
             message = "Failed to build nest: not enough resources."
             details = {"status": "failed_insufficient_resources"}
 
-        # --- 3. Publish Outcome ---
+        # 3. Publish Outcome
         outcome = ActionOutcome(success, message, base_reward, details)
         self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
 

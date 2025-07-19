@@ -63,13 +63,13 @@ class ScenarioLoader(ScenarioLoaderInterface):
         if not scenario_path:
             raise ValueError("Scenario path not found in configuration.")
 
-        print(f"--- Loading scenario from: {scenario_path} ---")
+        print(f"--- Loading scenario from: {scenario_path}")
         with open(scenario_path, "r") as f:
             self.scenario_data = json.load(f)
 
         self._create_resources()
         self._create_agents()
-        print(f"--- Scenario '{self.scenario_data.get('name', 'Untitled')}' loaded successfully. ---")
+        print(f"--- Scenario '{self.scenario_data.get('name', 'Untitled')}' loaded successfully.")
 
     def _define_archetypes(self):
         """
@@ -135,7 +135,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
                     self.simulation_state.environment.update_entity_position(entity_id, None, initial_pos)
                     agent_counter += 1
 
-        print(f"--- Created {agent_counter} agents. ---")
+        print(f"--- Created {agent_counter} agents.")
 
     def _create_resources(self):
         """Initializes resource entities by calling the random generator."""
@@ -156,7 +156,8 @@ class ScenarioLoader(ScenarioLoaderInterface):
             self.simulation_state.add_entity(res_id)
             pos = tuple(res_data["pos"])
             self.simulation_state.add_component(
-                res_id, PositionComponent(position=pos, environment=self.simulation_state.environment)
+                res_id,
+                PositionComponent(position=pos, environment=self.simulation_state.environment),
             )
 
             component_params = {
@@ -173,7 +174,7 @@ class ScenarioLoader(ScenarioLoaderInterface):
             self.simulation_state.add_component(res_id, ResourceComponent(**component_params))
             self.simulation_state.environment.update_entity_position(res_id, None, pos)
 
-        print(f"--- Created {len(resources_to_create)} resources randomly. ---")
+        print(f"--- Created {len(resources_to_create)} resources randomly.")
 
     def _prepare_component_kwargs(self, initial_pos: tuple) -> Dict[str, Any]:
         """Gathers all possible constructor arguments for any component from the config."""

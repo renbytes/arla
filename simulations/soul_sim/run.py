@@ -70,7 +70,7 @@ async def setup_and_run(
 ):
     """Asynchronous setup and execution for the simulation."""
 
-    print(f"--- [{task_id}] Initializing Soul-Sim ---")
+    print(f"--- [{task_id}] Initializing Soul-Sim")
 
     # 1. Load, merge, and validate the final configuration
     try:
@@ -89,7 +89,10 @@ async def setup_and_run(
     db_manager = AsyncDatabaseManager()
     database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
     mlflow_exporter = MLflowExporter()
-    environment = GridWorld(width=config.environment.grid_world_size[0], height=config.environment.grid_world_size[1])
+    environment = GridWorld(
+        width=config.environment.grid_world_size[0],
+        height=config.environment.grid_world_size[1],
+    )
     providers = {
         "action_generator": SoulSimActionGenerator(),
         "decision_selector": SoulSimDecisionSelector(),
@@ -127,7 +130,7 @@ async def setup_and_run(
         scenario_loader_instance.load()
 
     # 5. Register all systems with the manager
-    # --- FIX: Register systems with inter-dependencies in the correct order ---
+    # FIX: Register systems with inter-dependencies in the correct order
 
     # Register CausalGraphSystem first because QLearningSystem depends on it.
     manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
@@ -174,9 +177,9 @@ async def setup_and_run(
     manager.register_system(RenderSystem)
 
     # 6. Run the simulation
-    print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick} ---")
+    print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick}")
     await manager.run(start_step=starting_tick)
-    print(f"--- [{task_id}] Simulation loop finished for run: {run_id} ---")
+    print(f"--- [{task_id}] Simulation loop finished for run: {run_id}")
 
     if render_system := manager.system_manager.get_system(RenderSystem):
         render_system.finalize()

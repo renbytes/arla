@@ -19,11 +19,7 @@ from agent_core.cognition.narrative_context_provider_interface import (
 from agent_core.core.ecs.abstractions import SimulationState
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
-    AffectComponent,
     Component,
-    EmotionComponent,
-    GoalComponent,
-    IdentityComponent,
     TimeBudgetComponent,
     ValueSystemComponent,
 )
@@ -98,22 +94,17 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
             return None
 
         q_comp = simulation_state.get_component(entity_id, QLearningComponent)
-        if not isinstance(q_comp, QLearningComponent):
-            return random.choice(possible_actions)
-
-        if random.random() < q_comp.current_epsilon:
+        if not isinstance(q_comp, QLearningComponent) or random.random() < q_comp.current_epsilon:
             return random.choice(possible_actions)
 
         best_action: Optional[ActionPlanComponent] = None
         max_q_value = -float("inf")
 
+        # CORRECTED: This block now correctly uses the self.state_encoder instance
+        # instead of calling a non-existent method on simulation_state.
         state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
-        internal_features = simulation_state.get_internal_state_features_for_entity(
-            simulation_state.get_component(entity_id, IdentityComponent),
-            simulation_state.get_component(entity_id, AffectComponent),
-            simulation_state.get_component(entity_id, GoalComponent),
-            simulation_state.get_component(entity_id, EmotionComponent),
-        )
+        entity_components = simulation_state.entities.get(entity_id, {})
+        internal_features = self.state_encoder.encode_internal_state(entity_components, simulation_state.config)
         state_tensor = torch.tensor(state_features, dtype=torch.float32).unsqueeze(0)
         internal_tensor = torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0)
 

@@ -8,18 +8,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 import numpy as np
 from agent_core.core.ecs.abstractions import AbstractSimulationState
 from agent_core.core.ecs.component import (
-    AffectComponent,
     Component,
-    EmotionComponent,
-    GoalComponent,
-    IdentityComponent,
 )
 from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
 from agent_persist.models import AgentSnapshot, ComponentSnapshot, SimulationSnapshot
-from numpy.typing import NDArray
-
-# Imports from agent_core
-from agent_engine.cognition.identity.domain_identity import IdentityDomain
 
 # Forward references for type hinting to avoid circular imports
 if TYPE_CHECKING:
@@ -144,59 +136,3 @@ class SimulationState(AbstractSimulationState):
             if all(comp_type in components for comp_type in component_types):
                 matching_entities[entity_id] = components
         return matching_entities
-
-    def get_internal_state_features_for_entity(
-        self,
-        id_comp: Optional[IdentityComponent],
-        aff_comp: Optional[AffectComponent],
-        goal_comp: Optional[GoalComponent],
-        emo_comp: Optional[EmotionComponent],
-    ) -> NDArray[np.float32]:
-        features: List[NDArray[np.float32]] = []
-        flags: List[float] = []
-        # Use direct attribute access on the validated config object
-        main_embedding_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
-
-        if emo_comp and aff_comp:
-            features.append(
-                np.array(
-                    [
-                        emo_comp.valence,
-                        emo_comp.arousal,
-                        aff_comp.prediction_delta_magnitude,
-                        aff_comp.predictive_delta_smooth,
-                    ],
-                    dtype=np.float32,
-                )
-            )
-            flags.append(1.0)
-        else:
-            features.append(np.zeros(4, dtype=np.float32))
-            flags.append(0.0)
-
-        if (
-            goal_comp
-            and goal_comp.current_symbolic_goal
-            and goal_comp.current_symbolic_goal in goal_comp.symbolic_goals_data
-        ):
-            embedding = goal_comp.symbolic_goals_data[goal_comp.current_symbolic_goal]["embedding"]
-            features.append(embedding.astype(np.float32))
-            flags.append(1.0)
-        else:
-            features.append(np.zeros(main_embedding_dim, dtype=np.float32))
-            flags.append(0.0)
-
-        if id_comp and hasattr(id_comp, "multi_domain_identity"):
-            flags.append(1.0)
-            domain_embeddings = [
-                id_comp.multi_domain_identity.get_domain_embedding(domain).astype(np.float32)
-                for domain in IdentityDomain
-            ]
-            features.append(np.concatenate(domain_embeddings))
-        else:
-            flags.append(0.0)
-            num_domains = len(IdentityDomain)
-            features.append(np.zeros(main_embedding_dim * num_domains, dtype=np.float32))
-
-        features.append(np.array(flags, dtype=np.float32))
-        return np.concatenate(features).astype(np.float32)

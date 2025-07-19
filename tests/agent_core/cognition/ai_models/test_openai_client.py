@@ -17,7 +17,7 @@ from agent_core.cognition.ai_models.openai_client import (
 from openai import OpenAIError
 
 
-# --- Test Fixtures ---
+# Test Fixtures
 @pytest.fixture(autouse=True)
 def cleanup_openai_client():
     """Ensure the singleton client is cleared before and after each test."""
@@ -61,7 +61,7 @@ def mock_openai(mocker):
     return mock_client
 
 
-# --- Test Cases ---
+# Test Cases
 
 ## 1. get_client() Tests
 

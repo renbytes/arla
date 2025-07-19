@@ -21,7 +21,7 @@ from agent_engine.cognition.reflection.episode import Episode
 # Subject under test
 from agent_engine.systems.reflection_system import ReflectionSystem
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def reflection_system(
     return system
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 class TestReflectionSystem:
@@ -123,7 +123,7 @@ class TestReflectionSystem:
         Tests that _run_reflection_cycle correctly orchestrates the full process:
         chunking, synthesizing, and publishing.
         """
-        # --- Arrange ---
+        # Arrange
         # Use the correct key "action_plan" to match what ActionSystem publishes.
         reflection_system.event_buffer["agent1"] = [
             {
@@ -133,7 +133,7 @@ class TestReflectionSystem:
         ]
         components = mock_simulation_state.entities["agent1"]
 
-        # --- Act ---
+        # Act
         # The component check is validated in a separate test, so we patch it here
         # to isolate the orchestration logic.
         with patch.object(reflection_system, "_all_required_components_present", return_value=True):
@@ -144,7 +144,7 @@ class TestReflectionSystem:
                 is_final_reflection=False,
             )
 
-        # --- Assert ---
+        # Assert
         # 1. Verify episode chunking and processing was attempted
         # It should call the scaffold to get a theme for the new episode
         # Use keyword arguments to match the actual implementation

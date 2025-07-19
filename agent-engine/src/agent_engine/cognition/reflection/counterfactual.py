@@ -44,7 +44,8 @@ def generate_counterfactual(
         return None
 
     factual_instance = next(
-        (record for record in mem_comp.causal_data if record.get("event_id") == target_event_id), None
+        (record for record in mem_comp.causal_data if record.get("event_id") == target_event_id),
+        None,
     )
 
     if not factual_instance:

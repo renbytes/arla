@@ -41,7 +41,7 @@ class CombatSystem(System):
         if not isinstance(target_id, str):
             return
 
-        # --- 1. Validate Combatants ---
+        # 1. Validate Combatants
         attacker_comps = self.simulation_state.entities.get(attacker_id, {})
         defender_comps = self.simulation_state.entities.get(target_id, {})
 
@@ -56,7 +56,7 @@ class CombatSystem(System):
             self._publish_outcome(attacker_id, action_plan, outcome, event_data["current_tick"])
             return
 
-        # --- 2. Resolve Combat ---
+        # 2. Resolve Combat
         attacker_combat = attacker_comps.get(CombatComponent)
         defender_health = defender_comps.get(HealthComponent)
         if not isinstance(attacker_combat, CombatComponent) or not isinstance(defender_health, HealthComponent):
@@ -69,7 +69,7 @@ class CombatSystem(System):
         result = _resolve_combat(attacker_combat.attack_power, rng)
         damage = result["damage_dealt"]
 
-        # --- 3. Apply Consequences ---
+        # 3. Apply Consequences
         defender_health.current_health -= damage
         was_defeated = defender_health.current_health <= 0
 
@@ -92,7 +92,7 @@ class CombatSystem(System):
                     },
                 )
 
-        # --- 4. Create and Publish Outcome ---
+        # 4. Create and Publish Outcome
         # Use direct attribute access on the validated Pydantic model
         base_reward = self.config.learning.rewards.combat_reward_hit
         if was_defeated:

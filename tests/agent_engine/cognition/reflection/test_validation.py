@@ -15,7 +15,7 @@ from agent_engine.cognition.reflection.validation import (
     calculate_confidence_score,
 )
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def rule_validator(sample_episode, mock_cognitive_scaffold, mock_openai_key):
         yield validator
 
 
-# --- Test Cases for RuleValidator ---
+# Test Cases for RuleValidator
 
 
 def test_check_coherence():
@@ -118,7 +118,7 @@ def test_check_factual_alignment_empty_inference(rule_validator):
     assert alignment_score == 0.0
 
 
-# --- Test Cases for calculate_confidence_score ---
+# Test Cases for calculate_confidence_score
 
 
 def test_calculate_confidence_score_coherent_and_aligned():

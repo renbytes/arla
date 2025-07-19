@@ -75,7 +75,13 @@ def mock_event_bus():
 
 @pytest.fixture
 @patch("agent_engine.systems.affect_system.action_registry")
-def affect_system(mock_registry, mock_simulation_state, mock_providers, mock_emotional_dynamics, mock_event_bus):
+def affect_system(
+    mock_registry,
+    mock_simulation_state,
+    mock_providers,
+    mock_emotional_dynamics,
+    mock_event_bus,
+):
     """Provides an initialized AffectSystem with its core dependencies mocked."""
     mock_registry.action_ids = ["test_action"]
     mock_simulation_state.event_bus = mock_event_bus
@@ -90,9 +96,16 @@ def affect_system(mock_registry, mock_simulation_state, mock_providers, mock_emo
     return system
 
 
-@patch("agent_engine.systems.affect_system.get_emotion_from_affect", return_value="discovered_joy")
+@patch(
+    "agent_engine.systems.affect_system.get_emotion_from_affect",
+    return_value="discovered_joy",
+)
 def test_on_action_executed_updates_affect_and_emotion(
-    mock_get_emotion, affect_system, mock_simulation_state, mock_providers, mock_emotional_dynamics
+    mock_get_emotion,
+    affect_system,
+    mock_simulation_state,
+    mock_providers,
+    mock_emotional_dynamics,
 ):
     """Tests the full event handler cycle for a standard action outcome."""
     action_outcome = ActionOutcome(success=True, message="", base_reward=5.0, details={})

@@ -10,10 +10,10 @@ from rich import print
 from rich.console import Console
 from rich.table import Table
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Global constants that are **objects**, not *calls* in the function default
 # positions – this satisfies flake8‑bugbear B008.
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -49,7 +49,7 @@ EXPERIMENTS_DIR_OPTION = typer.Option(
     file_okay=False,
 )
 
-# --- CLI App Initialization -------------------------------------------------
+# CLI App Initialization----------------------------------------------
 # Create a Typer app for a clean command‑line interface.
 app = typer.Typer(
     name="agentsim",
@@ -59,9 +59,9 @@ app = typer.Typer(
 console = Console()
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Command: run‑experiment
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 @app.command(name="run-experiment")
 def run_experiment(
     experiment_file: Path = EXPERIMENT_FILE_ARGUMENT,
@@ -78,7 +78,7 @@ def run_experiment(
         # B904 – explicitly chain the original exception.
         raise typer.Exit(code=1) from e
 
-    # --- Load and merge configurations -------------------------------------
+    # Load and merge configurations----------------------------------
     base_config_path = PROJECT_ROOT / exp_def.get("base_config_path", "")  # type: ignore
     if not base_config_path.exists():
         print(f"[bold red]Error: Base config file not found at {base_config_path}[/bold red]")
@@ -120,9 +120,9 @@ def run_experiment(
     print("Monitor your Celery workers and MLflow UI for progress.")
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Command: start‑worker
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 @app.command(name="start-worker")
 def start_worker(
     # B008 – the Option objects are defined at module level.
@@ -160,9 +160,9 @@ def start_worker(
         raise typer.Exit(code=1) from e
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Command: list‑experiments
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 @app.command(name="list-experiments")
 def list_experiments(
     experiments_dir: Path = EXPERIMENTS_DIR_OPTION,
@@ -190,9 +190,9 @@ def list_experiments(
     console.print(table)
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Command: health‑check
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 @app.command(name="health-check")
 def health_check():
     """Ping the Celery workers to check if they are operational."""
@@ -218,8 +218,8 @@ def health_check():
         raise typer.Exit(code=1) from e
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Script entry‑point
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 if __name__ == "__main__":
     app()

@@ -10,7 +10,7 @@ from agent_core.environment.interface import EnvironmentInterface
 
 from simulations.soul_sim.components import PositionComponent, ResourceComponent
 
-# --- Resource Constants ---
+# Resource Constants
 RESOURCE_TYPES: Dict[str, Dict[str, Any]] = {
     "SINGLE_NODE": {
         "min_agents": 1,
@@ -41,7 +41,7 @@ RESOURCE_TYPES: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# --- Resource Management Functions ---
+# Resource Management Functions
 
 
 def init_resources(

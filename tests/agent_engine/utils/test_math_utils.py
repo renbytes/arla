@@ -10,7 +10,7 @@ from agent_engine.utils.math_utils import (
     safe_normalize_vector,
 )
 
-# --- Test Cases for safe_divide ---
+# Test Cases for safe_divide
 
 
 @pytest.mark.parametrize(
@@ -31,7 +31,7 @@ def test_safe_divide(numerator, denominator, default, expected):
     assert safe_divide(numerator, denominator, default) == pytest.approx(expected)
 
 
-# --- Test Cases for safe_cosine_similarity ---
+# Test Cases for safe_cosine_similarity
 
 
 def test_safe_cosine_similarity_identical_vectors():
@@ -70,7 +70,7 @@ def test_safe_cosine_similarity_with_zero_vector():
     assert safe_cosine_similarity(vec2, vec1) == pytest.approx(0.0)
 
 
-# --- Test Cases for safe_normalize_vector ---
+# Test Cases for safe_normalize_vector
 
 
 def test_safe_normalize_vector_standard():

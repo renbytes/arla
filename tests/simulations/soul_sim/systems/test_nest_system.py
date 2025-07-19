@@ -9,7 +9,11 @@ import pytest
 from agent_engine.simulation.simulation_state import SimulationState
 from omegaconf import OmegaConf
 
-from simulations.soul_sim.components import InventoryComponent, NestComponent, PositionComponent
+from simulations.soul_sim.components import (
+    InventoryComponent,
+    NestComponent,
+    PositionComponent,
+)
 from simulations.soul_sim.config.schemas import SoulSimAppConfig
 from simulations.soul_sim.systems.nest_system import NestSystem
 
@@ -47,7 +51,11 @@ def test_nest_creation_success(system_setup):
         NestComponent(),
     ]
 
-    event_data = {"entity_id": agent_id, "action_plan_component": MagicMock(), "current_tick": 5}
+    event_data = {
+        "entity_id": agent_id,
+        "action_plan_component": MagicMock(),
+        "current_tick": 5,
+    }
     system.on_execute_nest_action(event_data)
 
     mock_bus.publish.assert_called_once()
@@ -71,7 +79,11 @@ def test_nest_creation_fails_insufficient_resources(system_setup):
         NestComponent(),
     ]
 
-    event_data = {"entity_id": agent_id, "action_plan_component": MagicMock(), "current_tick": 5}
+    event_data = {
+        "entity_id": agent_id,
+        "action_plan_component": MagicMock(),
+        "current_tick": 5,
+    }
     system.on_execute_nest_action(event_data)
 
     mock_bus.publish.assert_called_once()
@@ -86,7 +98,11 @@ def test_nest_creation_fails_missing_component(system_setup):
     system, mock_state, mock_bus = system_setup
     mock_state.get_component.return_value = None  # Simulate missing component
 
-    event_data = {"entity_id": "agent_missing_comp", "action_plan_component": MagicMock(), "current_tick": 1}
+    event_data = {
+        "entity_id": "agent_missing_comp",
+        "action_plan_component": MagicMock(),
+        "current_tick": 1,
+    }
     system.on_execute_nest_action(event_data)
 
     mock_bus.publish.assert_not_called()

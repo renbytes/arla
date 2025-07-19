@@ -27,7 +27,7 @@ dependencies = [
     "agent-persist"
 ]
 
-# --- Script Entry Point ---
+# Script Entry Point
 # This makes CLI runnable after installation.
 [project.scripts]
 agentsim = "agent_sim.cli:app"

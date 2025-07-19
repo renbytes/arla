@@ -156,7 +156,7 @@ class LearningCurve(Base):
     q_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 
-# --- Asynchronous Database Setup ---
+# Asynchronous Database Setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://admin:password@postgres:5432/agent_sim_db")
 async_engine = create_async_engine(DATABASE_URL)
 async_session_maker = async_sessionmaker(bind=async_engine, expire_on_commit=False, class_=AsyncSession)

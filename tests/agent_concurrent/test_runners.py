@@ -7,7 +7,7 @@ import pytest
 # Subject under test
 from agent_concurrent.runners import AsyncSystemRunner, SerialSystemRunner
 
-# --- Mocks and Fixtures ---
+# Mocks and Fixtures
 
 
 class MockSystem:
@@ -38,7 +38,7 @@ def systems_with_failure():
     return [MockSystem("A"), MockSystem("B", should_fail=True), MockSystem("C")]
 
 
-# --- Test Cases for SerialSystemRunner ---
+# Test Cases for SerialSystemRunner
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test_serial_runner_handles_failure_and_continues(systems_with_failure,
     assert "RuntimeError: System 'B' failed as designed." in full_output
 
 
-# --- Test Cases for AsyncSystemRunner ---
+# Test Cases for AsyncSystemRunner
 
 
 @pytest.mark.asyncio

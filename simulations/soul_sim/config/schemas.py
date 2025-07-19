@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 
-# --- LLM ---
+# LLM
 class LLMConfig(BaseModel):
     provider: str
     completion_model: str
@@ -19,7 +19,7 @@ class LLMConfig(BaseModel):
     reflection_prompt_prefix: str
 
 
-# --- Learning Sub-configs ---
+# Learning Sub-configs
 class QLearningConfig(BaseModel):
     initial_epsilon: float
     epsilon_decay_rate: float
@@ -76,7 +76,7 @@ class CriticalStateConfig(BaseModel):
     resource_threshold: float
 
 
-# --- Top-level Learning Config ---
+# Top-level Learning Config
 class LearningConfig(BaseModel):
     q_learning: QLearningConfig
     rewards: RewardsConfig
@@ -86,7 +86,7 @@ class LearningConfig(BaseModel):
     critical_state: CriticalStateConfig
 
 
-# --- Environment ---
+# Environment
 class EnvironmentConfig(BaseModel):
     grid_world_size: Tuple[int, int]
     num_single_resources: int
@@ -104,7 +104,7 @@ class EnvironmentConfig(BaseModel):
     combat_time_loss_percent: float
 
 
-# --- Agent Sub-configs ---
+# Agent Sub-configs
 class VitalsConfig(BaseModel):
     initial_time_budget: float
     initial_health: float
@@ -208,7 +208,7 @@ class AgentConfig(BaseModel):
     identity_dynamics: IdentityDynamicsConfig
 
 
-# --- Simulation ---
+# Simulation
 class SimulationConfig(BaseModel):
     steps: int
     log_directory: str
@@ -218,7 +218,7 @@ class SimulationConfig(BaseModel):
     random_seed: Optional[int] = None
 
 
-# --- The Main Application Config Schema ---
+# The Main Application Config Schema
 class SoulSimAppConfig(BaseModel):
     """The single, validated, hierarchical configuration model for soul-sim."""
 

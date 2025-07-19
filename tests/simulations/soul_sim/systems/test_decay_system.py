@@ -71,5 +71,9 @@ async def test_inactivation_by_health_depletion(system_setup):
     # With the bug fixed in DecaySystem, this assertion will now pass
     mock_bus.publish.assert_called_once_with(
         "entity_inactivated",
-        {"entity_id": "agent_dies_health", "current_tick": 99, "reason": "health depletion"},
+        {
+            "entity_id": "agent_dies_health",
+            "current_tick": 99,
+            "reason": "health depletion",
+        },
     )
