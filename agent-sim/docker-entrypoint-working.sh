@@ -12,11 +12,11 @@ done
 echo "PostgreSQL started"
 
 # Run the database initialization script
-echo "--- Running database initialization ---"
+echo "--- Running database initialization"
 python -m agent_sim.infrastructure.database.init_db
 
 # The database is now ready.
 # `exec "$@"` runs the command passed to the script. In a Dockerfile,
 # this will be the CMD instruction (e.g., starting the celery worker).
-echo "--- DB initialization complete. Starting worker... ---"
+echo "--- DB initialization complete. Starting worker..."
 exec "$@"

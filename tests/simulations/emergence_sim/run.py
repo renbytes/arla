@@ -8,7 +8,7 @@ from pydantic import ValidationError
 # The function we are testing
 from simulations.emergence_sim.run import setup_and_run
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def minimal_valid_config_dict():
     }
 
 
-# --- Unit Tests ---
+# Unit Tests
 
 
 @pytest.mark.asyncio

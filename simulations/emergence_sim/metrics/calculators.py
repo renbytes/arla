@@ -40,7 +40,9 @@ class EmergenceMetricsCalculator(MetricsCalculatorInterface):
         return metrics
 
     def _get_component_data(
-        self, entities: List[Dict[Type[Component], Component]], comp_type: Type[Component]
+        self,
+        entities: List[Dict[Type[Component], Component]],
+        comp_type: Type[Component],
     ) -> List[Any]:
         """Helper to safely extract a list of components from all entities."""
         return [e.get(comp_type) for e in entities if e.get(comp_type) is not None]
@@ -65,7 +67,11 @@ class EmergenceMetricsCalculator(MetricsCalculatorInterface):
         resources = np.array([inv.current_resources for inv in inventories])
 
         if resources.size == 0:
-            return {"total_resources": 0.0, "average_resources": 0.0, "gini_coefficient_resources": 0.0}
+            return {
+                "total_resources": 0.0,
+                "average_resources": 0.0,
+                "gini_coefficient_resources": 0.0,
+            }
 
         return {
             "total_resources": float(resources.sum()),
@@ -74,7 +80,9 @@ class EmergenceMetricsCalculator(MetricsCalculatorInterface):
         }
 
     def _calculate_social_metrics(
-        self, entities: List[Dict[Type[Component], Component]], sim_state: SimulationState
+        self,
+        entities: List[Dict[Type[Component], Component]],
+        sim_state: SimulationState,
     ) -> Dict[str, float]:
         """Measures the structure of social capital and relationships."""
         social_credits_comps = self._get_component_data(entities, SocialCreditComponent)
@@ -109,14 +117,22 @@ class EmergenceMetricsCalculator(MetricsCalculatorInterface):
         conceptual_spaces = self._get_component_data(entities, ConceptualSpaceComponent)
 
         if not conceptual_spaces:
-            return {"total_unique_symbols": 0.0, "symbol_dominance": 0.0, "average_symbols_per_agent": 0.0}
+            return {
+                "total_unique_symbols": 0.0,
+                "symbol_dominance": 0.0,
+                "average_symbols_per_agent": 0.0,
+            }
 
         all_symbols = []
         for space in conceptual_spaces:
             all_symbols.extend(space.concepts.keys())
 
         if not all_symbols:
-            return {"total_unique_symbols": 0.0, "symbol_dominance": 0.0, "average_symbols_per_agent": 0.0}
+            return {
+                "total_unique_symbols": 0.0,
+                "symbol_dominance": 0.0,
+                "average_symbols_per_agent": 0.0,
+            }
 
         symbol_counts = Counter(all_symbols)
         total_unique_symbols = len(symbol_counts)

@@ -11,7 +11,7 @@ from agent_engine.simulation.simulation_state import SimulationState
 from agent_persist.models import SimulationSnapshot
 from omegaconf import OmegaConf
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
         patch("agent_engine.simulation.engine.EventBus", autospec=True) as mock_event_bus,
         patch("agent_engine.simulation.engine.FileStateStore", autospec=True) as mock_file_store,
     ):
-        # --- Configure Mock Instances ---
+        # Configure Mock Instances
         mock_sim_state_instance = mock_sim_state.return_value
         mock_system_manager_instance = mock_system_manager.return_value
 
@@ -73,10 +73,10 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
         mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
         mock_dependencies["environment"].to_dict.return_value = {"world_data": "empty"}
 
-        # --- Instantiate the Manager ---
+        # Instantiate the Manager
         manager = SimulationManager(config=mock_config, **mock_dependencies)
 
-        # --- Attach Mocks to the Manager for Easy Access in Tests ---
+        # Attach Mocks to the Manager for Easy Access in Tests
         manager.mock_system_manager = mock_system_manager_instance
         manager.mock_sim_state = mock_sim_state_instance
         manager.mock_scaffold = mock_scaffold.return_value
@@ -86,7 +86,7 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
         yield manager
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_initialization_and_scenario_loading(sim_manager_with_mocks, mock_dependencies):
@@ -111,7 +111,7 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
     2. The critical order of operations is correct: systems update BEFORE entity turns are processed.
     3. State is saved at the end of the simulation.
     """
-    # --- Arrange ---
+    # Arrange
     manager = sim_manager_with_mocks
     call_order_tracker = []
 
@@ -122,10 +122,10 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
         lambda simulation_state, entity_id, current_tick: call_order_tracker.append(f"process_turn_tick_{current_tick}")
     )
 
-    # --- Act ---
+    # Act
     await manager.run()
 
-    # --- Assert ---
+    # Assert
     # 1. Verify the loop ran for 3 steps
     assert manager.system_manager.update_all.call_count == 3
     assert mock_dependencies["action_generator"].generate.call_count == 3
@@ -156,7 +156,7 @@ async def test_run_loop_stops_when_no_active_entities(sim_manager_with_mocks, mo
     Tests the edge case where the simulation ends prematurely because all
     agents have become inactive.
     """
-    # --- Arrange ---
+    # Arrange
     manager = sim_manager_with_mocks
 
     inactive_entity_components = {TimeBudgetComponent: TimeBudgetComponent(0)}
@@ -164,10 +164,10 @@ async def test_run_loop_stops_when_no_active_entities(sim_manager_with_mocks, mo
     manager.simulation_state.entities = {"agent1": inactive_entity_components}
     manager.simulation_state.get_component.return_value = inactive_entity_components[TimeBudgetComponent]
 
-    # --- Act ---
+    # Act
     await manager.run()
 
-    # --- Assert ---
+    # Assert
     manager.system_manager.update_all.assert_not_called()
     mock_dependencies["action_generator"].generate.assert_not_called()
 
@@ -181,7 +181,7 @@ def test_load_state_replaces_simulation_state(sim_manager_with_mocks):
     Tests that loading from a checkpoint correctly replaces the existing
     simulation state with a new one created from a snapshot.
     """
-    # --- Arrange ---
+    # Arrange
     manager = sim_manager_with_mocks
     original_sim_state = manager.simulation_state
 
@@ -195,10 +195,10 @@ def test_load_state_replaces_simulation_state(sim_manager_with_mocks):
         new_mock_state.current_tick = 100
         mock_from_snapshot.return_value = new_mock_state
 
-        # --- Act ---
+        # Act
         manager.load_state("/fake/path/to/snapshot.json")
 
-        # --- Assert ---
+        # Assert
         # Assert that the `load` method was called on the instance mock we already have.
         manager.mock_file_store.load.assert_called_once_with()
 

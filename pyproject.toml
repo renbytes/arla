@@ -63,7 +63,7 @@ dev = [
 "Homepage" = "https://github.com/renbytes/arla" # Example URL
 "Bug Tracker" = "https://github.com/renbytes/arla/issues"
 
-# --- UNIFIED TOOL CONFIGURATION ---
+# UNIFIED TOOL CONFIGURATION
 
 [tool.ruff]
 # Global settings like 'exclude' and 'line-length' live at the top level

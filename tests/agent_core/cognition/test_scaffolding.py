@@ -6,7 +6,7 @@ import pytest
 # Subject under test
 from agent_core.cognition.scaffolding import CognitiveScaffold
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def scaffold(mock_dependencies):
     return scaffold_instance
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_scaffold_query_calls_llm_and_logs_correctly(scaffold, mock_dependencies):

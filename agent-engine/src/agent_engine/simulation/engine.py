@@ -53,7 +53,7 @@ class SimulationManager:
         self.save_path = Path(self.config.simulation.log_directory) / "snapshots"
         self.db_logger = db_logger
 
-        # --- Injected Dependencies ---
+        # Injected Dependencies
         self.environment = environment
         self.scenario_loader = scenario_loader
         self.action_generator = action_generator
@@ -95,10 +95,10 @@ class SimulationManager:
         print(f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}...")
 
         for step in range(start_step, num_steps):
-            print(f"\n--- Simulation Step {step + 1}/{num_steps} ---")
+            print(f"\n--- Simulation Step {step + 1}/{num_steps}")
             self.simulation_state.current_tick = step
 
-            # --- 1. CHECK FOR ACTIVE ENTITIES (EXIT EARLY IF NONE) ---
+            # 1. CHECK FOR ACTIVE ENTITIES (EXIT EARLY IF NONE)
             active_entities: List[str] = []
             for eid, comps in self.simulation_state.entities.items():
                 time_comp = comps.get(TimeBudgetComponent)
@@ -109,27 +109,27 @@ class SimulationManager:
                 print("All entities are inactive. Ending simulation.")
                 break
 
-            # --- 2. UPDATE ALL SYSTEMS ONCE (e.g., for state caching) ---
+            # 2. UPDATE ALL SYSTEMS ONCE (e.g., for state caching)
             await self.system_manager.update_all(current_tick=step)
 
-            # --- 3. PROCESS ENTITY TURNS ---
+            # 3. PROCESS ENTITY TURNS
             if self.main_rng:
                 self.main_rng.shuffle(active_entities)
 
             for entity_id in active_entities:
                 self._process_entity_turn(entity_id, step)
 
-            # --- 4. PERIODICALLY SAVE STATE ---
+            # 4. PERIODICALLY SAVE STATE
             if step > 0 and step % 50 == 0:
                 self.save_state(step)
 
-        # --- 5. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES ---
+        # 5. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES
         print("\nSimulation loop finished.")
         self.save_state(num_steps)
 
     def save_state(self, tick: int) -> None:
         """Saves the current simulation state to a file."""
-        print(f"--- Saving state at tick {tick} ---")
+        print(f"--- Saving state at tick {tick}")
         snapshot = self.simulation_state.to_snapshot()
         filepath = self.save_path / self.simulation_id / f"snapshot_tick_{tick}.json"
         store = FileStateStore(filepath)
@@ -140,7 +140,7 @@ class SimulationManager:
         Loads the entire simulation state from a checkpoint file.
         This replaces the existing self.simulation_state with a new one.
         """
-        print(f"--- Loading state from {filepath} ---")
+        print(f"--- Loading state from {filepath}")
         store = FileStateStore(Path(filepath))
         snapshot = store.load()
 
@@ -154,7 +154,7 @@ class SimulationManager:
             db_logger=self.db_logger,
         )
 
-        print(f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1} ---")
+        print(f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1}")
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
         """Handles the decision-making and action-dispatching for a single entity."""

@@ -83,10 +83,10 @@ class Component(CognitiveComponent):
         return False  # Default: no auto-fix
 
 
-# --------------------------------------------------------------------------
-# --- Core Cognitive Components (World-Agnostic) ---
+# -----------------------------------------------------------------------
+# Core Cognitive Components (World-Agnostic)
 # These components define the internal, psychological state of an agent.
-# --------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 
 class MemoryComponent(Component):
@@ -343,11 +343,11 @@ class ValueSystemComponent(Component):
         return True, []
 
 
-# --------------------------------------------------------------------------
-# --- Agnostic Utility Components ---
+# -----------------------------------------------------------------------
+# Agnostic Utility Components
 # These components are necessary for the engine to function but are not
 # part of the agent's core cognitive state.
-# --------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 
 class TimeBudgetComponent(Component):

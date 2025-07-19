@@ -19,6 +19,7 @@ from agent_sim.infrastructure.database.async_database_manager import (
     AsyncDatabaseManager,
 )
 from agent_sim.infrastructure.logging.database_emitter import DatabaseEmitter
+from agent_sim.infrastructure.logging.mlflow_exporter import MLflowExporter
 from omegaconf import OmegaConf
 
 from simulations.emergence_sim.config.schemas import EmergenceSimAppConfig
@@ -41,17 +42,23 @@ from simulations.emergence_sim.simulation.component_factory import (
 from simulations.emergence_sim.simulation.scenario_loader import (
     EmergenceScenarioLoader,
 )
+from simulations.emergence_sim.systems.decay_system import DecaySystem
+from simulations.emergence_sim.systems.move_system import MovementSystem
 from simulations.emergence_sim.systems.narrative_consensus_system import (
     NarrativeConsensusSystem,
 )
 from simulations.emergence_sim.systems.normative_abstraction_system import (
     NormativeAbstractionSystem,
 )
+from simulations.emergence_sim.systems.object_interaction_system import (
+    ObjectInteractionSystem,
+)
 from simulations.emergence_sim.systems.ritualization_system import RitualizationSystem
 from simulations.emergence_sim.systems.social_credit_system import SocialCreditSystem
 from simulations.emergence_sim.systems.symbol_negotiation_system import (
     SymbolNegotiationSystem,
 )
+from simulations.emergence_sim.systems.synergy_system import SynergySystem
 
 
 def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overrides: Dict[str, Any]):
@@ -71,7 +78,7 @@ async def setup_and_run(
 ):
     """Asynchronous setup and execution for the simulation."""
 
-    print(f"--- [{task_id}] Initializing Emergence-Sim ---")
+    print(f"--- [{task_id}] Initializing Emergence-Sim")
 
     # 1. Load, merge, and validate the final configuration
     try:
@@ -89,6 +96,7 @@ async def setup_and_run(
     action_registry.load_actions_from_paths(config.action_modules)
     db_manager = AsyncDatabaseManager()
     database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
+    mlflow_exporter = MLflowExporter()
     environment = EmergenceEnvironment(
         width=config.environment.grid_world_size[0],
         height=config.environment.grid_world_size[1],
@@ -135,7 +143,7 @@ async def setup_and_run(
         manager.scenario_loader.load()
 
     # 5. Register all systems with the manager
-    # --- Register systems with inter-dependencies in the correct order ---
+    # Register systems with inter-dependencies in the correct order
     manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
     causal_system_instance = manager.system_manager.get_system(CausalGraphSystem)
 
@@ -161,12 +169,16 @@ async def setup_and_run(
 
     # Logging and Metrics Systems
     metrics_calculator = EmergenceMetricsCalculator()
-    manager.register_system(LoggingSystem, exporters=[database_emitter])
+    manager.register_system(LoggingSystem, exporters=[database_emitter, mlflow_exporter])
     manager.register_system(
         MetricsSystem,
         calculators=[metrics_calculator],
         exporters=[database_emitter],
     )
+    manager.register_system(DecaySystem)
+    manager.register_system(MovementSystem)
+    manager.register_system(ObjectInteractionSystem)
+    manager.register_system(SynergySystem)
 
     # Conditionally register custom simulation systems
     if config.simulation.systems.enable_symbol_negotiation:
@@ -181,6 +193,6 @@ async def setup_and_run(
         manager.register_system(NormativeAbstractionSystem)
 
     # 6. Run the simulation
-    print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick} ---")
+    print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick}")
     await manager.run(start_step=starting_tick)
-    print(f"--- [{task_id}] Simulation loop finished for run: {run_id} ---")
+    print(f"--- [{task_id}] Simulation loop finished for run: {run_id}")

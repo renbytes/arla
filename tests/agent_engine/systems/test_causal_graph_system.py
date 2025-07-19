@@ -80,13 +80,17 @@ async def test_update_builds_model_periodically(mock_causal_model, system_setup)
     system, mock_state, _, _, agent_id = system_setup
     mem_comp = mock_state.get_component(agent_id, MemoryComponent)
 
-    # Provide realistic data for the DataFrame
     mem_comp.causal_data = [
         {"state_health": "ok", "state_location": "A", "action": "move", "outcome": 1} for _ in range(25)
     ]
     mock_state.get_entities_with_components.return_value = {agent_id: {MemoryComponent: mem_comp}}
 
-    await system.update(current_tick=50)
+    # Patch the action_registry to ensure it's not empty, preventing errors.
+    with patch(
+        "agent_engine.systems.causal_graph_system.core_action_registry.action_registry._actions",
+        {"move": None},
+    ):
+        await system.update(current_tick=50)
 
     mock_causal_model.assert_called_once()
     assert mem_comp.causal_model is not None

@@ -25,7 +25,7 @@ from agent_engine.cognition.identity.domain_identity import (
 # Subject under test
 from agent_engine.systems.identity_system import IdentitySystem
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -97,7 +97,7 @@ def identity_system(
         yield system
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_on_reflection_completed_updates_identity(

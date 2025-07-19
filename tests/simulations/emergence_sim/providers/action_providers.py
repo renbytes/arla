@@ -15,7 +15,7 @@ from simulations.emergence_sim.providers.action_providers import (
     EmergenceDecisionSelector,
 )
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ def mock_action_plans(mock_config):
     return plans
 
 
-# --- Unit Tests for EmergenceDecisionSelector ---
+# Unit Tests for EmergenceDecisionSelector
 
 
 def test_decision_selector_exploit_selects_best_action(mock_state_encoder, mock_simulation_state, mock_action_plans):

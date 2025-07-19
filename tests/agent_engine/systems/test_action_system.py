@@ -15,7 +15,7 @@ from agent_core.core.ecs.component import (
 # Subject under test
 from agent_engine.systems.action_system import ActionSystem
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def action_system(mock_simulation_state, mock_reward_calculator, mock_event_bus)
     return system
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 class TestActionSystem:

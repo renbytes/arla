@@ -4,7 +4,7 @@
 set -e
 
 # Install local packages now that the volume is mounted
-echo "--- Installing local packages ---"
+echo "--- Installing local packages"
 pip install --no-cache-dir -r requirements-local.txt
 
 # Wait for the database to be ready
@@ -15,9 +15,9 @@ done
 echo "PostgreSQL started"
 
 # Run the database initialization script
-echo "--- Running database initialization ---"
+echo "--- Running database initialization"
 python -m agent_sim.infrastructure.database.init_db
 
 # The database is now ready.
-echo "--- DB initialization complete. Starting worker... ---"
+echo "--- DB initialization complete. Starting worker..."
 exec "$@"

@@ -16,7 +16,7 @@ from agent_core.core.ecs.component import (
 # Subject under test
 from agent_engine.systems.goal_system import GoalSystem
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def mock_simulation_state():
     """Mocks the SimulationState and its contained components."""
     state = MagicMock()
 
-    # --- Mock Components ---
+    # Mock Components
     goal_comp = GoalComponent(embedding_dim=4)
     goal_comp.symbolic_goals_data = {
         "existing_goal": {
@@ -130,7 +130,7 @@ def goal_system(
         # 3. Configure the mock KMeans class to return our instance when fit() is called
         mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
 
-        # --- The rest of the fixture is unchanged ---
+        # The rest of the fixture is unchanged
         mock_simulation_state.event_bus = mock_event_bus
 
         mock_config = SimpleNamespace(
@@ -145,7 +145,7 @@ def goal_system(
         yield system
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitive_scaffold, mocker):

@@ -1,6 +1,6 @@
 # simulations/emergence_sim/config/emergence_config.yml
 
-# --- Core Simulation Setup ---
+# Core Simulation Setup
 simulation:
   steps: 1000
   log_directory: "data/logs/emergence_sim"
@@ -15,11 +15,11 @@ simulation:
     enable_social_credit: false
     enable_normative_abstraction: false
 
-# --- Action and Component Definitions ---
+# Action and Component Definitions
 action_modules:
   - "simulations.emergence_sim.actions.communication_actions"
   - "simulations.emergence_sim.actions.economic_actions"
-  # Note: A simple MoveAction would also be needed for spatial interaction.
+  - "simulations.emergence_sim.actions.move_action"
 
 logging:
   components_to_log:
@@ -31,7 +31,7 @@ logging:
     - "simulations.emergence_sim.components.DebtLedgerComponent"
     - "simulations.emergence_sim.components.SocialCreditComponent"
 
-# --- LLM and Agent Definitions ---
+# LLM and Agent Definitions
 llm:
   provider: "openai"
   completion_model: "gpt-4o-mini"
@@ -47,7 +47,7 @@ agent:
     vitals:
       initial_time_budget: 500.0
       initial_health: 100.0 # Not used by systems, but can be a placeholder
-      initial_resources: 5.0
+      initial_resources: 60.0
     attributes:
       initial_attack_power: 0.0 # Not relevant here
       initial_speed: 1
@@ -79,7 +79,11 @@ agent:
       agency: 0.5
       social_feedback: 0.3
 
-# --- Environment and Learning ---
+  dynamics:
+    decay:
+      resources_per_step: 1.0
+
+# Environment and Learning
 environment:
   grid_world_size: [15, 15]
   # For the "naming game", you need objects with properties, not tiered resources.

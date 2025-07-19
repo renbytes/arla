@@ -18,7 +18,7 @@ from agent_engine.simulation.simulation_state import SimulationState
 # Import snapshot models for testing
 from agent_persist.models import SimulationSnapshot
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def sim_state(config):
     return SimulationState(config=config, device="cpu")
 
 
-# --- Test Cases for Basic ECS Management ---
+# Test Cases for Basic ECS Management
 
 
 class TestECSOperations:
@@ -112,7 +112,7 @@ class TestECSOperations:
 # was correctly removed from the SimulationState class. These tests are obsolete.
 
 
-# --- Test Cases for Snapshotting ---
+# Test Cases for Snapshotting
 
 
 class TestSnapshotting:

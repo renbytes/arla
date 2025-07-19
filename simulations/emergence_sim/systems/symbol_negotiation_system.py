@@ -115,16 +115,15 @@ class SymbolNegotiationSystem(System):
         )
 
         if not perceivable_objects or not self.simulation_state.main_rng:
-            return  # No object to talk about
+            return
 
-        target_object_id, _ = self.simulation_state.main_rng.choice(perceivable_objects)
+        # Get the chosen object's data correctly, without re-randomizing
+        chosen_object_tuple = self.simulation_state.main_rng.choice(perceivable_objects)
+        target_object_id, target_object_data = chosen_object_tuple
 
-        # 2. Speaker proposes a symbol for the object.
-        # A more advanced agent would learn to select a symbol. Here, we invent one.
         proposed_symbol = f"token_{self.simulation_state.main_rng.integers(100, 999)}"
 
-        # 3. Listener attempts to guess the object based on the symbol.
-        # A more advanced agent would use its ConceptualSpaceComponent to inform the guess.
+        # 3. Listener attempts to guess the object
         listener_pos = cast(
             PositionComponent,
             self.simulation_state.get_component(listener_id, PositionComponent),
@@ -134,22 +133,30 @@ class SymbolNegotiationSystem(System):
             if self.simulation_state.environment
             else []
         )
-
         if not listener_perceived_objects:
-            return  # Listener cannot see any objects to guess from
-
+            return
         guessed_object_id, _ = self.simulation_state.main_rng.choice(listener_perceived_objects)
 
-        # 4. Evaluate success and determine reward
+        # 4. Evaluate success and determine reward based on the object's type
         success = guessed_object_id == target_object_id
+        reward = 0.0
+        message = ""
+
         if success:
-            reward = 10.0  # High reward for successful communication
-            message = f"Successfully communicated about {target_object_id}."
+            obj_type = target_object_data.get("obj_type")
+            if obj_type == "resource":
+                reward = 3.0
+                message = f"Successfully communicated about a valuable resource ({target_object_id})."
+            elif obj_type == "hazard":
+                reward = 1.0
+                message = f"Successfully communicated about a hazard ({target_object_id})."
+
             self._update_conceptual_space(speaker_id, proposed_symbol, target_object_id)
             self._update_conceptual_space(listener_id, proposed_symbol, target_object_id)
         else:
-            reward = -2.0  # Penalty for miscommunication
+            reward = -1.0
             message = f"Failed to communicate. Speaker meant {target_object_id}, Listener guessed {guessed_object_id}."
+
         # 5. Publish outcomes for both agents to learn from the interaction
         speaker_outcome = ActionOutcome(success, message, reward, {"status": "communication_judged"})
         listener_outcome = ActionOutcome(success, message, reward, {"status": "communication_judged"})

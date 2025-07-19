@@ -30,6 +30,7 @@ from simulations.emergence_sim.components import (
     PositionComponent,
     RitualComponent,
     SocialCreditComponent,
+    SynergyTrackerComponent,
 )
 
 
@@ -110,6 +111,7 @@ class EmergenceScenarioLoader(ScenarioLoaderInterface):
         self.simulation_state.add_component(agent_id, RitualComponent())
         self.simulation_state.add_component(agent_id, DebtLedgerComponent())
         self.simulation_state.add_component(agent_id, SocialCreditComponent())
+        self.simulation_state.add_component(agent_id, SynergyTrackerComponent())
 
         # Add Q-learning component using dimensions from the config
         q_config = self.config.learning.q_learning

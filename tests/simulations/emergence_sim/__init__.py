@@ -11,7 +11,7 @@ from simulations.emergence_sim.config.schemas import EmergenceSimAppConfig
 # Assume these are the paths to your classes
 from simulations.emergence_sim.simulation.scenario_loader import EmergenceScenarioLoader
 
-# --- Test Fixtures ---
+# Test Fixtures
 # Fixtures are reusable setup functions for tests.
 
 
@@ -90,7 +90,7 @@ def valid_config(tmp_path):
     return EmergenceSimAppConfig.model_validate(config_data, from_attributes=True, context={"strict": False})
 
 
-# --- Unit Tests ---
+# Unit Tests
 
 
 def test_scenario_loader_emergence_sim_load_success(

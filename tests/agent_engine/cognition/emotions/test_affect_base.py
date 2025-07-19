@@ -10,7 +10,7 @@ from agent_engine.cognition.emotions.affect_base import (
     update_affect_state,
 )
 
-# --- Test Cases for AffectiveExperience ---
+# Test Cases for AffectiveExperience
 
 
 @pytest.fixture
@@ -87,7 +87,7 @@ def test_affective_experience_to_dict(default_experience_params):
     assert exp_dict["action_type_one_hot"] == [0.0, 1.0, 0.0]
 
 
-# --- Test Cases for init_affect_state ---
+# Test Cases for init_affect_state
 
 
 def test_init_affect_state():
@@ -106,7 +106,7 @@ def test_init_affect_state():
     assert initial_state == expected_state
 
 
-# --- Test Cases for update_affect_state ---
+# Test Cases for update_affect_state
 
 
 @pytest.mark.parametrize(

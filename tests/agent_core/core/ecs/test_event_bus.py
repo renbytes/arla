@@ -6,7 +6,7 @@ import pytest
 # Subject under test
 from agent_core.core.ecs.event_bus import EventBus
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def debug_event_bus():
     return EventBus(config=mock_config)
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_subscribe_and_publish_single_handler(event_bus: EventBus):

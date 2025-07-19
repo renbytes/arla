@@ -37,7 +37,7 @@ class SocialInteractionSystem(System):
         if not isinstance(target_id, str):
             return
 
-        # --- 1. Validate Interaction ---
+        # 1. Validate Interaction
         failure_reason = self._validate_interaction(entity_id, target_id)
         if failure_reason:
             outcome = ActionOutcome(
@@ -49,11 +49,11 @@ class SocialInteractionSystem(System):
             self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
             return
 
-        # --- 2. Handle Information Exchange ---
+        # 2. Handle Information Exchange
         if action_plan.intent == Intent.COOPERATE:
             self._exchange_information(entity_id, target_id)
 
-        # --- 3. Create and Publish Outcome ---
+        # 3. Create and Publish Outcome
         # Use direct attribute access on the validated Pydantic model
         base_reward = self.config.learning.rewards.communicate_reward_base
         if action_plan.intent == Intent.COOPERATE:

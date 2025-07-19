@@ -57,7 +57,7 @@ class DecaySystem(System):
         time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
         health_comp = cast(HealthComponent, components.get(HealthComponent))
 
-        # --- FIX: Determine the reason BEFORE modifying the state ---
+        # FIX: Determine the reason BEFORE modifying the state
         reason = "health depletion"
         if time_comp.current_time_budget <= 0:
             reason = "time budget depletion"

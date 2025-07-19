@@ -17,7 +17,7 @@ def _handle_task_exception(task: asyncio.Task) -> None:
     try:
         task.result()
     except Exception:
-        print("--- ERROR IN ASYNC EVENT HANDLER ---")
+        print("--- ERROR IN ASYNC EVENT HANDLER")
         traceback.print_exc()
         print("------------------------------------")
 

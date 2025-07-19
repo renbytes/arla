@@ -48,7 +48,7 @@ class SerialSystemRunner(SystemRunner):
         """
         Iterates through the systems and awaits their update method one by one.
         """
-        print(f"--- Tick {current_tick}: Running {len(systems)} systems serially ---")
+        print(f"--- Tick {current_tick}: Running {len(systems)} systems serially")
         for system in systems:
             try:
                 await system.update(current_tick=current_tick)
@@ -73,7 +73,7 @@ class AsyncSystemRunner(SystemRunner):
         """
         Creates a task for each system's update method and runs them concurrently.
         """
-        print(f"--- Tick {current_tick}: Running {len(systems)} systems concurrently ---")
+        print(f"--- Tick {current_tick}: Running {len(systems)} systems concurrently")
         tasks = [asyncio.create_task(system.update(current_tick=current_tick)) for system in systems]
 
         # Use asyncio.gather with return_exceptions=True to ensure that one

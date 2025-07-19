@@ -12,7 +12,7 @@ from agent_engine.cognition.emotions.appraisal_theory import (
     compute_emotional_valence,
 )
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def base_appraisal():
     )
 
 
-# --- Test Cases for AppraisalProcessor ---
+# Test Cases for AppraisalProcessor
 
 
 def test_appraise_event_positive_outcome(appraisal_processor):
@@ -115,7 +115,7 @@ def test_appraise_event_no_goal(appraisal_processor):
     assert appraisal.goal_relevance == 0.3  # Default when no goal
 
 
-# --- Test Cases for compute_emotional_valence ---
+# Test Cases for compute_emotional_valence
 
 
 def test_compute_valence_positive(base_appraisal):
@@ -164,7 +164,7 @@ def test_compute_valence_clipping(base_appraisal):
     assert valence_low == -1.0
 
 
-# --- Test Cases for compute_emotional_arousal ---
+# Test Cases for compute_emotional_arousal
 
 
 def test_compute_arousal_high_error(base_appraisal):

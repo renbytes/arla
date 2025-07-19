@@ -19,7 +19,7 @@ from simulations.emergence_sim.providers.simulation_providers import (
     EmergenceStateEncoder,
 )
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def mock_config():
     return config
 
 
-# --- Unit Tests ---
+# Unit Tests
 
 
 def test_encode_state_returns_correct_shape(state_encoder, mock_config):

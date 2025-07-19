@@ -12,7 +12,7 @@ from simulations.emergence_sim.actions.economic_actions import (
 )
 from simulations.emergence_sim.components import InventoryComponent, PositionComponent
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def mock_simulation_state():
     return state
 
 
-# --- GiveResourceAction Tests ---
+# GiveResourceAction Tests
 
 
 class TestGiveResourceAction:
@@ -72,14 +72,18 @@ class TestGiveResourceAction:
         params = {"intent": Intent.COOPERATE}
 
         # CORRECTED: Patch the underlying '_actions' dictionary instead of the property.
-        with patch.object(action_registry, "_actions", {"give_resource": None, "request_resource": None}):
+        with patch.object(
+            action_registry,
+            "_actions",
+            {"give_resource": None, "request_resource": None},
+        ):
             vector = action.get_feature_vector("agent_1", mock_simulation_state, params)
 
         assert len(vector) == mock_simulation_state.config.learning.q_learning.action_feature_dim
         assert vector[0] == 1.0
 
 
-# --- RequestResourceAction Tests ---
+# RequestResourceAction Tests
 
 
 class TestRequestResourceAction:

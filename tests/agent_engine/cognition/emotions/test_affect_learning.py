@@ -13,7 +13,7 @@ from agent_engine.cognition.emotions.affect_learning import (
     name_experience_cluster,
 )
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -94,7 +94,7 @@ def default_config():
     return SimpleNamespace(learning=SimpleNamespace(memory=SimpleNamespace(emotion_cluster_min_data=10)))
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_name_experience_cluster(mock_cognitive_scaffold, mock_action_registry):

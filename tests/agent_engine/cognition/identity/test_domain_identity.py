@@ -12,7 +12,7 @@ from agent_engine.cognition.identity.domain_identity import (
     SocialValidationCollector,
 )
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def social_validator():
     return SocialValidationCollector()
 
 
-# --- Test Cases for MultiDomainIdentity ---
+# Test Cases for MultiDomainIdentity
 
 
 def test_initialization(identity):
@@ -177,7 +177,7 @@ def test_update_domain_identity_resisted_update(identity):
     np.testing.assert_array_equal(original_embedding, new_embedding)
 
 
-# --- Test Cases for SocialValidationCollector ---
+# Test Cases for SocialValidationCollector
 
 
 def test_collect_social_feedback_with_data(social_validator):

@@ -14,7 +14,7 @@ if os.path.exists(dotenv_path):
 
 async def main():
     """The main entry point for the database initialization script."""
-    print("--- Database Initializer ---")
+    print("--- Database Initializer")
     print("Attempting to connect to the database and create tables...")
     try:
         await create_tables()

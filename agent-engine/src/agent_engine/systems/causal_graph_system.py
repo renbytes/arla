@@ -146,12 +146,23 @@ class CausalGraphSystem(System):
 
         df = pd.DataFrame(mem_comp.causal_data)
         df.dropna(inplace=True)
+
+        # Define all_possible_actions before using it
+        all_possible_actions = core_action_registry.action_registry.action_ids
+
+        if not all_possible_actions:
+            return
+
+        # Add a filtering step to remove any rows that contain
+        # action names not present in the action registry. This prevents
+        # them from being converted to NaN in the next step.
+        df = df[df["action"].isin(all_possible_actions)]
+
         if len(df) < 20:
             return
 
         # Bootstrap the model by defining all possible actions as categories.
         # This prevents "unknown category" errors when estimating the effect of a new action.
-        all_possible_actions = core_action_registry.action_registry.action_ids
         df["action"] = pd.Categorical(df["action"], categories=all_possible_actions)
 
         common_causes = [col for col in df.columns if col.startswith("state_")]

@@ -15,7 +15,7 @@ scenarios:
 # Number of times to run each scenario for each variation
 runs_per_scenario: 3
 
-# --- Variations based on your Research Roadmap ---
+# Variations based on your Research Roadmap
 variations:
   - name: "Phase I - Symbol Grounding"
     overrides:

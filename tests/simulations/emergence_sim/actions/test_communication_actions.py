@@ -14,7 +14,7 @@ from simulations.emergence_sim.actions.communication_actions import (
 )
 from simulations.emergence_sim.components import PositionComponent
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def mock_simulation_state():
     return state
 
 
-# --- ProposeSymbolAction Tests ---
+# ProposeSymbolAction Tests
 
 
 class TestProposeSymbolAction:
@@ -81,7 +81,7 @@ class TestProposeSymbolAction:
         assert sum(vector[: len(sorted_ids)]) == 1.0  # Ensure only one action is hot
 
 
-# --- (The rest of the test file remains the same) ---
+# (The rest of the test file remains the same)
 class TestGuessObjectAction:
     def test_generate_possible_params(self, mock_simulation_state):
         action = GuessObjectAction()

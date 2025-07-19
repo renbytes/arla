@@ -9,7 +9,7 @@ from pydantic import ValidationError
 # Assume this is the path to your main Pydantic model
 from simulations.emergence_sim.config.schemas import EmergenceSimAppConfig
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -52,7 +52,6 @@ logging:
   components_to_log:
     - "simulations.emergence_sim.components.SocialCreditComponent"
 
-# CORRECTED: Added the missing top-level 'llm' block to the test data.
 llm:
   provider: "openai"
   completion_model: "gpt-4o-mini"
@@ -92,6 +91,9 @@ agent:
       goal_relevance: 0.7
       agency: 0.5
       social_feedback: 0.3
+  dynamics:
+    decay:
+      resources_per_step: 0.1
 
 learning:
   q_learning:
@@ -125,7 +127,7 @@ scenario_path: "simulations/emergence_sim/scenarios/default.json"
     return config_file
 
 
-# --- Unit Tests ---
+# Unit Tests
 
 
 def test_load_and_validate_full_config(full_config_yaml: Path):

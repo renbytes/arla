@@ -3,7 +3,7 @@
 # Subject under test
 from agent_core.agents.actions.base_action import ActionOutcome, Intent
 
-# --- Test Cases for Intent Enum ---
+# Test Cases for Intent Enum
 
 
 def test_intent_enum_values():
@@ -15,7 +15,7 @@ def test_intent_enum_values():
     assert Intent.COMPETE.value == "COMPETE"
 
 
-# --- Test Cases for ActionOutcome ---
+# Test Cases for ActionOutcome
 
 
 def test_action_outcome_initialization_full():

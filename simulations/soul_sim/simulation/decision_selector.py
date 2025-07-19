@@ -40,7 +40,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         Returns:
             The chosen ActionPlanComponent, or None if no action is possible.
         """
-        # --- 1. Pre-computation and Epsilon-Greedy Check ---
+        # 1. Pre-computation and Epsilon-Greedy Check
         if not possible_actions:
             return None
 
@@ -50,7 +50,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         if not isinstance(q_comp, QLearningComponent) or random.random() < q_comp.current_epsilon:
             return random.choice(possible_actions)
 
-        # --- 2. Feature Vector Calculation (Optimized) ---
+        # 2. Feature Vector Calculation (Optimized)
         # The agent's internal state and the world state are constant during this
         # single decision moment. We calculate these feature vectors once before the loop.
         state_features = self.state_encoder.encode_state(simulation_state, entity_id, simulation_state.config)
@@ -63,7 +63,7 @@ class SoulSimDecisionSelector(DecisionSelectorInterface):
         state_t = torch.tensor(state_features, dtype=torch.float32).unsqueeze(0)
         internal_t = torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0)
 
-        # --- 3. Exploitation: Evaluate Actions and Find the Best One ---
+        # 3. Exploitation: Evaluate Actions and Find the Best One
         best_action: Optional[ActionPlanComponent] = None
         max_utility = -float("inf")
 

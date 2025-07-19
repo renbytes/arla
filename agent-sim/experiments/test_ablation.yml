@@ -16,7 +16,7 @@ scenarios:
 # Number of times to run each scenario for each variation
 runs_per_scenario: 5
 
-# --- Ablation Variations ---
+# Ablation Variations
 # Each item here is a separate experimental condition.
 # Using proper nested structure to ensure correct config merging.
 variations:

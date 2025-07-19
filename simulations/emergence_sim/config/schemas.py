@@ -14,7 +14,7 @@ class LLMConfig(BaseModel):
     reflection_prompt_prefix: str
 
 
-# --- (The rest of the models are unchanged) ---
+# (The rest of the models are unchanged)
 
 
 class SocialCreditSystemConfig(BaseModel):
@@ -32,6 +32,14 @@ class SymbolNegotiationSystemConfig(BaseModel):
 class NarrativeConsensusSystemConfig(BaseModel):
     consensus_threshold: int = 3
     narrative_influence_factor: float = 0.1
+
+
+class DynamicsDecay(BaseModel):
+    resources_per_step: float
+
+
+class DynamicsConfig(BaseModel):
+    decay: DynamicsDecay
 
 
 class SystemsConfig(BaseModel):
@@ -111,6 +119,7 @@ class AgentConfig(BaseModel):
     cognitive: CognitiveConfig
     costs: CostsConfig
     emotional_dynamics: EmotionalDynamicsConfig
+    dynamics: DynamicsConfig
 
 
 class QLearningConfig(BaseModel):
@@ -149,7 +158,7 @@ class EnvironmentConfig(BaseModel):
     num_objects: int
 
 
-# --- Top-Level Application Configuration (Defined Last) ---
+# Top-Level Application Configuration (Defined Last)
 
 
 class EmergenceSimAppConfig(BaseModel):

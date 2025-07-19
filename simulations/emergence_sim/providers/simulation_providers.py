@@ -3,13 +3,11 @@
 from typing import Any, Dict, Optional, Tuple, Type, cast
 
 import numpy as np
-from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.abstractions import SimulationState
 from agent_core.core.ecs.component import (
     Component,
     MemoryComponent,
     TimeBudgetComponent,
-    ValueSystemComponent,
 )
 from agent_core.environment.controllability_provider_interface import (
     ControllabilityProviderInterface,
@@ -34,8 +32,7 @@ from simulations.emergence_sim.components import (
 
 class EmergenceRewardCalculator(RewardCalculatorInterface):
     """
-    Calculates a subjective reward based on the agent's values.
-    For this simulation, it boosts rewards for cooperative actions.
+    Calculates a subjective reward based on the agent's values and social credit.
     """
 
     def calculate_final_reward(
@@ -47,14 +44,6 @@ class EmergenceRewardCalculator(RewardCalculatorInterface):
     ) -> Tuple[float, Dict[str, Any]]:
         final_reward = base_reward
         breakdown = {"base_reward": base_reward}
-
-        value_comp = cast(ValueSystemComponent, entity_components.get(ValueSystemComponent))
-
-        if value_comp and action_intent == Intent.COOPERATE.name and base_reward > 0:
-            bonus = base_reward * (value_comp.collaboration_multiplier - 1.0)
-            final_reward += bonus
-            breakdown["collaboration_bonus"] = bonus
-
         return final_reward, breakdown
 
 
@@ -65,7 +54,11 @@ class EmergenceNarrativeContextProvider(StateNodeEncoderInterface):
     """
 
     def get_narrative_context(
-        self, components: Dict[Type["Component"], "Component"], current_tick: int, config: Any, **kwargs
+        self,
+        components: Dict[Type["Component"], "Component"],
+        current_tick: int,
+        config: Any,
+        **kwargs,
     ) -> Dict[str, Any]:
         """Creates a detailed text summary of the agent's social situation for the LLM."""
 
@@ -111,7 +104,7 @@ class EmergenceNarrativeContextProvider(StateNodeEncoderInterface):
             if recent_gives > 0:
                 narrative_parts.append(f"Recently, I have been generous, giving resources away {recent_gives} time(s).")
 
-        # --- Combine into final narrative ---
+        # Combine into final narrative
         narrative = " ".join(narrative_parts)
         return {"narrative": narrative, "llm_final_account": narrative}
 
@@ -155,7 +148,7 @@ class EmergenceStateEncoder(StateEncoderInterface):
         credit_comp = cast(SocialCreditComponent, components.get(SocialCreditComponent))
         debt_comp = cast(DebtLedgerComponent, components.get(DebtLedgerComponent))
 
-        # --- Physical State ---
+        # Physical State
         pos_x_norm = (
             pos_comp.position[0] / simulation_state.environment.width
             if pos_comp and simulation_state.environment
@@ -168,7 +161,7 @@ class EmergenceStateEncoder(StateEncoderInterface):
         )
         resources_norm = min(inv_comp.current_resources, 50.0) / 50.0 if inv_comp else 0
 
-        # --- CORRECTED: Social state is now included in the feature vector ---
+        # CORRECTED: Social state is now included in the feature vector
         credit_score = credit_comp.score if credit_comp else 0.5
         # Normalize number of debts (clipping at 10 for stability)
         debt_count_norm = min(len(debt_comp.obligations), 10) / 10.0 if debt_comp else 0.0

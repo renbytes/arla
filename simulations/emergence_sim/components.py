@@ -177,3 +177,17 @@ class PositionComponent(Component):
         ):
             return False, [f"Position must be a tuple of two integers, but got {self.position}"]
         return True, []
+
+
+class SynergyTrackerComponent(Component):
+    """Stores a record of agents who have given this agent resources."""
+
+    def __init__(self):
+        # Maps giver_id -> tick_of_gift
+        self.synergy_partners: Dict[str, int] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"synergy_partners_count": len(self.synergy_partners)}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return isinstance(self.synergy_partners, dict), []

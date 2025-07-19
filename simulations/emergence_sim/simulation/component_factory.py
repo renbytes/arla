@@ -86,7 +86,8 @@ class EmergenceComponentFactory(ComponentFactoryInterface):
             "ValueSystemComponent": lambda data: ValueSystemComponent(),
             # Emergence Sim Components
             "PositionComponent": lambda data: PositionComponent(
-                position=(data["position_x"], data["position_y"]), environment=self.environment
+                position=(data["position_x"], data["position_y"]),
+                environment=self.environment,
             ),
             "InventoryComponent": lambda data: InventoryComponent(initial_resources=data["current_resources"]),
             "ConceptualSpaceComponent": self._create_conceptual_space_component,

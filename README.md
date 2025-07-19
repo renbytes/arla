@@ -45,6 +45,12 @@ conda create --name arla python=3.11 -y
 conda activate arla
 ```
 
+Pro-tip: For a much faster experience, you can use Mamba, a drop-in replacement for Conda. If you have Mamba installed (`conda install -n base -c conda-forge mamba`), the command is the same:
+```bash
+mamba create -n arla python=3.11 -y
+mamba activate arla
+```
+
 ### 4. Install All Packages
 
 The monorepo contains multiple installable packages. The following command uses pip's "editable" (-e) mode to install them all. This creates links to your source code, so any changes you make are immediately available without reinstalling.

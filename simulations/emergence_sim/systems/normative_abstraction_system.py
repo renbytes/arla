@@ -57,14 +57,14 @@ class NormativeAbstractionSystem(System):
         if current_tick == 0 or current_tick % self.abstraction_interval != 0 or not EMERGENCE_COMPONENTS_LOADED:
             return
 
-        print(f"--- [{current_tick}] Normative Abstraction System Running ---")
+        print(f"--- [{current_tick}] Normative Abstraction System Running")
 
-        # --- Check for Reciprocity Norm ---
+        # Check for Reciprocity Norm
         reciprocity_summary = self._detect_reciprocity_norm()
         if reciprocity_summary and "reciprocity" not in self.defined_norms:
             await self._abstract_and_publish_norm("reciprocity", reciprocity_summary, current_tick)
 
-        # --- Check for Ritual Norms ---
+        # Check for Ritual Norms
         ritual_summaries = self._detect_ritual_norms()
         for ritual_name, summary in ritual_summaries.items():
             if ritual_name not in self.defined_norms:

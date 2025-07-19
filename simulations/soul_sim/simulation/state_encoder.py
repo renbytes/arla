@@ -43,7 +43,7 @@ class SoulSimStateEncoder(StateEncoderInterface):
         env = simulation_state.environment
         max_dist = np.sqrt(env.width**2 + env.height**2)
 
-        # --- Self Features ---
+        # Self Features
         self_features = [
             safe_divide(pos_comp.position[0], env.height),
             safe_divide(pos_comp.position[1], env.width),
@@ -52,7 +52,7 @@ class SoulSimStateEncoder(StateEncoderInterface):
             min(1.0, safe_divide(inv_comp.current_resources, 200.0)),
         ]
 
-        # --- Nearest Resource Features ---
+        # Nearest Resource Features
         resource_features = [0.0] * 4  # [dist, health, type1, type2]
         closest_res_dist = float("inf")
         all_resources = simulation_state.get_entities_with_components([ResourceComponent, PositionComponent])
@@ -69,7 +69,7 @@ class SoulSimStateEncoder(StateEncoderInterface):
                     1.0 if "TRIPLE" in res_comp.type else 0.0,
                 ]
 
-        # --- Nearest Agent Features ---
+        # Nearest Agent Features
         other_agent_features = [0.0] * 4  # [dist, health, attack, is_target]
         closest_agent_dist = float("inf")
         all_agents = simulation_state.get_entities_with_components([TimeBudgetComponent, PositionComponent])
@@ -89,10 +89,10 @@ class SoulSimStateEncoder(StateEncoderInterface):
                     1.0 if other_id == target_entity_id else 0.0,
                 ]
 
-        # --- Social/Misc Features (can be expanded) ---
+        # Social/Misc Features (can be expanded)
         social_features = [0.0] * 3
 
-        # --- Combine and Pad/Truncate ---
+        # Combine and Pad/Truncate
         feature_vector = np.array(
             self_features + resource_features + other_agent_features + social_features,
             dtype=np.float32,

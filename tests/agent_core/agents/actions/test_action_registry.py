@@ -8,7 +8,7 @@ from agent_core.agents.actions.action_interface import ActionInterface
 # Subject under test
 from agent_core.agents.actions.action_registry import ActionRegistry, action_registry
 
-# --- Mock Objects for Testing ---
+# Mock Objects for Testing
 
 
 class MockAction(ActionInterface):
@@ -81,7 +81,7 @@ class InvalidAction:
     pass
 
 
-# --- Test Fixtures ---
+# Test Fixtures
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def fresh_registry() -> ActionRegistry:
     return ActionRegistry()
 
 
-# --- Test Cases ---
+# Test Cases
 
 
 def test_register_valid_action(fresh_registry: ActionRegistry):

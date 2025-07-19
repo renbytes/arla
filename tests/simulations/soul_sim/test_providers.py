@@ -30,7 +30,7 @@ from simulations.soul_sim.providers import (
     SoulSimVitalityMetricsProvider,
 )
 
-# --- Fixtures ---
+# Fixtures
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ def mock_simulation_state(pydantic_config):
     return state
 
 
-# --- Test SoulSimActionGenerator ---
+# Test SoulSimActionGenerator
 
 
 def test_action_generator(mock_simulation_state):
@@ -95,7 +95,7 @@ def test_action_generator(mock_simulation_state):
         mock_action_class_1.return_value.generate_possible_params.assert_called_once()
 
 
-# --- Test SoulSimDecisionSelector ---
+# Test SoulSimDecisionSelector
 
 
 def test_decision_selector_no_q_comp_is_random(mock_simulation_state):
@@ -132,7 +132,7 @@ def test_decision_selector_exploits_best_q_value(mock_simulation_state):
         assert mock_net.call_count == 3
 
 
-# --- Test SoulSimRewardCalculator ---
+# Test SoulSimRewardCalculator
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_reward_calculator(pydantic_config, details, action_id, expected_final):
     assert final_reward == pytest.approx(expected_final)
 
 
-# --- Test Other Providers ---
+# Test Other Providers
 
 
 def test_vitality_metrics_provider(mock_simulation_state):

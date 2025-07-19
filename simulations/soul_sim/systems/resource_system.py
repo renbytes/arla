@@ -35,7 +35,7 @@ class ResourceSystem(System):
         if not isinstance(resource_id, str):
             return
 
-        # --- 1. Validate Target and Miner ---
+        # 1. Validate Target and Miner
         resource_comps = self.simulation_state.entities.get(resource_id, {})
         miner_comps = self.simulation_state.entities.get(entity_id, {})
 
@@ -63,7 +63,7 @@ class ResourceSystem(System):
             self._publish_outcome(entity_id, action_plan, outcome, event_data["current_tick"])
             return
 
-        # --- 2. Resolve Mining Action ---
+        # 2. Resolve Mining Action
         res_comp.current_health -= res_comp.mining_rate
         base_reward = res_comp.reward_per_mine_action
 
@@ -77,7 +77,7 @@ class ResourceSystem(System):
             base_reward += res_comp.resource_yield
             miner_inv_comp.current_resources += res_comp.resource_yield
 
-        # --- 3. Create and Publish Outcome ---
+        # 3. Create and Publish Outcome
         status = "resource_depleted" if was_depleted else "mining_progress"
         message = f"Depleted resource {resource_id}!" if was_depleted else f"Mined resource {resource_id}."
         details = {
