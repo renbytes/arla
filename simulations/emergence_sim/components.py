@@ -14,6 +14,23 @@ if TYPE_CHECKING:
     from agent_core.environment.interface import EnvironmentInterface
 
 
+class OpinionComponent(Component):
+    """Stores the agent's current opinion (e.g., 'Blue' or 'Orange')."""
+
+    def __init__(self, initial_opinion: str):
+        self.opinion: str = initial_opinion
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's state."""
+        return {"opinion": self.opinion}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates that the opinion is a non-empty string."""
+        if not isinstance(self.opinion, str) or not self.opinion:
+            return False, ["'opinion' attribute must be a non-empty string."]
+        return True, []
+
+
 class ConceptualSpaceComponent(Component):
     """
     Represents an agent's internal semantic space based on Gärdenfors' theory.
@@ -152,7 +169,6 @@ class PositionComponent(Component):
     def __init__(self, position: Tuple[int, int], environment: "EnvironmentInterface"):
         """
         Initializes the component.
-
         Args:
             position: The (x, y) coordinates of the entity.
             environment: A reference to the simulation's environment object.

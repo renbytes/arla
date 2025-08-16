@@ -67,16 +67,10 @@ This command automatically finds the `pyproject.toml` in each subdirectory and i
 
 The main entry point for running a simulation is located in the agent-sim package. The project uses Hydra for configuration management, allowing you to easily override settings from the command line.
 
-To run the default simulation scenario:
+You can run one of the experiments using the CLI like so:
 
 ```bash
-python agent-sim/src/main.py scenario_path=agent-sim/src/simulations/soul_sim/scenarios/default.json
-```
-
-You can override any parameter defined in the config.yaml files. For example, to run the simulation for only 50 steps:
-
-```bash
-python agent-sim/src/main.py scenario_path=agent-sim/src/simulations/soul_sim/scenarios/default.json simulation.steps=50
+arla run-experiment agent-sim/experiments/emergence_study.yml
 ```
 
 If you're making code edits in between simulation runs, you can run this to reload the code:
@@ -84,7 +78,7 @@ If you're making code edits in between simulation runs, you can run this to relo
 docker compose build celery-worker && docker-compose up --build -d
 ```
 
-> Note: if you've made small changes, it should pick up the latest build cache, speeding things up. Any major changes will still prompt a complete rebuild, which can take a few minutes.
+> Note: if you've made small changes, it should pick up the latest build cache, speeding things up. Any changes to underlying dependencies will cause a complete rebuild, which can take a few minutes.
 
 ## Running Tests
 

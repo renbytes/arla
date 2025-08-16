@@ -2,14 +2,15 @@
 
 # Core Simulation Setup
 simulation:
-  steps: 1000
-  log_directory: "data/logs/emergence_sim"
+  steps: 500
+  log_directory: "data/logs/emergence_voter_model"
   database_directory: "data/db"
   database_file: "agent_sim.db"
   enable_debug_logging: false
-  random_seed: 123
-  systems: # Flags to control which systems are active for each variation
-    enable_symbol_negotiation: true
+  random_seed: 42
+  # All complex systems are disabled for this simple game
+  systems:
+    enable_symbol_negotiation: false
     enable_narrative_consensus: false
     enable_ritualization: false
     enable_social_credit: false
@@ -17,19 +18,14 @@ simulation:
 
 # Action and Component Definitions
 action_modules:
-  - "simulations.emergence_sim.actions.communication_actions"
-  - "simulations.emergence_sim.actions.economic_actions"
-  - "simulations.emergence_sim.actions.move_action"
+  - "simulations.emergence_sim.actions.influence_action"
 
 logging:
   components_to_log:
     - "agent_core.core.ecs.component.TimeBudgetComponent"
     - "simulations.emergence_sim.components.PositionComponent"
-    - "simulations.emergence_sim.components.InventoryComponent"
-    - "simulations.emergence_sim.components.ConceptualSpaceComponent"
-    - "simulations.emergence_sim.components.RitualComponent"
-    - "simulations.emergence_sim.components.DebtLedgerComponent"
-    - "simulations.emergence_sim.components.SocialCreditComponent"
+    - "simulations.emergence_sim.components.OpinionComponent"
+    - "agent_core.core.ecs.component.IdentityComponent"
 
 # LLM and Agent Definitions
 llm:
@@ -38,34 +34,35 @@ llm:
   embedding_model: "text-embedding-3-small"
   temperature: 0.0
   max_tokens: 500
-  reflection_prompt_prefix: "You are an agent in a simulation. Reflect on your recent experiences. In one paragraph, what have you learned about your group and its rules? "
+  reflection_prompt_prefix: "You are an agent in a simulation. Reflect on your recent experiences. In one paragraph, what have you learned about your group and its beliefs?"
 
 agent:
   foundational:
-    num_agents: 15 # Start with a smaller population
+    num_agents: 40
     lifespan_std_dev_percent: 0.0
     vitals:
-      initial_time_budget: 500.0
-      initial_health: 100.0 # Not used by systems, but can be a placeholder
-      initial_resources: 60.0
+      initial_time_budget: 1000.0
+      initial_health: 100.0
+      initial_resources: 0.0 # Resources not needed for this model
     attributes:
-      initial_attack_power: 0.0 # Not relevant here
+      initial_attack_power: 0.0
       initial_speed: 1
 
   cognitive:
     embeddings:
       main_embedding_dim: 1536
       schema_embedding_dim: 128
-    # NOTE: The complex architecture_flags from soul_sim are replaced by the
-    # simpler `simulation.systems` flags above for this simulation.
 
   costs:
-    actions: # Costs for your new actions
+    actions:
+      influence: 1.0 # Cost for the only action
+      # Add missing fields required by the schema with default values
       propose_symbol: 1.0
       guess_object: 1.0
-      share_narrative: 2.0
+      share_narrative: 1.0
       give_resource: 1.0
       request_resource: 1.0
+
 
   emotional_dynamics:
     temporal:
@@ -81,32 +78,33 @@ agent:
 
   dynamics:
     decay:
-      resources_per_step: 1.0
+      # No resource decay needed
+      resources_per_step: 0.0
 
 # Environment and Learning
 environment:
-  grid_world_size: [15, 15]
-  # For the "naming game", you need objects with properties, not tiered resources.
-  # This will be handled by your environment implementation.
-  num_objects: 50
+  grid_world_size: [10, 10]
+  # No objects are needed for this simple model
+  num_objects: 0
 
 learning:
   q_learning:
-    initial_epsilon: 0.9
+    initial_epsilon: 0.1 # Low exploration, as there's only one action
     epsilon_decay_rate: 0.999
-    min_epsilon: 0.05
+    min_epsilon: 0.01
     alpha: 0.001
     gamma: 0.99
     state_feature_dim: 16
     internal_state_dim: 8
-    action_feature_dim: 15
+    action_feature_dim: 15 # Kept for compatibility, though less critical now
   memory:
     short_term_memory_maxlen: 10
-    affective_buffer_maxlen: 200 # Still needed for affect-driven systems
+    affective_buffer_maxlen: 200
     emotion_cluster_min_data: 50
-    reflection_interval: 25 # Core reflection cycle is still needed
+    reflection_interval: 50 # Reflect more often on opinion changes
     cognitive_dissonance_threshold: 0.7
-  rewards: # Simplified rewards for this simulation
+  rewards:
     base_reward: 0.0
-    move_reward_base: -0.1
-    give_resource_bonus: 1.0 # Small bonus for giving
+    # Add missing fields required by the schema with default values
+    move_reward_base: 0.0
+    give_resource_bonus: 0.0

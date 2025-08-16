@@ -27,6 +27,7 @@ from simulations.emergence_sim.components import (
     ConceptualSpaceComponent,
     DebtLedgerComponent,
     InventoryComponent,
+    OpinionComponent,  # New Import
     PositionComponent,
     RitualComponent,
     SocialCreditComponent,
@@ -66,7 +67,6 @@ class EmergenceComponentFactory(ComponentFactoryInterface):
                 internal_state_dim=q_conf.internal_state_dim,
                 action_feature_dim=q_conf.action_feature_dim,
                 q_learning_alpha=q_conf.alpha,
-                initial_epsilon=q_conf.initial_epsilon,
                 device="cpu",
             ),
             "MemoryComponent": lambda data: MemoryComponent(),
@@ -85,6 +85,7 @@ class EmergenceComponentFactory(ComponentFactoryInterface):
             "ValidationComponent": lambda data: ValidationComponent(),
             "ValueSystemComponent": lambda data: ValueSystemComponent(),
             # Emergence Sim Components
+            "OpinionComponent": lambda data: OpinionComponent(initial_opinion=data["opinion"]),  # New Entry
             "PositionComponent": lambda data: PositionComponent(
                 position=(data["position_x"], data["position_y"]),
                 environment=self.environment,

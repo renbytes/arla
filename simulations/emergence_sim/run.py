@@ -1,12 +1,10 @@
 # simulations/emergence_sim/run.py
 import asyncio
-import os
 import uuid
 from typing import Any, Dict, Optional
 
 from agent_core.agents.actions.action_registry import action_registry
 from agent_engine.simulation.engine import SimulationManager
-from agent_engine.systems.action_system import ActionSystem
 from agent_engine.systems.affect_system import AffectSystem
 from agent_engine.systems.causal_graph_system import CausalGraphSystem
 from agent_engine.systems.goal_system import GoalSystem
@@ -42,23 +40,9 @@ from simulations.emergence_sim.simulation.component_factory import (
 from simulations.emergence_sim.simulation.scenario_loader import (
     EmergenceScenarioLoader,
 )
-from simulations.emergence_sim.systems.decay_system import DecaySystem
-from simulations.emergence_sim.systems.move_system import MovementSystem
-from simulations.emergence_sim.systems.narrative_consensus_system import (
-    NarrativeConsensusSystem,
+from simulations.emergence_sim.systems.opinion_dynamics_system import (
+    OpinionDynamicsSystem,
 )
-from simulations.emergence_sim.systems.normative_abstraction_system import (
-    NormativeAbstractionSystem,
-)
-from simulations.emergence_sim.systems.object_interaction_system import (
-    ObjectInteractionSystem,
-)
-from simulations.emergence_sim.systems.ritualization_system import RitualizationSystem
-from simulations.emergence_sim.systems.social_credit_system import SocialCreditSystem
-from simulations.emergence_sim.systems.symbol_negotiation_system import (
-    SymbolNegotiationSystem,
-)
-from simulations.emergence_sim.systems.synergy_system import SynergySystem
 
 
 def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overrides: Dict[str, Any]):
@@ -78,7 +62,7 @@ async def setup_and_run(
 ):
     """Asynchronous setup and execution for the simulation."""
 
-    print(f"--- [{task_id}] Initializing Emergence-Sim")
+    print(f"--- [{task_id}] Initializing Cognitive Voter Model Simulation")
 
     # 1. Load, merge, and validate the final configuration
     try:
@@ -124,7 +108,7 @@ async def setup_and_run(
         action_generator=providers["action_generator"],
         decision_selector=providers["decision_selector"],
         component_factory=component_factory,
-        db_logger=db_manager,  # ARGUMENT ADDED HERE
+        db_logger=db_manager,
         run_id=run_id,
         task_id=task_id,
         experiment_id=experiment_id,
@@ -132,18 +116,13 @@ async def setup_and_run(
 
     # 4. Load initial state
     starting_tick = 0
-    if checkpoint_path and os.path.exists(checkpoint_path):
-        await manager.load_state(checkpoint_path)
-        starting_tick = manager.simulation_state.current_tick + 1
-    else:
-        # Create the loader here, passing the manager's state object
-        scenario_loader_instance = EmergenceScenarioLoader(config, environment, manager.simulation_state)
-        # Link the loader back to the manager and load the data
-        manager.scenario_loader = scenario_loader_instance
-        manager.scenario_loader.load()
+    # Create the loader here, passing the manager's state object
+    scenario_loader_instance = EmergenceScenarioLoader(config, environment, manager.simulation_state)
+    # Link the loader back to the manager and load the data
+    manager.scenario_loader = scenario_loader_instance
+    manager.scenario_loader.load()
 
     # 5. Register all systems with the manager
-    # Register systems with inter-dependencies in the correct order
     manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
     causal_system_instance = manager.system_manager.get_system(CausalGraphSystem)
 
@@ -154,7 +133,8 @@ async def setup_and_run(
     )
 
     # Register the rest of the core systems
-    manager.register_system(ActionSystem, reward_calculator=providers["reward_calculator"])
+    # The ActionSystem is no longer needed as OpinionDynamicsSystem handles the full interaction cycle.
+    # manager.register_system(ActionSystem, reward_calculator=providers["reward_calculator"])
     manager.register_system(
         AffectSystem,
         vitality_metrics_provider=providers["vitality_metrics_provider"],
@@ -175,22 +155,9 @@ async def setup_and_run(
         calculators=[metrics_calculator],
         exporters=[database_emitter],
     )
-    manager.register_system(DecaySystem)
-    manager.register_system(MovementSystem)
-    manager.register_system(ObjectInteractionSystem)
-    manager.register_system(SynergySystem)
 
-    # Conditionally register custom simulation systems
-    if config.simulation.systems.enable_symbol_negotiation:
-        manager.register_system(SymbolNegotiationSystem)
-    if config.simulation.systems.enable_narrative_consensus:
-        manager.register_system(NarrativeConsensusSystem)
-    if config.simulation.systems.enable_ritualization:
-        manager.register_system(RitualizationSystem)
-    if config.simulation.systems.enable_social_credit:
-        manager.register_system(SocialCreditSystem)
-    if config.simulation.systems.enable_normative_abstraction:
-        manager.register_system(NormativeAbstractionSystem)
+    # Register the single, new game logic system
+    manager.register_system(OpinionDynamicsSystem)
 
     # 6. Run the simulation
     print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick}")

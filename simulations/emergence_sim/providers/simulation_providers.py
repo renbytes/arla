@@ -25,6 +25,7 @@ from simulations.emergence_sim.components import (
     ConceptualSpaceComponent,
     DebtLedgerComponent,
     InventoryComponent,
+    OpinionComponent,  # New Import
     PositionComponent,
     SocialCreditComponent,
 )
@@ -64,33 +65,21 @@ class EmergenceNarrativeContextProvider(StateNodeEncoderInterface):
 
         credit_comp = cast(SocialCreditComponent, components.get(SocialCreditComponent))
         debt_comp = cast(DebtLedgerComponent, components.get(DebtLedgerComponent))
-        concept_comp = cast(ConceptualSpaceComponent, components.get(ConceptualSpaceComponent))
+        _concept_comp = cast(ConceptualSpaceComponent, components.get(ConceptualSpaceComponent))
         mem_comp = cast(MemoryComponent, components.get(MemoryComponent))
+        opinion_comp = cast(OpinionComponent, components.get(OpinionComponent))  # New
 
         # Basic Social Standing
         credit_score = credit_comp.score if credit_comp else 0.0
-        num_debts = len(debt_comp.obligations) if debt_comp else 0
+        _num_debts = len(debt_comp.obligations) if debt_comp else 0
+        opinion = opinion_comp.opinion if opinion_comp else "undecided"  # New
 
         narrative_parts = [
-            f"My current social credit is {credit_score:.2f} and I am involved in {num_debts} social obligations."
+            f"My current social credit is {credit_score:.2f}. I am part of the '{opinion}' faction."  # Modified
         ]
 
-        # Add specific, well-known symbols
-        if concept_comp and concept_comp.concepts:
-            # Sort concepts by how successfully they've been used and take the top 3
-            sorted_concepts = sorted(
-                concept_comp.concepts.items(),
-                key=lambda item: item[1].get("successful_associations", 0),
-                reverse=True,
-            )
-            top_symbols = [symbol for symbol, data in sorted_concepts[:3]]
-            if top_symbols:
-                narrative_parts.append(f"The symbols I understand best are {', '.join(top_symbols)}.")
-
-        # -Add summary of recent economic actions from memory
         if mem_comp:
             recent_gives = 0
-            # Look at events from the last reflection period
             reflection_interval = config.learning.memory.reflection_interval
             start_tick = max(0, current_tick - reflection_interval)
 
@@ -161,9 +150,8 @@ class EmergenceStateEncoder(StateEncoderInterface):
         )
         resources_norm = min(inv_comp.current_resources, 50.0) / 50.0 if inv_comp else 0
 
-        # CORRECTED: Social state is now included in the feature vector
+        # Social state is now included in the feature vector
         credit_score = credit_comp.score if credit_comp else 0.5
-        # Normalize number of debts (clipping at 10 for stability)
         debt_count_norm = min(len(debt_comp.obligations), 10) / 10.0 if debt_comp else 0.0
 
         features = np.array(
@@ -213,7 +201,7 @@ class EmergenceVitalityMetricsProvider(VitalityMetricsProviderInterface):
     """
 
     def get_normalized_vitality_metrics(
-        self, components: Dict[Type[Component], "Component"], **kwargs
+        self, components: Dict[Type["Component"], "Component"], **kwargs
     ) -> Dict[str, float]:
         time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
         inv_comp = cast(InventoryComponent, components.get(InventoryComponent))

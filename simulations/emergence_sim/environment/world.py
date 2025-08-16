@@ -20,6 +20,8 @@ class EmergenceEnvironment(EnvironmentInterface):
 
     def _initialize_objects(self, num_objects: int):
         """Creates random objects with properties for agents to perceive."""
+        if num_objects == 0:
+            return
         shapes = ["sphere", "cube", "pyramid"]
         colors = ["red", "green", "blue"]
         for i in range(num_objects):
@@ -28,22 +30,11 @@ class EmergenceEnvironment(EnvironmentInterface):
                 random.randint(0, self.width - 1),
                 random.randint(0, self.height - 1),
             )
-
-            # 20% chance to create a cooperative resource
-            if random.random() < 0.2:
-                obj_type = "cooperative_resource"
-                value = 25  # Higher value to incentivize cooperation
-            else:
-                obj_type = random.choice(["resource", "hazard"])
-                value = random.choice([5, 10, 15])
-
             self.objects[obj_id] = {
                 "id": obj_id,
                 "position": pos,
                 "shape": random.choice(shapes),
                 "color": random.choice(colors),
-                "obj_type": obj_type,
-                "value": value,
             }
 
     def get_object_at(self, position: Tuple[int, int]) -> Optional[Dict[str, Any]]:
@@ -90,22 +81,28 @@ class EmergenceEnvironment(EnvironmentInterface):
         if entity_id in self.entity_positions:
             del self.entity_positions[entity_id]
 
+    def get_neighbors(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Gets all valid neighboring positions (cardinal directions)."""
+        x, y = position
+        potential_neighbors = [
+            (x + 1, y),
+            (x - 1, y),
+            (x, y + 1),
+            (x, y - 1),
+        ]
+        return [pos for pos in potential_neighbors if self.is_valid_position(pos)]
+
+    def can_move(self, from_pos: Any, to_pos: Any) -> bool:
+        # Placeholder
+        return True
+
+    def get_entities_at_position(self, position: Tuple[int, int]) -> Set[str]:
+        """Gets all entities at a specific position."""
+        return {eid for eid, pos in self.entity_positions.items() if pos == position}
+
     def to_dict(self) -> Dict[str, Any]:
         return {"entity_positions": self.entity_positions, "objects": self.objects}
 
     def restore_from_dict(self, data: Dict[str, Any]) -> None:
         self.entity_positions = data.get("entity_positions", {})
         self.objects = data.get("objects", {})
-
-    # Methods below are not fully implemented for this simple environment
-    def get_neighbors(self, position: Any) -> List[Any]:
-        # Placeholder
-        return []
-
-    def can_move(self, from_pos: Any, to_pos: Any) -> bool:
-        # Placeholder
-        return True
-
-    def get_entities_at_position(self, position: Any) -> Set[str]:
-        # Placeholder
-        return set()

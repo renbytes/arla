@@ -27,6 +27,7 @@ from simulations.emergence_sim.components import (
     ConceptualSpaceComponent,
     DebtLedgerComponent,
     InventoryComponent,
+    OpinionComponent,  # New import
     PositionComponent,
     RitualComponent,
     SocialCreditComponent,
@@ -87,23 +88,24 @@ class EmergenceScenarioLoader(ScenarioLoaderInterface):
             InventoryComponent(self.config.agent.foundational.vitals.initial_resources),
         )
 
+        # Add the new OpinionComponent with a random initial opinion
+        initial_opinion = random.choice(["Blue", "Orange"])
+        self.simulation_state.add_component(agent_id, OpinionComponent(initial_opinion=initial_opinion))
+
         # Add cognitive and custom components
         self.simulation_state.add_component(agent_id, MemoryComponent())
         self.simulation_state.add_component(agent_id, IdentityComponent(MultiDomainIdentity()))
-        # Note: embedding_dim is not in emergence_config, using a reasonable default
         self.simulation_state.add_component(agent_id, GoalComponent(embedding_dim=128))
         self.simulation_state.add_component(agent_id, EmotionComponent())
-        # Note: affective_buffer_maxlen is not in emergence_config, using a reasonable default
         self.simulation_state.add_component(agent_id, AffectComponent(affective_buffer_maxlen=200))
         self.simulation_state.add_component(agent_id, CompetenceComponent())
         self.simulation_state.add_component(agent_id, EpisodeComponent())
         self.simulation_state.add_component(agent_id, BeliefSystemComponent())
         self.simulation_state.add_component(agent_id, ValidationComponent())
         self.simulation_state.add_component(agent_id, ValueSystemComponent())
-        # Note: schema_embedding_dim is not in emergence_config, using a reasonable default
         self.simulation_state.add_component(agent_id, SocialMemoryComponent(schema_embedding_dim=128, device="cpu"))
 
-        # Add emergence-specific components
+        # Add emergence-specific components (can be kept for potential future use)
         self.simulation_state.add_component(
             agent_id,
             ConceptualSpaceComponent(quality_dimensions={"color": 3, "shape": 3}),
@@ -121,10 +123,9 @@ class EmergenceScenarioLoader(ScenarioLoaderInterface):
                 state_feature_dim=q_config.state_feature_dim,
                 internal_state_dim=q_config.internal_state_dim,
                 action_feature_dim=q_config.action_feature_dim,
-                # CORRECTED: The config uses 'alpha', not 'learning_rate'
                 q_learning_alpha=q_config.alpha,
                 device="cpu",
             ),
         )
 
-        print(f"Created agent '{agent_id}' at position {start_pos}")
+        print(f"Created agent '{agent_id}' at position {start_pos} with opinion '{initial_opinion}'")
