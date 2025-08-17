@@ -2,16 +2,20 @@
 
 This repository contains the complete source code for the ARLA project, a multi-agent simulation platform designed for studying emergent behavior and complex cognitive architectures.
 
-## Quickstart (Clone → Run in ~60s)
+## Quickstart (Clone → Run in \~60s)
 
 This guide helps you set up the development environment and run a sample simulation in minutes.
 
-### 1. Prerequisites
-- **Python 3.11**
-- **[Poetry](https://python-poetry.org/docs/#installation)**: A modern dependency management tool for Python.
+### 1\. Prerequisites
 
-### 2. Installation
-Clone the repository and use `poetry install` to create a virtual environment and install all dependencies from `pyproject.toml`.
+  - **Python 3.11**
+  - **[Poetry](https://python-poetry.org/docs/#installation)**: A modern dependency management tool for Python.
+  - **[Make](https://www.gnu.org/software/make/)**: For running helper commands from the `Makefile`.
+  - **[Docker](https://www.docker.com/products/docker-desktop/)**: For the containerized workflow.
+
+### 2\. Installation
+
+Clone the repository and use `poetry install` to create a virtual environment and install all dependencies.
 
 ```bash
 git clone git@github.com:renbytes/arla.git
@@ -21,30 +25,45 @@ poetry install
 
 This command handles everything: it creates a `.venv`, installs all dependencies, and links the local `agent-*` subpackages in editable mode.
 
-### 3. Run a Simulation
+### 3\. Run a Simulation Locally
 
-Activate the environment with `poetry shell` or use `poetry run` to execute commands.
+The main entrypoint for local simulations is the `agent_sim.main` module. You can run commands within the Poetry virtual environment by activating it first with `poetry env activate`, or by prefixing each command with `poetry run`.
 
 ```bash
-# Activate the virtual environment
-poetry shell
+# Activate the virtual environment (do this once per session)
+poetry env activate
 
-# Smoke test the CLI
-arla-sim --help
+# Smoke test the local runner to see available options
+python -m agent_sim.main --help
 
 # Run an example simulation for 50 steps
-arla-sim --scenario simulations/soul_sim/scenarios/default.json --steps 50
+python -m agent_sim.main --scenario simulations/soul_sim/scenarios/default.json --steps 50
 ```
 
-### Optional: Run with Docker Compose
+### 4\. Run with Docker Compose (Recommended)
 
-If you prefer a containerized environment, a docker-compose setup is provided for a headless run.
+The provided `Makefile` contains the simplest way to use the containerized environment.
 
-1. Ensure Docker is running.
-2. Build and run the service:
+1.  **Start Services**: Build the Docker images and start the application, database, and other services in the background.
 
-```bash
-docker compose -f docker/compose.yaml up --build
-```
+    ```bash
+    make up
+    ```
 
-This command will build a Python image, mount the project directory, install dependencies using Poetry, and execute the example simulation.
+2.  **Run Simulation**: Execute the example simulation inside the running `app` container.
+
+    ```bash
+    make run-example
+    ```
+
+3.  **View Logs**: You can tail the logs from all running services using:
+
+    ```bash
+    make logs
+    ```
+
+4.  **Stop Services**: When you're finished, stop and remove all containers.
+
+    ```bash
+    make down
+    ```
