@@ -29,13 +29,14 @@ from agent_engine.simulation.system import SystemManager
 class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
-    decisions, and updating all registered systems. It is decoupled from any
+    decisions, and updating all registered systems.
+    It is decoupled from any
     specific world implementation or game rules.
     """
 
     def __init__(
         self,
-        config: Any,  # Now accepts a validated Pydantic model
+        config: Any,
         environment: EnvironmentInterface,
         scenario_loader: ScenarioLoaderInterface,
         action_generator: ActionGeneratorInterface,
@@ -46,14 +47,11 @@ class SimulationManager:
         experiment_id: Optional[str] = None,
         run_id: Optional[str] = None,
     ):
-        # The config is now a Pydantic model, not a dict
         self.config = config
         self.device = "cpu"
-        # Use direct attribute access on the validated config object
         self.save_path = Path(self.config.simulation.log_directory) / "snapshots"
         self.db_logger = db_logger
 
-        # Injected Dependencies
         self.environment = environment
         self.scenario_loader = scenario_loader
         self.action_generator = action_generator
@@ -63,11 +61,9 @@ class SimulationManager:
         self._setup_simulation_ids(run_id, task_id, experiment_id)
         self._setup_rng()
 
-        # Initialize core services and state, passing the validated config object
         self.event_bus = EventBus(self.config)
         self.simulation_state = SimulationState(self.config, self.device)
         self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config, db_logger=self.db_logger)
-
         self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
 
         self._initialize_state()
@@ -78,52 +74,79 @@ class SimulationManager:
         """A convenience method to register a system with the SystemManager."""
         self.system_manager.register_system(system_class, **kwargs)
 
+    async def _initialize_run_records(self) -> None:
+        """Creates database records for the experiment and this specific run."""
+        if not self.db_logger:
+            return
+        try:
+            db_experiment_id = await self.db_logger.create_experiment(
+                name=self.experiment_id or "local_experiment",
+                config=self.config.model_dump(),
+                total_runs=1,
+                simulation_package=self.config.simulation_package,
+                mlflow_experiment_id="local",
+            )
+            scenario_name = Path(self.config.scenario_path).stem if self.config.scenario_path else "default"
+            await self.db_logger.create_simulation_run(
+                run_id=uuid.UUID(self.simulation_id),
+                experiment_id=db_experiment_id,
+                scenario_name=scenario_name,
+                config=self.config.model_dump(),
+                task_id=self.task_id,
+            )
+            print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
+        except Exception as e:
+            print(f"[{self.task_id}] WARNING: Could not create database records: {e}. Logging may fail.")
+
+    def _get_active_entities(self) -> List[str]:
+        """Returns a list of all active entities in the simulation state."""
+        active_entities = []
+        for eid, comps in self.simulation_state.entities.items():
+            time_comp = comps.get(TimeBudgetComponent)
+            if isinstance(time_comp, TimeBudgetComponent) and time_comp.is_active:
+                active_entities.append(eid)
+        return active_entities
+
+    async def _execute_simulation_step(self, step: int) -> bool:
+        """
+        Executes all the logic for a single simulation step.
+        Returns False if the simulation should end, True otherwise.
+        """
+        print(f"\n--- Simulation Step {step + 1}/{self.config.simulation.steps}")
+        self.simulation_state.current_tick = step
+
+        active_entities = self._get_active_entities()
+        if not active_entities:
+            print("All entities are inactive. Ending simulation.")
+            return False  # Signal to stop the simulation
+
+        await self.system_manager.update_all(current_tick=step)
+
+        if self.main_rng:
+            self.main_rng.shuffle(active_entities)
+
+        for entity_id in active_entities:
+            self._process_entity_turn(entity_id, step)
+
+        if step > 0 and step % 50 == 0:
+            self.save_state(step)
+
+        return True  # Signal to continue
+
     async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
         """
         Executes the main ECS simulation loop asynchronously.
-        Args:
-            start_step: The tick to start the simulation from (for resuming).
-            end_step: The tick to end the simulation on. If None, runs for the
-                      number of steps specified in the config.
         """
-        if end_step is None:
-            # Use direct attribute access
-            num_steps = self.config.simulation.steps
-        else:
-            num_steps = end_step
+        await self._initialize_run_records()
 
+        num_steps = end_step if end_step is not None else self.config.simulation.steps
         print(f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}...")
 
         for step in range(start_step, num_steps):
-            print(f"\n--- Simulation Step {step + 1}/{num_steps}")
-            self.simulation_state.current_tick = step
-
-            # 1. CHECK FOR ACTIVE ENTITIES (EXIT EARLY IF NONE)
-            active_entities: List[str] = []
-            for eid, comps in self.simulation_state.entities.items():
-                time_comp = comps.get(TimeBudgetComponent)
-                if isinstance(time_comp, TimeBudgetComponent) and time_comp.is_active:
-                    active_entities.append(eid)
-
-            if not active_entities:
-                print("All entities are inactive. Ending simulation.")
+            should_continue = await self._execute_simulation_step(step)
+            if not should_continue:
                 break
 
-            # 2. UPDATE ALL SYSTEMS ONCE (e.g., for state caching)
-            await self.system_manager.update_all(current_tick=step)
-
-            # 3. PROCESS ENTITY TURNS
-            if self.main_rng:
-                self.main_rng.shuffle(active_entities)
-
-            for entity_id in active_entities:
-                self._process_entity_turn(entity_id, step)
-
-            # 4. PERIODICALLY SAVE STATE
-            if step > 0 and step % 50 == 0:
-                self.save_state(step)
-
-        # 5. EXECUTE THESE ACTIONS *AFTER* THE LOOP FINISHES
         print("\nSimulation loop finished.")
         self.save_state(num_steps)
 
@@ -144,7 +167,6 @@ class SimulationManager:
         store = FileStateStore(Path(filepath))
         snapshot = store.load()
 
-        # Re-create the simulation state using the class method
         self.simulation_state = SimulationState.from_snapshot(
             snapshot=snapshot,
             config=self.config,
@@ -153,7 +175,6 @@ class SimulationManager:
             event_bus=self.event_bus,
             db_logger=self.db_logger,
         )
-
         print(f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1}")
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
@@ -198,7 +219,6 @@ class SimulationManager:
 
     def _setup_rng(self) -> None:
         """Initializes random number generators."""
-        # Use direct attribute access
         seed = self.config.simulation.random_seed
         if seed is not None:
             self.main_rng = np.random.default_rng(seed)

@@ -1,140 +1,50 @@
-# ARLA: A Modular Multi-Agent Simulation Platform
+# ARLA: Agent-based Reinforcement Learning Architecture
 
-Affective Reinforcement Learning Architecture (ARLA) is a Python-based monorepo for creating sophisticated multi-agent simulations, with a focus on cognitive architectures. It uses a clean, decoupled Entity-Component-System (ECS) architecture, making it highly modular and extensible for research and development.
+This repository contains the complete source code for the ARLA project, a multi-agent simulation platform designed for studying emergent behavior and complex cognitive architectures.
 
-## Core Concepts
+## Quickstart (Clone → Run in ~60s)
 
-The project is organized as a monorepo containing several distinct but interconnected Python packages. Understanding the role of each is key to working with ARLA.
-
-**[agent-core](./agent-core)**: Contains the foundational data structures, component interfaces, and abstract base classes that all other parts of the system rely on.
-
-**[agent-engine](./agent-engine)**: The world-agnostic simulation engine. It orchestrates the main simulation loop, manages systems, and is responsible for the core cognitive processing, but knows nothing about specific game rules.
-
-**[agent-concurrent](./agent-concurrent)**: A small, powerful library providing runners for executing simulation systems in parallel.
-
-**[agent-persist](./agent-persist)**: A library for serializing and deserializing the simulation state, allowing you to save and load snapshots.
-
-**[agent-sim](./agent-sim)**: A concrete implementation of a simulation. This package defines the world-specific rules, components (e.g., PositionComponent), and systems (e.g., CombatSystem) to create a runnable simulation.
-
-## Getting Started
-
-Follow these steps to get the ARLA project running on your local machine.
+This guide helps you set up the development environment and run a sample simulation in minutes.
 
 ### 1. Prerequisites
+- **Python 3.11**
+- **[Poetry](https://python-poetry.org/docs/#installation)**: A modern dependency management tool for Python.
 
-- Python 3.11+
-- pip and venv (usually included with Python)
-- Git
-
-### 2. Clone the Repository
-
-First, clone the ARLA repository to your local machine:
+### 2. Installation
+Clone the repository and use `poetry install` to create a virtual environment and install all dependencies from `pyproject.toml`.
 
 ```bash
-git clone https://github.com/renbytes/arla.git
+git clone git@github.com:renbytes/arla.git
 cd arla
+poetry install
 ```
 
-### 3. Set Up a Virtual Environment
+This command handles everything: it creates a `.venv`, installs all dependencies, and links the local `agent-*` subpackages in editable mode.
 
-It is highly recommended to use a virtual environment to manage dependencies.
+### 3. Run a Simulation
 
-Run this:
-```bash
-conda create --name arla python=3.11 -y
-conda activate arla
-```
-
-Pro-tip: For a much faster experience, you can use Mamba, a drop-in replacement for Conda. If you have Mamba installed (`conda install -n base -c conda-forge mamba`), the command is the same:
-```bash
-mamba create -n arla python=3.11 -y
-mamba activate arla
-```
-
-### 4. Install All Packages
-
-The monorepo contains multiple installable packages. The following command uses pip's "editable" (-e) mode to install them all. This creates links to your source code, so any changes you make are immediately available without reinstalling.
-
-Run this command from the root `arla/` directory:
+Activate the environment with `poetry shell` or use `poetry run` to execute commands.
 
 ```bash
-pip install -e ./agent-core -e ./agent-concurrent -e ./agent-engine -e ./agent-persist -e ./agent-sim
+# Activate the virtual environment
+poetry shell
+
+# Smoke test the CLI
+arla-sim --help
+
+# Run an example simulation for 50 steps
+arla-sim --scenario simulations/soul_sim/scenarios/default.json --steps 50
 ```
 
-This command automatically finds the `pyproject.toml` in each subdirectory and installs it, along with all of its dependencies.
+### Optional: Run with Docker Compose
 
-## Running the Simulation
+If you prefer a containerized environment, a docker-compose setup is provided for a headless run.
 
-The main entry point for running a simulation is located in the agent-sim package. The project uses Hydra for configuration management, allowing you to easily override settings from the command line.
-
-To run the default simulation scenario:
+1. Ensure Docker is running.
+2. Build and run the service:
 
 ```bash
-python agent-sim/src/main.py scenario_path=agent-sim/src/simulations/soul_sim/scenarios/default.json
+docker compose -f docker/compose.yaml up --build
 ```
 
-You can override any parameter defined in the config.yaml files. For example, to run the simulation for only 50 steps:
-
-```bash
-python agent-sim/src/main.py scenario_path=agent-sim/src/simulations/soul_sim/scenarios/default.json simulation.steps=50
-```
-
-If you're making code edits in between simulation runs, you can run this to reload the code:
-```bash
-docker compose build celery-worker && docker-compose up --build -d
-```
-
-> Note: if you've made small changes, it should pick up the latest build cache, speeding things up. Any major changes will still prompt a complete rebuild, which can take a few minutes.
-
-## Running Tests
-
-The project uses pytest for testing. After setting up your environment, you can run the entire test suite from the root arla/ directory:
-
-```bash
-pytest
-```
-
-This command will automatically discover and run all tests across all sub-repos.
-
-## Code Quality (Pre-Commit)
-
-The repository is configured with pre-commit hooks to automatically lint and format code, ensuring consistency.
-
-To enable these hooks for your own commits, install pre-commit and set it up:
-
-```bash
-pre-commit install
-```
-
-> Note: This only needs to be run once after cloning the repo
-
-Now, the ruff and mypy checks will run automatically on your staged files every time you git commit.
-
-## Project Structure
-
-```
-arla/
-├── .github/                 # GitHub Actions CI workflows
-├── .pre-commit-config.yaml  # Pre-commit hook definitions
-├── agent-concurrent/        # Concurrent execution library
-│   ├── pyproject.toml
-│   └── src/
-├── agent-core/              # Core interfaces and components
-│   ├── pyproject.toml
-│   └── src/
-├── agent-engine/            # World-agnostic simulation engine
-│   ├── pyproject.toml
-│   └── src/
-├── agent-persist/           # State persistence library
-│   ├── pyproject.toml
-│   └── src/
-├── agent-sim/               # Example simulation implementation
-│   ├── pyproject.toml
-│   └── src/
-├── pyproject.toml           # Root mypy configuration
-└── README.md
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to open an issue or submit a pull request. (A formal CONTRIBUTING.md guide will be added soon)
+This command will build a Python image, mount the project directory, install dependencies using Poetry, and execute the example simulation.

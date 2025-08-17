@@ -216,6 +216,7 @@ class SimulationConfig(BaseModel):
     database_file: str
     enable_debug_logging: bool
     random_seed: Optional[int] = None
+    enable_rendering: bool = False
 
 
 # The Main Application Config Schema
@@ -230,3 +231,4 @@ class SoulSimAppConfig(BaseModel):
     environment: EnvironmentConfig
     learning: LearningConfig
     scenario_path: Optional[str] = None
+    simulation_package: str = "unknown"
