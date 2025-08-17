@@ -33,11 +33,14 @@ The main entrypoint for local simulations is the `agent_sim.main` module. You ca
 # Activate the virtual environment (do this once per session)
 poetry env activate
 
+# Install the packages
+poetry install
+
 # Smoke test the local runner to see available options
-python -m agent_sim.main --help
+poetry run arla --help
 
 # Run an example simulation for 50 steps
-python -m agent_sim.main --scenario simulations/soul_sim/scenarios/default.json --steps 50
+poetry run arla --scenario simulations/soul_sim/scenarios/default.json --steps 50
 ```
 
 ### 4\. Run with Docker Compose (Recommended)

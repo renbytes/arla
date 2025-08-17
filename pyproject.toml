@@ -10,16 +10,37 @@ repository = "https://github.com/renbytes/arla"
 documentation = "https://github.com/renbytes/arla"
 package-mode = false
 
+[[tool.poetry.packages]]
+include = "agent_sim"
+from = "agent-sim/src"
+
+[[tool.poetry.packages]]
+include = "agent_core"
+from = "agent-core/src"
+
+[[tool.poetry.packages]]
+include = "agent_engine"
+from = "agent-engine/src"
+
+[[tool.poetry.packages]]
+include = "agent_persist"
+from = "agent-persist/src"
+
+[[tool.poetry.packages]]
+include = "agent_concurrent"
+from = "agent-concurrent/src"
+
+[tool.poetry.scripts]
+arla = "agent_sim.main:app"
+
 [tool.poetry.dependencies]
 python = "==3.11.9"
-
 # Local Packages (installed in editable/develop mode)
 agent-core = { path = "agent-core", develop = true }
 agent-engine = { path = "agent-engine", develop = true }
 agent-concurrent = { path = "agent-concurrent", develop = true }
 agent-persist = { path = "agent-persist", develop = true }
 agent-sim = { path = "agent-sim", develop = true }
-
 # Third Party Packages
 celery = { extras = ["redis"], version = "==5.3.4" }
 redis = ">=4.3.0"
