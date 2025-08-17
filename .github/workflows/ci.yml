@@ -20,15 +20,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.9"
-          cache: "poetry"
 
       - name: "Install Poetry"
-        uses: snok/install-poetry@v1
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: "Configure Poetry"
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: "Cache Poetry dependencies"
+        uses: actions/cache@v4
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          virtualenvs-path: ~/.venv
+          path: .venv
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
 
       - name: "Install dependencies"
         run: poetry install
@@ -49,15 +58,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.9"
-          cache: "poetry"
 
       - name: "Install Poetry"
-        uses: snok/install-poetry@v1
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: "Configure Poetry"
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: "Cache Poetry dependencies"
+        uses: actions/cache@v4
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          virtualenvs-path: ~/.venv
+          path: .venv
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
 
       - name: "Install dependencies"
         run: poetry install
@@ -76,7 +94,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.9"
-          cache: "poetry"
 
       - name: "Install Graphviz"
         run: |
@@ -84,12 +101,22 @@ jobs:
           sudo apt-get install -y graphviz graphviz-dev
 
       - name: "Install Poetry"
-        uses: snok/install-poetry@v1
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: "Configure Poetry"
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: "Cache Poetry dependencies"
+        uses: actions/cache@v4
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          virtualenvs-path: ~/.venv
+          path: .venv
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
 
       - name: "Install dependencies"
         run: poetry install
