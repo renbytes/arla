@@ -9,74 +9,40 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-format:
-    name: "Lint & Format"
+  build-and-test:
+    name: "Build & Test"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
+
       - name: "Set up Python"
         id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.9"
           cache: "poetry"
-      - name: "Install Poetry"
-        uses: snok/install-poetry@v1
-      - name: "Install dependencies"
-        # Only run if the cache didn't hit
-        if: steps.setup-python.outputs.cache-hit != 'true'
-        run: poetry install --with dev
-      - name: "Run Ruff Linter"
-        run: poetry run ruff check .
-      - name: "Run Ruff Formatter Check"
-        run: poetry run ruff format --check .
 
-  type-check:
-    name: "Type Checking"
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-      - name: "Set up Python"
-        id: setup-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.9"
-          cache: "poetry"
-      - name: "Install Poetry"
-        uses: snok/install-poetry@v1
-      - name: "Install dependencies"
-        if: steps.setup-python.outputs.cache-hit != 'true'
-        run: poetry install --with dev
-      - name: "Run MyPy"
-        run: poetry run mypy agent-core agent-engine agent-concurrent agent-persist agent-sim simulations
-
-  test:
-    name: "Tests"
-    runs-on: ubuntu-latest
-    strategy:
-      # Run tests on multiple Python versions
-      matrix:
-        python-version: ["3.11.9", "3.12"]
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-      - name: "Set up Python ${{ matrix.python-version }}"
-        id: setup-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "poetry"
       - name: "Install Graphviz"
         run: |
           sudo apt-get update
           sudo apt-get install -y graphviz graphviz-dev
+
       - name: "Install Poetry"
         uses: snok/install-poetry@v1
+
       - name: "Install dependencies"
-        if: steps.setup-python.outputs.cache-hit != 'true'
-        run: poetry install --with dev
-      - name: "Run Pytest"
-        run: poetry run pytest
+        # The simple 'poetry install' command is the most robust way to install
+        # all dependencies (main and dev) from the lock file.
+        run: poetry install
+
+      - name: "Run Linter & Formatter"
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+
+      - name: "Run Type Checker"
+        run: poetry run mypy agent-core agent-engine agent-concurrent agent-persist agent-sim simulations
+
+      - name: "Run Tests"
         run: poetry run pytest
