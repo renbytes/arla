@@ -19,7 +19,6 @@ SEARCH_PREFIXES = [
     "agent-sim",
     "agent-concurrent",
     "agent-persist",
-    "simulations",
 ]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE

@@ -1,13 +1,49 @@
 # src/agent_sim/infrastructure/data/async_runner.py
 
 import asyncio
+import os
 import threading
 import time
+from abc import ABC, abstractmethod
 from typing import Any, Coroutine
 
+# ----------------------------------------------------------------------------
+# Base Class and Implementations
+# ----------------------------------------------------------------------------
 
-class AsyncRunner:
-    """Thread-safe async operation runner for database operations"""
+
+class AsyncRunner(ABC):
+    """Abstract Base Class defining the interface for an async runner."""
+
+    @abstractmethod
+    def run_async(self, coro: Coroutine) -> Any:
+        """Runs a coroutine from a synchronous context."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self) -> None:
+        """Cleans up any resources used by the runner."""
+        raise NotImplementedError
+
+
+class SimpleAsyncRunner(AsyncRunner):
+    """
+    A simple, single-threaded runner that uses asyncio.run().
+    This is compatible with Celery's 'solo' pool and avoids threading issues.
+    """
+
+    def run_async(self, coro: Coroutine) -> Any:
+        return asyncio.run(coro)
+
+    def close(self) -> None:
+        pass  # No-op, as asyncio.run() manages the loop lifecycle.
+
+
+class ThreadedAsyncRunner(AsyncRunner):
+    """
+    The original multi-threaded runner that uses a dedicated background
+    thread for the asyncio event loop.
+    """
 
     def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -15,46 +51,49 @@ class AsyncRunner:
         self._start_event_loop()
 
     def _start_event_loop(self) -> None:
-        """Start a dedicated event loop in a separate thread."""
-
         def run_loop():
-            """This function runs in the new thread."""
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            # Assign the new loop to the instance attribute so the main thread can see it.
             self._loop = loop
             loop.run_forever()
 
-        # Nullify the loop reference before starting the new thread.
-        # This makes the `while` loop below a reliable synchronization point.
         self._loop = None
         self._thread = threading.Thread(target=run_loop, daemon=True)
         self._thread.start()
 
-        # Wait for the new loop to be created and assigned in the other thread.
         while self._loop is None:
             time.sleep(0.01)
 
     def run_async(self, coro: Coroutine) -> Any:
-        """Run an async coroutine and return the result."""
-        # If the thread is dead or the loop isn't running, we need a new one.
         if self._thread is None or not self._thread.is_alive() or self._loop is None or not self._loop.is_running():
             self._start_event_loop()
 
-        # This will now always use a valid, running loop.
         if self._loop is None:
             raise RuntimeError("AsyncRunner event loop is not running.")
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result(timeout=30)
 
     def close(self) -> None:
-        """Clean shutdown of the async runner."""
         if self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self._loop.stop)
-        # It's good practice to join the thread to ensure clean shutdown
         if self._thread:
             self._thread.join(timeout=1)
 
 
-# Global instance
-async_runner = AsyncRunner()
+# ----------------------------------------------------------------------------
+# Factory Selection
+# ----------------------------------------------------------------------------
+
+# Use an environment variable to select the runner mode.
+# Defaults to 'simple' to solve the hang issue on M-chip MacBooks.
+runner_mode = os.getenv("ASYNC_RUNNER_MODE", "simple").lower()
+
+# Explicitly type the variable with the base class to satisfy mypy
+async_runner: AsyncRunner
+
+if runner_mode == "threaded":
+    print("INFO: Using multi-threaded AsyncRunner.")
+    async_runner = ThreadedAsyncRunner()
+else:
+    print("INFO: Using simple, single-threaded AsyncRunner.")
+    async_runner = SimpleAsyncRunner()

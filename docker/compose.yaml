@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  arla:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app:delegated
+    command: >
+      bash -c "pip install poetry &&
+               poetry install --no-root &&
+               poetry run arla-sim --scenario simulations/soul_sim/scenarios/default.json --steps 50"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

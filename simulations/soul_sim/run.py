@@ -78,17 +78,24 @@ async def setup_and_run(
         final_config_dict = OmegaConf.to_container(OmegaConf.merge(base_config, config_overrides), resolve=True)
         if not isinstance(final_config_dict, dict):
             raise TypeError("Resolved config is not a dictionary.")
+
+        # Set the simulation package name before validation
+        final_config_dict["simulation_package"] = "simulations.soul_sim"
+
         config = SoulSimAppConfig(**final_config_dict)
         print(f"[{task_id}] Configuration validated successfully.")
     except Exception as e:
         print(f"[{task_id}] FATAL: Configuration validation failed for soul-sim: {e}")
         raise
 
-    # 2. Initialize world-specific singletons and providers
+    # 2. Initialize core services
     action_registry.load_actions_from_paths(config.action_modules)
     db_manager = AsyncDatabaseManager()
+    await db_manager.check_connection()
+
+    # 3. Initialize emitters, providers, and world singletons
     database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=uuid.UUID(run_id))
-    mlflow_exporter = MLflowExporter()
+    mlflow_exporter = MLflowExporter(run_id=run_id, experiment_id=experiment_id)
     environment = GridWorld(
         width=config.environment.grid_world_size[0],
         height=config.environment.grid_world_size[1],
@@ -106,7 +113,7 @@ async def setup_and_run(
     scenario_loader_instance = ScenarioLoader(config)
     component_factory = SoulSimComponentFactory(environment=environment, config=config)
 
-    # 3. Create the generic SimulationManager
+    # 4. Create the generic SimulationManager
     manager = SimulationManager(
         config=config,
         environment=environment,
@@ -120,7 +127,7 @@ async def setup_and_run(
         experiment_id=experiment_id,
     )
 
-    # 4. Load initial state
+    # 5. Load initial state
     starting_tick = 0
     if checkpoint_path and os.path.exists(checkpoint_path):
         manager.load_state(checkpoint_path)
@@ -129,21 +136,15 @@ async def setup_and_run(
         scenario_loader_instance.simulation_state = manager.simulation_state
         scenario_loader_instance.load()
 
-    # 5. Register all systems with the manager
-    # FIX: Register systems with inter-dependencies in the correct order
-
-    # Register CausalGraphSystem first because QLearningSystem depends on it.
+    # 6. Register all systems with the manager
     manager.register_system(CausalGraphSystem, state_node_encoder=providers["state_node_encoder"])
     causal_system_instance = manager.system_manager.get_system(CausalGraphSystem)
 
-    # Now, register QLearningSystem and inject the CausalGraphSystem instance.
     manager.register_system(
         QLearningSystem,
         state_encoder=providers["state_encoder"],
         causal_graph_system=causal_system_instance,
     )
-
-    # Register the rest of the systems
     manager.register_system(ActionSystem, reward_calculator=providers["reward_calculator"])
     manager.register_system(
         AffectSystem,
@@ -156,8 +157,6 @@ async def setup_and_run(
     )
     manager.register_system(IdentitySystem)
     manager.register_system(GoalSystem)
-
-    # World-Specific Systems
     manager.register_system(MovementSystem)
     manager.register_system(ResourceSystem)
     manager.register_system(CombatSystem)
@@ -166,7 +165,6 @@ async def setup_and_run(
     manager.register_system(NestSystem)
     manager.register_system(SocialInteractionSystem)
 
-    # Logging and Metrics Systems
     vitals_calculator = VitalsAndEconomyCalculator()
     manager.register_system(LoggingSystem, exporters=[database_emitter, mlflow_exporter])
     manager.register_system(
@@ -174,9 +172,11 @@ async def setup_and_run(
         calculators=[vitals_calculator],
         exporters=[database_emitter, mlflow_exporter],
     )
-    manager.register_system(RenderSystem)
 
-    # 6. Run the simulation
+    if config.simulation.enable_rendering:
+        manager.register_system(RenderSystem)
+
+    # 7. Run the simulation
     print(f"--- [{task_id}] Starting simulation loop for run: {run_id} from tick {starting_tick}")
     await manager.run(start_step=starting_tick)
     print(f"--- [{task_id}] Simulation loop finished for run: {run_id}")

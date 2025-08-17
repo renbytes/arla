@@ -1,36 +1,19 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "agent-sim"
 version = "0.1.0"
-description = "The main simulation application for the ARLA project."
-dependencies = [
-    # External PyPI packages
-    "hydra-core",
-    "pydantic",
-    "celery",
-    "redis",
-    "mlflow",
-    "sqlalchemy",
-    "asyncpg",
-    "imageio",
-    "matplotlib",
-    "typer[all]",
-    "rich",
+description = "The main simulation runner and application package for ARLA."
+authors = ["Your Name <your@email.com>"]
+packages = [{include = "agent_sim", from = "src"}]
 
-    # Local monorepo packages
-    "agent-core",
-    "agent-engine",
-    "agent-concurrent",
-    "agent-persist"
-]
+[tool.poetry.dependencies]
+python = "==3.11.9"
+# Most dependencies are managed by the root pyproject.toml,
+# so this can be kept minimal.
 
-# Script Entry Point
-# This makes CLI runnable after installation.
-[project.scripts]
-agentsim = "agent_sim.cli:app"
+[tool.poetry.scripts]
+# This correctly defines the script as part of the agent-sim package
+arla-sim = "agent_sim.main:app"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
