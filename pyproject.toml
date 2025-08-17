@@ -8,7 +8,6 @@ readme = "README.md"
 homepage = "https://github.com/renbytes/arla"
 repository = "https://github.com/renbytes/arla"
 documentation = "https://github.com/renbytes/arla"
-package-mode = false
 
 [[tool.poetry.packages]]
 include = "agent_sim"
