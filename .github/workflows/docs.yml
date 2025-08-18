@@ -23,6 +23,11 @@ jobs:
         with:
           python-version: "3.11.9"
 
+      - name: "Install Graphviz system dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz graphviz-dev libgraphviz-dev pkg-config
+
       - name: "Install Poetry"
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -33,16 +38,16 @@ jobs:
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
 
-      - name: "Install dependencies with fallback"
-        run: |
-          # Try to install all dependencies first
-          poetry install || {
-            echo "Full install failed, trying without optional dependencies..."
-            poetry install --no-dev --verbose
-          } || {
-            echo "Fallback: installing core dependencies only..."
-            poetry install --only main --verbose
-          }
+      - name: "Cache Poetry dependencies"
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
+
+      - name: "Install all project dependencies"
+        run: poetry install
 
       - name: "Build and deploy documentation"
         run: poetry run mkdocs gh-deploy --force
