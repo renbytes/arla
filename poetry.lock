@@ -2481,7 +2481,6 @@ Markdown = ">=3.3"
 MarkupSafe = ">=1.1"
 mkdocs = ">=1.4"
 mkdocs-autorefs = ">=0.3.1"
-mkdocstrings-python = {version = ">=0.5.2", optional = true, markers = "extra == \"python\""}
 platformdirs = ">=2.2.0"
 pymdown-extensions = ">=6.3"
 
@@ -5143,4 +5142,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "==3.11.9"
-content-hash = "2a44e4cfc4f54e8bec62cf954529dd5d0b66e9f79d908268b9c5e0ca8a5b391f"
+content-hash = "f22f1ff6038161a51e68910bb51f9e2ab1ff8177e0356f8ed9cee4ea4ce5f026"

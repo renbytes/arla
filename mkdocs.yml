@@ -47,6 +47,7 @@ theme:
 plugins:
   - search
   - blog
+  - autorefs
   - mkdocstrings:
       handlers:
         python:
