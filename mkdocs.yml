@@ -10,6 +10,11 @@ site_author: Bordumb / Renbytes
 repo_url: https://github.com/renbytes/arla
 repo_name: arla
 
+# Tell mkdocs where to find the source code for API documentation
+watch:
+  - agent-core/src
+  - agent-engine/src
+
 # Copyright
 copyright: Copyright &copy; 2025 Bordumb / Renbytes
 
@@ -65,7 +70,7 @@ nav:
     - "Running Simulations": guides/running-simulations.md
     - "Understanding the Output": guides/understanding-output.md
   - Developer Guides:
-    - "Core Architecture": developer/architecture.md
+    - "Architecture": architecture/index.md # Corrected path
     - "Creating a New Action": developer/creating-actions.md
     - "Creating a New System": developer/creating-systems.md
     - "The Event Bus": developer/event-bus.md
