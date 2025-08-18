@@ -10,6 +10,8 @@ site_author: Bordumb / Renbytes
 repo_url: https://github.com/renbytes/arla
 repo_name: arla
 
+docs_dir: docs
+
 # Copyright
 copyright: Copyright &copy; 2025 Bordumb / Renbytes
 
