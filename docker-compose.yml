@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # MODIFIED: Use a named volume to preserve the .venv from the image
     volumes:
       - .:/app
       - poetry_venv:/app/.venv
@@ -29,7 +28,6 @@ services:
     command: poetry run agentsim start-worker -Q "experiments,simulations" -c 4
     env_file:
       - .env
-    # MODIFIED: Also preserve the .venv here
     volumes:
       - .:/app
       - poetry_venv:/app/.venv
@@ -45,7 +43,7 @@ services:
     restart: unless-stopped
 
   # The PostgreSQL Database Service
-  db: # Named 'postgres' to match the DATABASE_URL in .env.example
+  db:
     image: postgres:15-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -59,7 +57,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # The Redis Service (no changes needed)
+  # The Redis Service
   redis:
     image: redis:7.2-alpine
     ports:
@@ -72,30 +70,47 @@ services:
       timeout: 3s
       retries: 5
 
-  # The MLflow Service (no changes needed)
+  # The MLflow Service
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.1
     ports:
       - "5001:5000"
     volumes:
       - ./mlruns:/mlruns
-    command: >
-      bash -c "
-        apt-get update && apt-get install -y curl &&
-        mlflow server
-          --backend-store-uri file:///mlruns
-          --host 0.0.0.0
-          --port 5000
-      "
+    env_file:
+      - .env
+    environment:
+      - MLFLOW_AUTH_CONFIG_PATH=/auth_config.ini
+    command:
+      - bash
+      - -c
+      - |
+        # Install curl and PostgreSQL driver for auth database
+        apt-get update && apt-get install -y curl libpq-dev &&
+        pip install psycopg2-binary &&
+        
+        # Create auth config with PostgreSQL connection
+        cat > /auth_config.ini << EOF
+        [mlflow]
+        admin_username = admin
+        admin_password = password
+        default_permission = READ
+        database_uri = postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+        EOF
+        
+        # Start MLflow with authentication
+        exec mlflow server \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --backend-store-uri file:///mlruns \
+          --app-name basic-auth
     healthcheck:
-      # Use a simple, more reliable health check URL
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:5000/"]
       interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 45s
     restart: unless-stopped
-
 
 volumes:
   postgres_data:
