@@ -84,7 +84,7 @@ jobs:
         run: poetry run mypy agent-core agent-engine agent-concurrent agent-persist agent-sim
 
   test:
-    name: "Tests"
+    name: "Run Tests & Check Coverage"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout code"
@@ -121,5 +121,5 @@ jobs:
       - name: "Install dependencies"
         run: poetry install
 
-      - name: "Run Tests"
-        run: poetry run pytest
+      - name: "Run Tests and Check Coverage"
+        run: poetry run pytest --cov=agent_core --cov=agent_engine --cov-report=term-missing --cov-fail-under=80
