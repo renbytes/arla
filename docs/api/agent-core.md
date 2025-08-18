@@ -6,7 +6,7 @@ This section provides the auto-generated API documentation for the `agent-core` 
 
 These are the central classes of the Entity Component System pattern.
 
-::: agent_core.core.ecs.simulation_state.SimulationState
+::: agent_core.core.ecs.abstractions.AbstractSimulationState
     options:
       show_root_heading: true
       show_source: false
