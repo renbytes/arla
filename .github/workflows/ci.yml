@@ -9,9 +9,26 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-format:
-    name: "Lint & Format"
+  ci:
+    # The job name will be dynamically set based on the matrix task name
+    name: ${{ matrix.task.name }}
     runs-on: ubuntu-latest
+    strategy:
+      # This ensures that if one matrix job fails, the others will continue to run
+      fail-fast: false
+      matrix:
+        task:
+          - name: "Lint & Format"
+            run_command: |
+              poetry run ruff check .
+              poetry run ruff format --check .
+          - name: "Type Checking"
+            run_command: poetry run mypy agent-core agent-engine agent-concurrent agent-persist agent-sim
+          - name: "Run Tests & Check Coverage"
+            run_command: poetry run pytest --cov=agent_core --cov=agent_engine --cov-report=term-missing --cov-fail-under=80
+            # Add a flag to indicate that this specific task needs graphviz
+            needs_graphviz: true
+
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -21,81 +38,9 @@ jobs:
         with:
           python-version: "3.11.9"
 
-      - name: "Install Poetry"
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: "Configure Poetry"
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
-
-      - name: "Cache Poetry dependencies"
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            poetry-${{ runner.os }}-
-
-      - name: "Install dependencies"
-        run: poetry install
-
-      - name: "Run Linter & Formatter"
-        run: |
-          poetry run ruff check .
-          poetry run ruff format --check .
-
-  type-check:
-    name: "Type Checking"
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.9"
-
-      - name: "Install Poetry"
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: "Configure Poetry"
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
-
-      - name: "Cache Poetry dependencies"
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            poetry-${{ runner.os }}-
-
-      - name: "Install dependencies"
-        run: poetry install
-
-      - name: "Run Type Checker"
-        run: poetry run mypy agent-core agent-engine agent-concurrent agent-persist agent-sim
-
-  test:
-    name: "Run Tests & Check Coverage"
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v4
-
-      - name: "Set up Python"
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.9"
-
+      # This step will only run for the "Run Tests & Check Coverage" job
       - name: "Install Graphviz"
+        if: matrix.task.needs_graphviz == true
         run: |
           sudo apt-get update
           sudo apt-get install -y graphviz graphviz-dev libgraphviz-dev pkg-config
@@ -121,5 +66,5 @@ jobs:
       - name: "Install dependencies"
         run: poetry install
 
-      - name: "Run Tests and Check Coverage"
-        run: poetry run pytest --cov=agent_core --cov=agent_engine --cov-report=term-missing --cov-fail-under=80
+      - name: "Run Task"
+        run: ${{ matrix.task.run_command }}

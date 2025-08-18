@@ -1,4 +1,4 @@
-# tests/test_store.py
+# tests/agent_persist/test_store.py
 
 import json
 from pathlib import Path
