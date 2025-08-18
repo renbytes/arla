@@ -1,0 +1,98 @@
+# mkdocs.yml
+
+# Project information
+site_name: ARLA Project
+site_url: https://renbytes.github.io/arla/
+site_description: >-
+  ARLA is a framework for building complex, multi-agent simulations
+  with a focus on emergent behavior and artificial intelligence.
+site_author: Bordumb / Renbytes
+repo_url: https://github.com/renbytes/arla
+repo_name: arla
+
+# Copyright
+copyright: Copyright &copy; 2025 Bordumb / Renbytes
+
+# Configuration
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.instant
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+
+# Plugins
+plugins:
+  - search
+  - blog
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: false
+
+# Page tree
+nav:
+  - Home: index.md
+  - Tutorials:
+    - "Building Your First Simulation": tutorials/first-simulation.md
+  - User Guides:
+    - "Installation & Setup": guides/installation.md
+    - "Running Simulations": guides/running-simulations.md
+    - "Understanding the Output": guides/understanding-output.md
+  - Developer Guides:
+    - "Core Architecture": developer/architecture.md
+    - "Creating a New Action": developer/creating-actions.md
+    - "Creating a New System": developer/creating-systems.md
+    - "The Event Bus": developer/event-bus.md
+  - Contributor's Guide:
+    - "Development Setup": contributing/setup.md
+    - "Coding Standards & Style": contributing/style-guide.md
+    - "Running Tests": contributing/testing.md
+  - API Reference:
+    - "agent-core": api/agent-core.md
+    - "agent-engine": api/agent-engine.md
+  - Blog: blog/index.md
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-github-username
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/arla/ # When you publish it
+
+# Markdown extensions
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
