@@ -1,79 +1,218 @@
-# Contributor's Guide: Development Setup
+# Installation & Setup
 
-Welcome, and thank you for your interest in contributing to the ARLA framework! This guide will walk you through setting up a complete local development environment.
+Get ARLA running on your local machine in minutes. Our Docker-based setup ensures consistency across all platforms while providing a complete development environment with cognitive systems, data persistence, and experiment tracking.
 
-The entire ARLA ecosystem, including the database, MLflow server, and application workers, is managed via Docker Compose to ensure a consistent and reproducible setup.
+!!! info "What You'll Build"
+    By the end of this guide, you'll have a complete ARLA development environment with:
+    
+    - **Agent simulation engine** with cognitive systems
+    - **PostgreSQL database** for experiment data and agent memories
+    - **MLflow tracking server** for experiment management and visualization
+    - **Redis message broker** for distributed computing and task queues
 
 ## Prerequisites
 
-Before you start, make sure you have the following tools installed on your system:
+Before you begin, ensure you have these tools installed on your development machine:
 
-- **Git**: For cloning the repository and managing versions.
-- **Docker & Docker Compose**: For running the containerized development environment.
-- **An OpenAI API Key**: Required for running the cognitive systems that rely on LLMs.
+<div class="grid cards" markdown>
 
-## Step 1: Fork and Clone the Repository
+-   :fontawesome-brands-git-alt:{ .lg .middle } **Git**
 
-First, fork the official ARLA repository on GitHub, and then clone your fork to your local machine.
+    ---
 
-```bash
-git clone https://github.com/renbytes/arla.git
-cd arla
-```
+    For cloning the repository and version control.
 
-## Step 2: Configure Your Local Environment
+    [Download Git](https://git-scm.com/downloads){ .md-button }
 
-The project uses a `.env` file to manage environment variables for API keys and service connections.
+-   :fontawesome-brands-docker:{ .lg .middle } **Docker & Docker Compose**
 
-1. **Create the `.env` file**: The `Makefile` includes a command to do this for you.
+    ---
+
+    For running the containerized development environment.
+
+    [Download Docker](https://docs.docker.com/get-docker/){ .md-button }
+
+-   :material-key:{ .lg .middle } **OpenAI API Key**
+
+    ---
+
+    Required for cognitive systems that use Large Language Models.
+
+    [Get API Key](https://platform.openai.com/api-keys){ .md-button }
+
+</div>
+
+## Quick Start
+
+### Step 1: Clone the Repository
+
+Get the latest version of ARLA from GitHub:
+
+=== "HTTPS"
+
+    ```bash
+    git clone https://github.com/renbytes/arla.git
+    cd arla
+    ```
+
+=== "SSH"
+
+    ```bash
+    git clone git@github.com:renbytes/arla.git
+    cd arla
+    ```
+
+=== "GitHub CLI"
+
+    ```bash
+    gh repo clone renbytes/arla
+    cd arla
+    ```
+
+### Step 2: Configure Environment
+
+ARLA uses environment variables for sensitive configuration like API keys and database credentials.
+
+**Create Configuration File:**
+
+The `Makefile` includes a convenient setup command:
 
 ```bash
 make setup
 ```
 
-This copies the `.env.example` file to a new `.env` file.
+This copies `.env.example` to `.env` with sensible defaults.
 
-2. **Add your OpenAI API Key**: Open the newly created `.env` file and add your secret key from OpenAI.
+**Add Your API Key:**
 
-```bash
-# in .env
+Open the newly created `.env` file and add your OpenAI API key:
+
+```bash title=".env"
+# --- OpenAI API Key (Required) ---
 OPENAI_API_KEY=sk-YourSecretKeyGoesHere
+
+# --- Database Configuration ---
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=password
+POSTGRES_DB=agent_sim_db
+
+# --- MLflow Configuration ---
+MLFLOW_TRACKING_URI=http://mlflow:5000
+MLFLOW_TRACKING_USERNAME=admin
+MLFLOW_TRACKING_PASSWORD=password
+
+# --- Redis Configuration ---
+REDIS_URL=redis://redis:6379/0
 ```
 
-## Step 3: Build and Start the Services
+!!! warning "Security Note"
+    Never commit your `.env` file to version control. It's already included in `.gitignore`.
 
-The `Makefile` provides a simple command to build the Docker images and start all the services.
+### Step 3: Build and Start Services
+
+Launch the complete ARLA environment with a single command:
 
 ```bash
 make up
 ```
 
-This command does the following:
+**What Happens During Setup:**
 
-- Builds the Docker images for the `app` and `worker` services, installing all Python dependencies with Poetry.
-- Starts the PostgreSQL database, Redis message broker, and MLflow tracking server.
-- Creates a shared volume to cache the Python dependencies, making subsequent builds much faster.
+<div class="grid cards" markdown>
 
-The first time you run this command, it may take several minutes.
+-   **1. Image Building**
 
-## Step 4: Verify Your Setup
+    ---
 
-Once the `make up` command has finished, you can verify that all services are running correctly.
+    Docker builds custom images for the application and worker services, installing Python dependencies with Poetry.
 
-1. **Check Container Status**:
+-   **2. Service Startup**
+
+    ---
+
+    Launches PostgreSQL database, Redis message broker, and MLflow tracking server with health checks.
+
+-   **3. Dependency Caching**
+
+    ---
+
+    Creates shared volumes to cache Python dependencies, making subsequent builds much faster.
+
+-   **4. Database Migration**
+
+    ---
+
+    Automatically creates database tables and applies any pending migrations.
+
+</div>
+
+!!! tip "First Run Performance"
+    The initial setup may take 5-10 minutes to download images and install dependencies. Subsequent runs are much faster thanks to Docker's caching.
+
+### Step 4: Verify Installation
+
+Confirm everything is working correctly:
+
+**Check Service Status:**
 
 ```bash
 docker compose ps
 ```
 
-You should see all services (`app`, `worker`, `db`, `redis`, `mlflow`) running and in a `healthy` state.
+You should see all services running with `healthy` status:
 
-2. **Run the Test Suite**: The best way to ensure your environment is set up correctly for development is to run the full test suite.
-
-```bash
-make test
+```
+NAME            STATUS                    PORTS
+arla-app-1      Up (healthy)             
+arla-worker-1   Up (healthy)             
+arla-db-1       Up (healthy)             0.0.0.0:5432->5432/tcp
+arla-redis-1    Up (healthy)             0.0.0.0:6379->6379/tcp
+arla-mlflow-1   Up (healthy)             0.0.0.0:5001->5000/tcp
 ```
 
-If all tests pass, your development environment is ready to go!
+**Run Example Simulation:**
 
-You are now fully set up to start contributing to the ARLA framework. Thank you for helping to build the future of agent-based simulation!
+Test the installation with a pre-configured simulation:
+
+```bash
+make run-example
+```
+
+**Expected Output:**
+```
+✅ Database connection successful
+📊 MLflow tracking enabled
+🤖 Spawning 10 agents in 50x50 grid world
+⚡ Starting simulation with 1000 ticks...
+🧠 Cognitive systems initialized: Reflection, Q-Learning, Identity, Goals
+🎬 Simulation running... (Tick 1/1000)
+```
+
+**Access MLflow UI:**
+
+Open your browser and navigate to [http://localhost:5001](http://localhost:5001) to view the experiment tracking interface.
+
+!!! success "Installation Complete!"
+    You now have a complete ARLA development environment running locally. You're ready to start building simulations!
+
+---
+
+## Development Workflow
+
+### Daily Development Commands
+
+Once installed, use these commands for daily development:
+
+```bash
+# Start services
+make up
+
+# Run a quick test simulation
+make run-example
+
+# Run the full test suite
+make test
+
+# View logs from all services
+make logs
+```
