@@ -81,7 +81,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/your-github-username
+      link: https://github.com/renbytes
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/arla/ # When you publish it
 
