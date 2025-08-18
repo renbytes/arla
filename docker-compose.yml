@@ -77,29 +77,40 @@ services:
       - "5001:5000"
     volumes:
       - ./mlruns:/mlruns
-      # Mount the auth file into the container
-      - ./basic_auth.ini:/basic_auth.ini
-    # Pass credentials to the service
     env_file:
       - .env
-    command: >
-      bash -c "
-        apt-get update && apt-get install -y curl &&
-        mlflow server
-          --backend-store-uri file:///mlruns
-          --host 0.0.0.0
-          --port 5000
+    environment:
+      - MLFLOW_AUTH_CONFIG_PATH=/auth_config.ini
+    command:
+      - bash
+      - -c
+      - |
+        # Install curl and PostgreSQL driver for auth database
+        apt-get update && apt-get install -y curl libpq-dev &&
+        pip install psycopg2-binary &&
+        
+        # Create auth config with PostgreSQL connection
+        cat > /auth_config.ini << EOF
+        [mlflow]
+        admin_username = admin
+        admin_password = password
+        default_permission = READ
+        database_uri = postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+        EOF
+        
+        # Start MLflow with authentication
+        exec mlflow server \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --backend-store-uri file:///mlruns \
           --app-name basic-auth
-          --users-file /basic_auth.ini
-      "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:5000/"]
       interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 45s
     restart: unless-stopped
-
 
 volumes:
   postgres_data:
