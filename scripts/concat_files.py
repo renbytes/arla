@@ -14,11 +14,12 @@ ROOT = "."
 # 1. CONFIGURE WHICH PACKAGES TO SEARCH
 #    The script will look for directories at the root that start with these prefixes.
 SEARCH_PREFIXES = [
-    "agent-core",
-    "agent-engine",
-    "agent-sim",
-    "agent-concurrent",
-    "agent-persist",
+    # "agent-core",
+    # "agent-engine",
+    # "agent-sim",
+    # "agent-concurrent",
+    # "agent-persist",
+    "docs"
 ]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
@@ -27,7 +28,7 @@ INCLUDE_SUBDIRS = []
 
 # 3. CONFIGURE WHICH FILE TYPES TO INCLUDE
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
-INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", "Dockerfile"]
+INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", "Dockerfile", ".md"]
 
 # 4. CONFIGURE DIRS/FILES TO EXCLUDE
 #    Any path containing these names will be skipped.
