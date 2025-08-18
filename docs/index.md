@@ -15,7 +15,7 @@ With a clean separation of data and logic (ECS), ARLA is designed for research. 
 
 Ready to build your first simulation? Our quickstart tutorial will guide you through the process of creating a new world and bringing your first agent to life.
 
-[Get Started with the Tutorial](tutorial.md){ .md-button .md-button--primary } 
+[Get Started with the Tutorial](tutorials/first-simulation.md){ .md-button .md-button--primary }
 [View the Source on GitHub](https://github.com/renbytes/arla){ .md-button }
 
 ## For Every Kind of User
