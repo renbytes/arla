@@ -22,6 +22,7 @@ from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_persist.store import FileStateStore
 from omegaconf import OmegaConf
+from pydantic import BaseModel
 
 # Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
@@ -79,30 +80,35 @@ class SimulationManager:
         self.system_manager.register_system(system_class, **kwargs)
 
     async def _initialize_run_records(self) -> None:
-        """Creates database records for the experiment and this specific run."""
+        """
+        Creates database records for the experiment and this specific run.
+        This is a critical step; if it fails, the simulation cannot proceed.
+        """
         if not self.db_logger:
             return
-        try:
-            # Convert OmegaConf to a plain dict for serialization
+
+        config_dict: Dict[str, Any]
+        if isinstance(self.config, BaseModel):
+            config_dict = self.config.model_dump()
+        else:
             config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
-            db_experiment_id = await self.db_logger.create_experiment(
-                name=self.experiment_id or "local_experiment",
-                config=config_dict,
-                total_runs=1,
-                simulation_package=self.config.simulation_package,
-                mlflow_experiment_id="local",
-            )
-            scenario_name = Path(self.config.scenario_path).stem if self.config.scenario_path else "default"
-            await self.db_logger.create_simulation_run(
-                run_id=uuid.UUID(self.simulation_id),
-                experiment_id=db_experiment_id,
-                scenario_name=scenario_name,
-                config=config_dict,
-                task_id=self.task_id,
-            )
-            print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
-        except Exception as e:
-            print(f"[{self.task_id}] WARNING: Could not create database records: {e}. Logging may fail.")
+
+        db_experiment_id = await self.db_logger.create_experiment(
+            name=self.experiment_id or "local_experiment",
+            config=config_dict,
+            total_runs=1,
+            simulation_package=self.config.simulation_package,
+            mlflow_experiment_id="local",
+        )
+        scenario_name = Path(self.config.scenario_path).stem if self.config.scenario_path else "default"
+        await self.db_logger.create_simulation_run(
+            run_id=uuid.UUID(self.simulation_id),
+            experiment_id=db_experiment_id,
+            scenario_name=scenario_name,
+            config=config_dict,
+            task_id=self.task_id,
+        )
+        print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
 
     def _get_active_entities(self) -> List[str]:
         """Returns a list of all active entities in the simulation state."""
@@ -126,12 +132,15 @@ class SimulationManager:
             print("All entities are inactive. Ending simulation.")
             return False
 
+        print(f"--- Running {len(self.system_manager._systems)} systems...")
         await self.system_manager.update_all(current_tick=step)
+        print("--- All systems updated.")
 
         if self.main_rng:
             self.main_rng.shuffle(active_entities)
 
-        for entity_id in active_entities:
+        for i, entity_id in enumerate(active_entities):
+            print(f"--- Processing agent {i + 1}/{len(active_entities)}: {entity_id}")
             self._process_entity_turn(entity_id, step)
 
         if step > 0 and step % 50 == 0:
@@ -184,15 +193,14 @@ class SimulationManager:
         if not time_comp or not hasattr(time_comp, "is_active") or not time_comp.is_active:
             return
 
-        print(f"   Processing turn for {entity_id}...")
-
         possible_actions = self.action_generator.generate(self.simulation_state, entity_id, current_tick)
         if not possible_actions:
-            print(f"   {entity_id} has no possible actions and passes the turn.")
+            print(f"   - {entity_id} has no possible actions and passes the turn.")
             return
 
         chosen_plan = self.decision_selector.select(self.simulation_state, entity_id, possible_actions)
         if not chosen_plan:
+            print(f"   - {entity_id} chose not to act.")
             return
 
         self.simulation_state.add_component(entity_id, chosen_plan)
@@ -250,8 +258,14 @@ class SimulationManager:
 
     def _generate_run_manifest(self) -> None:
         """Generates and saves the manifest and resolved config for the run."""
-        # Cast the result of to_container to satisfy mypy
-        config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
+        config_dict: Dict[str, Any]
+
+        # Check if the config is a Pydantic model or an OmegaConf object
+        if isinstance(self.config, BaseModel):
+            config_dict = self.config.model_dump()
+        else:
+            # Assume it's an OmegaConf object and cast to satisfy mypy
+            config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
 
         # Create and save the manifest.json
         manifest_data = create_run_manifest(
@@ -266,4 +280,10 @@ class SimulationManager:
 
         # Save the fully resolved resolved_config.yml
         config_path = self.run_directory / "resolved_config.yml"
-        OmegaConf.save(config=self.config, f=config_path)
+        # Also handle the case where we have a Pydantic model for saving
+        if isinstance(self.config, BaseModel):
+            with open(config_path, "w") as f:
+                # A simple way to save as YAML-like format; for true YAML, a library like PyYAML would be needed
+                json.dump(config_dict, f, indent=2)
+        else:
+            OmegaConf.save(config=self.config, f=config_path)

@@ -102,9 +102,10 @@ ignore = ["B905"]
 exclude = ["tests/"]
 python_version = "3.11.9"
 disallow_untyped_defs = true
+ignore_missing_imports = true
+mypy_path = ["agent-core/src", "agent-engine/src", "agent-concurrent/src", "agent-persist/src", "agent-sim/src"]
 warn_return_any = true
 warn_unused_configs = true
-mypy_path = ["agent-core/src", "agent-engine/src", "agent-concurrent/src", "agent-persist/src", "agent-sim/src"]
 
 [[tool.mypy.overrides]]
 module = [

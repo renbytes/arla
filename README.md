@@ -47,6 +47,11 @@ poetry run arla --scenario simulations/soul_sim/scenarios/default.json --steps 5
 
 The provided `Makefile` contains the simplest way to use the containerized environment.
 
+Before running any of the following, you need to start up the docker container:
+```bash
+docker compose up -d
+```
+
 1.  **Start Services**: Build the Docker images and start the application, database, and other services in the background.
 
     ```bash
