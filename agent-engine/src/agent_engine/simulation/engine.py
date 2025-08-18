@@ -3,14 +3,15 @@
 A world-agnostic simulation engine that orchestrates the main ECS loop.
 """
 
+import json
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, cast
 
 import numpy as np
-
-# Imports from agent_core
+import torch
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.cognition.scaffolding import CognitiveScaffold
@@ -20,10 +21,12 @@ from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 from agent_persist.store import FileStateStore
+from omegaconf import OmegaConf
 
 # Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import SystemManager
+from agent_engine.utils.manifest import create_run_manifest
 
 
 class SimulationManager:
@@ -49,7 +52,6 @@ class SimulationManager:
     ):
         self.config = config
         self.device = "cpu"
-        self.save_path = Path(self.config.simulation.log_directory) / "snapshots"
         self.db_logger = db_logger
 
         self.environment = environment
@@ -59,6 +61,7 @@ class SimulationManager:
         self.component_factory = component_factory
 
         self._setup_simulation_ids(run_id, task_id, experiment_id)
+        self._setup_run_directory()
         self._setup_rng()
 
         self.event_bus = EventBus(self.config)
@@ -67,6 +70,7 @@ class SimulationManager:
         self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
 
         self._initialize_state()
+        self._generate_run_manifest()
 
         print("Engine: Manager initialized. World will be populated by the scenario loader.")
 
@@ -79,9 +83,11 @@ class SimulationManager:
         if not self.db_logger:
             return
         try:
+            # Convert OmegaConf to a plain dict for serialization
+            config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
             db_experiment_id = await self.db_logger.create_experiment(
                 name=self.experiment_id or "local_experiment",
-                config=self.config.model_dump(),
+                config=config_dict,
                 total_runs=1,
                 simulation_package=self.config.simulation_package,
                 mlflow_experiment_id="local",
@@ -91,7 +97,7 @@ class SimulationManager:
                 run_id=uuid.UUID(self.simulation_id),
                 experiment_id=db_experiment_id,
                 scenario_name=scenario_name,
-                config=self.config.model_dump(),
+                config=config_dict,
                 task_id=self.task_id,
             )
             print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
@@ -118,7 +124,7 @@ class SimulationManager:
         active_entities = self._get_active_entities()
         if not active_entities:
             print("All entities are inactive. Ending simulation.")
-            return False  # Signal to stop the simulation
+            return False
 
         await self.system_manager.update_all(current_tick=step)
 
@@ -131,12 +137,10 @@ class SimulationManager:
         if step > 0 and step % 50 == 0:
             self.save_state(step)
 
-        return True  # Signal to continue
+        return True
 
     async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
-        """
-        Executes the main ECS simulation loop asynchronously.
-        """
+        """Executes the main ECS simulation loop asynchronously."""
         await self._initialize_run_records()
 
         num_steps = end_step if end_step is not None else self.config.simulation.steps
@@ -151,18 +155,15 @@ class SimulationManager:
         self.save_state(num_steps)
 
     def save_state(self, tick: int) -> None:
-        """Saves the current simulation state to a file."""
+        """Saves the current simulation state to a file in the run directory."""
         print(f"--- Saving state at tick {tick}")
         snapshot = self.simulation_state.to_snapshot()
-        filepath = self.save_path / self.simulation_id / f"snapshot_tick_{tick}.json"
+        filepath = self.run_directory / "snapshots" / f"snapshot_tick_{tick}.json"
         store = FileStateStore(filepath)
         store.save(snapshot)
 
     def load_state(self, filepath: str) -> None:
-        """
-        Loads the entire simulation state from a checkpoint file.
-        This replaces the existing self.simulation_state with a new one.
-        """
+        """Loads the entire simulation state from a checkpoint file."""
         print(f"--- Loading state from {filepath}")
         store = FileStateStore(Path(filepath))
         snapshot = store.load()
@@ -213,16 +214,28 @@ class SimulationManager:
         else:
             timestamp = int(time.time() * 1000)
             self.simulation_id = f"sim_{timestamp}_{uuid.uuid4().hex[:8]}"
-
         self.task_id = task_id
         self.experiment_id = experiment_id
 
+    def _setup_run_directory(self) -> None:
+        """Creates a unique, timestamped directory for the run's outputs."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        run_dir_name = f"{timestamp}_{self.simulation_id}"
+        self.run_directory = Path(self.config.simulation.log_directory) / run_dir_name
+        self.run_directory.mkdir(parents=True, exist_ok=True)
+        print(f"Created run output directory: {self.run_directory}")
+
     def _setup_rng(self) -> None:
-        """Initializes random number generators."""
+        """Initializes all relevant random number generators with a central seed."""
         seed = self.config.simulation.random_seed
         if seed is not None:
+            print(f"Seeding all RNGs with: {seed}")
             self.main_rng = np.random.default_rng(seed)
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed)
         else:
+            print("Warning: No random_seed provided. Simulation will not be reproducible.")
             self.main_rng = np.random.default_rng()
 
     def _initialize_state(self) -> None:
@@ -234,3 +247,23 @@ class SimulationManager:
         self.simulation_state.cognitive_scaffold = self.cognitive_scaffold
         self.simulation_state.main_rng = self.main_rng
         self.simulation_state.db_logger = self.db_logger
+
+    def _generate_run_manifest(self) -> None:
+        """Generates and saves the manifest and resolved config for the run."""
+        # Cast the result of to_container to satisfy mypy
+        config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
+
+        # Create and save the manifest.json
+        manifest_data = create_run_manifest(
+            run_id=self.simulation_id,
+            experiment_id=self.experiment_id,
+            task_id=self.task_id,
+            config=config_dict,
+        )
+        manifest_path = self.run_directory / "manifest.json"
+        with open(manifest_path, "w") as f:
+            json.dump(manifest_data, f, indent=2)
+
+        # Save the fully resolved resolved_config.yml
+        config_path = self.run_directory / "resolved_config.yml"
+        OmegaConf.save(config=self.config, f=config_path)
