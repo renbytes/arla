@@ -10,11 +10,6 @@ site_author: Bordumb / Renbytes
 repo_url: https://github.com/renbytes/arla
 repo_name: arla
 
-# Tell mkdocs where to find the source code for API documentation
-watch:
-  - agent-core/src
-  - agent-engine/src
-
 # Copyright
 copyright: Copyright &copy; 2025 Bordumb / Renbytes
 
@@ -56,6 +51,9 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          setup_paths:
+            - agent-core/src
+            - agent-engine/src
           options:
             show_root_heading: true
             show_source: false
@@ -70,7 +68,7 @@ nav:
     - "Running Simulations": guides/running-simulations.md
     - "Understanding the Output": guides/understanding-output.md
   - Developer Guides:
-    - "Architecture": architecture/index.md # Corrected path
+    - "Architecture": architecture/index.md
     - "Creating a New Action": developer/creating-actions.md
     - "Creating a New System": developer/creating-systems.md
     - "The Event Bus": developer/event-bus.md
@@ -89,7 +87,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/renbytes
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/arla/ # When you publish it
+      link: https://pypi.org/project/arla/
 
 # Markdown extensions
 markdown_extensions:
