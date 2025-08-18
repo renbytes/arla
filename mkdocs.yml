@@ -51,9 +51,13 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          # This is the key change: tell mkdocstrings where to find ALL the code.
           setup_paths:
             - agent-core/src
             - agent-engine/src
+            - agent-concurrent/src
+            - agent-persist/src
+            - agent-sim/src
           options:
             show_root_heading: true
             show_source: false
@@ -87,7 +91,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/renbytes
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/arla/
+      link: https://pypi.org/project/arla/ # When you publish it
 
 # Markdown extensions
 markdown_extensions:
