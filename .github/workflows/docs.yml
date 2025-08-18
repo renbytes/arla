@@ -1,0 +1,39 @@
+# .github/workflows/docs.yml
+
+name: Deploy Documentation to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: "Install Poetry"
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: "Install documentation dependencies"
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+          # Assuming you've added mkdocs and mkdocs-material to your pyproject.toml
+          poetry install --only docs
+
+      - name: "Build and deploy documentation"
+        run: poetry run mkdocs gh-deploy --force
