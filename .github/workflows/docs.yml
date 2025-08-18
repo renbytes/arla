@@ -28,11 +28,21 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: "Install all project dependencies"
+      - name: "Configure Poetry"
         run: |
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
-          poetry install
+
+      - name: "Install dependencies with fallback"
+        run: |
+          # Try to install all dependencies first
+          poetry install || {
+            echo "Full install failed, trying without optional dependencies..."
+            poetry install --no-dev --verbose
+          } || {
+            echo "Fallback: installing core dependencies only..."
+            poetry install --only main --verbose
+          }
 
       - name: "Build and deploy documentation"
         run: poetry run mkdocs gh-deploy --force
