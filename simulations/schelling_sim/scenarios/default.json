@@ -1,0 +1,6 @@
+{
+    "name": "Default Schelling Scenario",
+    "description": "A standard setup with 350 agents on a 50x50 grid, with a 50/50 group split.",
+    "num_agents": 350,
+    "group_ratio": 0.5
+  }
