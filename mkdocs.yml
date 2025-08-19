@@ -1,6 +1,6 @@
 # mkdocs.yml
 
-site_name: ARLA Project
+site_name: Affective Reinforcement Learning Agents (ARLA)
 site_url: https://renbytes.github.io/arla/
 site_description: >-
   ARLA is a framework for building complex, multi-agent simulations
