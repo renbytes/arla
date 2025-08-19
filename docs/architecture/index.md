@@ -60,9 +60,9 @@ graph TD
 ```
 
 **Event Flow Example:**
-- ActionSystem publishes "action_executed" events
-- ReflectionSystem, QLearningSystem, and IdentitySystem all subscribe
-- Each processes the event independently without knowing about the others
+* ActionSystem publishes "action_executed" events
+* ReflectionSystem, QLearningSystem, and IdentitySystem all subscribe
+* Each processes the event independently without knowing about the others
 
 ### World-Agnostic Engine
 
@@ -70,9 +70,9 @@ The agent-engine is fundamentally agnostic to the rules of any specific simulati
 
 **Architecture Benefits:**
 
-- **Reusability**: Same cognitive engine works across different simulation worlds
-- **Testability**: Mock providers enable isolated testing of cognitive systems
-- **Modularity**: Swap world implementations without changing agent logic
+* **Reusability**: Same cognitive engine works across different simulation worlds
+* **Testability**: Mock providers enable isolated testing of cognitive systems
+* **Modularity**: Swap world implementations without changing agent logic
 
 ---
 

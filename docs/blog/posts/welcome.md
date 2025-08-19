@@ -26,7 +26,7 @@ This blog will be our primary channel for communicating with the ARLA community.
 
 ## Get Involved!
 
-ARLA is an open-source project, and we welcome contributions from everyone. Whether you're interested in fixing a bug, adding a new feature, or improving the documentation, we encourage you to check out our [Contributor's Guide](contributing/setup.md) and get involved.
+ARLA is an open-source project, and we welcome contributions from everyone. Whether you're interested in fixing a bug, adding a new feature, or improving the documentation, we encourage you to check out our [Contributor's Guide](https://renbytes.github.io/arla/contributing/setup/) and get involved.
 
 We can't wait to see what you'll build.
 
