@@ -221,7 +221,7 @@ class AsyncDatabaseManager:
             return
         try:
             async with self.get_session() as session:
-                metric = Metric(simulation_id=simulation_id, tick=tick, **metrics_data)
+                metric = Metric(simulation_id=simulation_id, tick=tick, data=metrics_data)
                 session.add(metric)
         except Exception as e:
             print(f"Failed to log metrics: {e}")

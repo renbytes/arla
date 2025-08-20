@@ -8,7 +8,8 @@ from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.abstractions import SimulationState
 
-from .components import PositionComponent, SchellingAgentComponent
+# --- FIX: Import the new, separated components ---
+from .components import PositionComponent, SatisfactionComponent
 from .environment import SchellingGridEnvironment
 
 
@@ -39,10 +40,11 @@ class MoveToEmptyCellAction(ActionInterface):
         Generates a move parameter if the agent is unsatisfied and there are
         empty cells available.
         """
-        agent_comp = simulation_state.get_component(entity_id, SchellingAgentComponent)
+        # --- FIX: Use the SatisfactionComponent to check the agent's state ---
+        satisfaction_comp = simulation_state.get_component(entity_id, SatisfactionComponent)
 
         # Only generate a move action if the agent is unsatisfied.
-        if not agent_comp or agent_comp.is_satisfied:
+        if not satisfaction_comp or satisfaction_comp.is_satisfied:
             return []
 
         env = simulation_state.environment
@@ -66,8 +68,7 @@ class MoveToEmptyCellAction(ActionInterface):
     ) -> ActionOutcome:
         """
         Signals the intent to move. The actual move logic is handled by the
-        MovementSystem, which listens for the corresponding event. This keeps
-        the action lightweight and decoupled from state-modifying logic.
+        MovementSystem.
         """
         pos_comp = simulation_state.get_component(entity_id, PositionComponent)
         if not pos_comp:
@@ -77,7 +78,7 @@ class MoveToEmptyCellAction(ActionInterface):
         return ActionOutcome(
             success=True,
             message=f"Agent {entity_id} moves from {pos_comp.position} to {target_pos}.",
-            base_reward=1.0,  # Reward for finding a new home
+            base_reward=1.0,
         )
 
     def get_feature_vector(

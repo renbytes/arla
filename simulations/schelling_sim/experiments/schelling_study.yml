@@ -1,0 +1,29 @@
+# experiments/schelling_study.yml
+
+experiment_name: "Schelling Model - Satisfaction Study"
+
+# Path to the base configuration file you created.
+base_config_path: "simulations/schelling_sim/config/config.yml"
+
+# The Python package for your simulation.
+simulation_package: "simulations.schelling_sim"
+
+# A list of scenarios to run for EACH variation.
+scenarios:
+  - "simulations/schelling_sim/scenarios/default.json"
+
+# Number of times to repeat each run for statistical significance.
+runs_per_scenario: 3
+
+# Define the experimental variations.
+# Each variation overrides a parameter in the base_config.yml.
+variations:
+  - name: "Moderate Satisfaction (40%)"
+    overrides:
+      simulation:
+        satisfaction_threshold: 0.4
+
+  - name: "High Satisfaction (60%)"
+    overrides:
+      simulation:
+        satisfaction_threshold: 0.6

@@ -7,10 +7,6 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Coroutine
 
-# ----------------------------------------------------------------------------
-# Base Class and Implementations
-# ----------------------------------------------------------------------------
-
 
 class AsyncRunner(ABC):
     """Abstract Base Class defining the interface for an async runner."""
@@ -80,13 +76,12 @@ class ThreadedAsyncRunner(AsyncRunner):
             self._thread.join(timeout=1)
 
 
-# ----------------------------------------------------------------------------
-# Factory Selection
-# ----------------------------------------------------------------------------
-
 # Use an environment variable to select the runner mode.
-# Defaults to 'simple' to solve the hang issue on M-chip MacBooks.
-runner_mode = os.getenv("ASYNC_RUNNER_MODE", "simple").lower()
+# Defaults to 'threaded' as it correctly manages a persistent event loop,
+# which is required for libraries like SQLAlchemy's async engine.
+# The 'simple' runner (using asyncio.run()) is an anti-pattern for this use case
+# and causes event loop conflicts.
+runner_mode = os.getenv("ASYNC_RUNNER_MODE", "threaded").lower()
 
 # Explicitly type the variable with the base class to satisfy mypy
 async_runner: AsyncRunner

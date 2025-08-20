@@ -1,5 +1,6 @@
 import argparse
 import importlib
+import sys
 import traceback
 import uuid
 from pathlib import Path
@@ -15,6 +16,13 @@ def app():
     simulation configuration and entrypoint, and starts the simulation.
     It is designed for quick, direct runs without the Celery/MLflow stack.
     """
+    # This allows the script to find the top-level 'simulations' directory.
+    # The path is calculated relative to this file's location.
+    # .../agent-sim/src/agent_sim/main.py -> .../agent-sim/src/ -> .../agent-sim/ -> project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
     parser = argparse.ArgumentParser(
         description="ARLA Simulation Runner",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

@@ -6,18 +6,7 @@ from agent_core.core.ecs.component import Component
 
 
 class PositionComponent(Component):
-    """
-    Stores an entity's x, y coordinates in the grid world.
-
-    Args:
-        x (int): The x-coordinate of the agent.
-        y (int): The y-coordinate of the agent.
-
-    Sample Usage:
-        pos = PositionComponent(x=10, y=20)
-        pos.move_to(11, 21)
-        print(pos.previous_position)  # Outputs: (10, 20)
-    """
+    """Stores an entity's x, y coordinates in the grid world."""
 
     def __init__(self, x: int = 0, y: int = 0) -> None:
         self.x = x
@@ -53,34 +42,35 @@ class PositionComponent(Component):
         """Validates the component's internal state."""
         errors: List[str] = []
         if not isinstance(self.x, int) or not isinstance(self.y, int):
-            # FIX: Changed message to match the test's specific expectation.
             errors.append("Position coordinates must be integers")
         return len(errors) == 0, errors
 
 
-class SchellingAgentComponent(Component):
-    """
-    Stores state for an agent in a Schelling segregation model simulation.
+class GroupComponent(Component):
+    """Stores the agent's group or type identifier."""
 
-    Args:
-        agent_type (int): The group or type identifier for the agent.
-        satisfaction_threshold (float): The minimum proportion of same-type
-            neighbors required for the agent to be satisfied.
-
-    Sample Usage:
-        agent_attrs = SchellingAgentComponent(agent_type=1, satisfaction_threshold=0.4)
-        agent_attrs.is_satisfied = False
-    """
-
-    def __init__(self, agent_type: int, satisfaction_threshold: float) -> None:
+    def __init__(self, agent_type: int) -> None:
         self.agent_type = agent_type
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data to a dictionary."""
+        return {"agent_type": self.agent_type}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the component's internal state."""
+        return True, []
+
+
+class SatisfactionComponent(Component):
+    """Stores an agent's satisfaction state and threshold."""
+
+    def __init__(self, satisfaction_threshold: float) -> None:
         self.satisfaction_threshold = satisfaction_threshold
         self.is_satisfied: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the component's data to a dictionary."""
         return {
-            "agent_type": self.agent_type,
             "satisfaction_threshold": self.satisfaction_threshold,
             "is_satisfied": self.is_satisfied,
         }

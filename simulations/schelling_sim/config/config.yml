@@ -1,68 +1,41 @@
-# /simulations/schelling_sim/config/config.yml
-# -----------------------------------------------------------------------------
-# Main configuration for the Schelling Segregation Model benchmark.
-# This file defines all the parameters and class paths needed to run the simulation.
-# -----------------------------------------------------------------------------
-
-# The root Python package for this specific simulation.
-# This is used by the experiment runner to locate all other class paths.
 simulation_package: "simulations.schelling_sim"
 
 simulation:
-  steps: 100
+  steps: 200 # Increased steps to better see the effect
   log_directory: "data/logs/schelling_sim"
-  database_directory: "data/databases"
-  database_file: "schelling_sim.db"
-  enable_debug_logging: false
   random_seed: 42
-
-  # --- Schelling Model Specific Parameter ---
-  # The core rule of the model: an agent is satisfied if the fraction of
-  # same-group neighbors is >= this value. A classic value to show
-  # emergent segregation is just above 1/3 (e.g., 0.34), but 0.4 or 0.5
-  # makes the effect more pronounced and faster.
   satisfaction_threshold: 0.4
 
-# Defines the environment the agents will inhabit.
 environment:
   class: "simulations.schelling_sim.environment.SchellingGridEnvironment"
   params:
     width: 50
     height: 50
 
-# Defines the class responsible for loading the initial scenario.
 scenario_loader:
   class: "simulations.schelling_sim.loader.SchellingScenarioLoader"
 
-# Defines the class that generates possible actions for an agent.
-# We can reuse the generic one from the main 'soul_sim' as it simply
-# queries the action registry, which is what we need.
 action_generator:
-  class: "simulations.soul_sim.providers.GridWorldActionGenerator"
+  class: "simulations.schelling_sim.run.SchellingActionGenerator"
 
 # Defines the class that selects an action for an agent to perform.
-# This points to our custom, rule-based selector for this model.
 decision_selector:
-  class: "simulations.schelling_sim.providers.SchellingDecisionSelector"
+  class: "simulations.schelling_sim.run.SchellingDecisionSelector"
 
 # Defines the factory for creating components when loading a saved state.
-# We can reuse the generic one from 'soul_sim'.
 component_factory:
-  class: "simulations.soul_sim.providers.ComponentFactory"
+  class: "simulations.schelling_sim.run.SchellingComponentFactory"
 
-# A list of all system modules to be loaded and registered by the SystemManager.
-# For this simulation, we only need our custom SatisfactionSystem.
-# The core cognitive systems from agent-engine are not needed for this benchmark.
+# A list of all system modules to be loaded and registered.
 systems:
   - "simulations.schelling_sim.systems.SatisfactionSystem"
+  - "simulations.schelling_sim.systems.MovementSystem"
 
 # A list of all action modules to be loaded.
-# Importing these modules ensures that the @action_registry.register decorator
-# is executed, making the actions available to the simulation.
 actions:
   - "simulations.schelling_sim.actions"
 
-# Logging configuration (optional, but good practice).
+# Updated logging to reflect the new component names
 logging:
   components_to_log:
     - "simulations.schelling_sim.components.PositionComponent"

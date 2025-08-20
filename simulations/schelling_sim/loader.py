@@ -7,7 +7,7 @@ from typing import cast
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
 
-from .components import PositionComponent, SchellingAgentComponent
+from .components import GroupComponent, PositionComponent, SatisfactionComponent
 from .environment import SchellingGridEnvironment
 
 
@@ -30,16 +30,15 @@ class SchellingScenarioLoader(ScenarioLoaderInterface):
         with open(self.scenario_path, "r") as f:
             scenario_data = json.load(f)
 
-        # --- FIX: Use the grid dimensions from the scenario ---
-        grid_width = scenario_data.get("grid_width", 50)
-        grid_height = scenario_data.get("grid_height", 50)
+        config = self.simulation_state.config
         num_agents = scenario_data.get("num_agents", 100)
         group_ratio = scenario_data.get("group_ratio", 0.5)
-        satisfaction_threshold = scenario_data.get("satisfaction_threshold", 0.4)
+        satisfaction_threshold = config.simulation.get("satisfaction_threshold", 0.4)
 
-        # Initialize the environment with the correct dimensions
-        self.simulation_state.environment = SchellingGridEnvironment(width=grid_width, height=grid_height)
+        # The environment is now passed in, so we just ensure it's the correct type
         environment = cast(SchellingGridEnvironment, self.simulation_state.environment)
+        if not environment:
+            raise ValueError("Environment not initialized in SimulationState.")
 
         # Create agents
         locations = random.sample(environment.get_valid_positions(), num_agents)
@@ -52,15 +51,12 @@ class SchellingScenarioLoader(ScenarioLoaderInterface):
 
             self.simulation_state.add_entity(agent_id)
             self.simulation_state.add_component(agent_id, PositionComponent(x=position[0], y=position[1]))
+
+            self.simulation_state.add_component(agent_id, GroupComponent(agent_type=agent_type))
             self.simulation_state.add_component(
-                agent_id,
-                SchellingAgentComponent(
-                    agent_type=agent_type,
-                    satisfaction_threshold=satisfaction_threshold,
-                ),
+                agent_id, SatisfactionComponent(satisfaction_threshold=satisfaction_threshold)
             )
-            # Add a basic time budget component for compatibility
+
             self.simulation_state.add_component(agent_id, TimeBudgetComponent(initial_time_budget=1000))
 
-        # Populate the environment grid from the final component state
         environment.initialize_from_state(self.simulation_state, self.simulation_state.entities)

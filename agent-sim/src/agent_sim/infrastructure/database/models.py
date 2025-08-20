@@ -135,13 +135,8 @@ class Metric(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     simulation_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("simulation_runs.id"), index=True)
     tick: Mapped[int] = mapped_column(Integer, index=True)
-    active_agents: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    avg_reward: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    avg_health: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    avg_time_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    total_resources: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    goal_distribution: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    avg_cognitive_dissonance: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # This single JSONB column can store any set of key-value metrics
+    data: Mapped[Dict[str, Any]] = mapped_column(JSONB)
 
 
 class LearningCurve(Base):

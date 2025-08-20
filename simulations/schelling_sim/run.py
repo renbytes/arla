@@ -1,48 +1,40 @@
 # simulations/schelling_sim/run.py
 
 import asyncio
-from typing import Any, Dict, List, Optional
+import importlib
+import uuid
+from typing import Any, Dict, Type
 
-from agent_core.agents.action_generator_interface import ActionGeneratorInterface
-from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
-from agent_core.core.ecs.component import ActionPlanComponent, Component
-from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
 from agent_engine.simulation.engine import SimulationManager
+from agent_engine.systems.logging_system import LoggingSystem
+from agent_engine.systems.metrics_system import MetricsSystem
+from agent_sim.infrastructure.database.async_database_manager import (
+    AsyncDatabaseManager,
+)
+from agent_sim.infrastructure.logging.database_emitter import DatabaseEmitter
+from agent_sim.infrastructure.logging.mlflow_exporter import MLflowExporter
 from omegaconf import OmegaConf
 
-from .actions import MoveToEmptyCellAction
-from .components import PositionComponent, SchellingAgentComponent
 from .environment import SchellingGridEnvironment
 from .loader import SchellingScenarioLoader
-from .systems import MovementSystem, SatisfactionSystem
+from .metrics.segregation_calculator import SegregationCalculator
+from .providers import (
+    SchellingActionGenerator,
+    SchellingComponentFactory,
+    SchellingDecisionSelector,
+)
 
 
-# Helper classes to satisfy the SimulationManager's requirements
-class SchellingActionGenerator(ActionGeneratorInterface):
-    """Generates possible moves for unsatisfied agents."""
-
-    def generate(self, sim_state, entity_id, tick) -> List[ActionPlanComponent]:
-        move_action = MoveToEmptyCellAction()
-        params_list = move_action.generate_possible_params(entity_id, sim_state, tick)
-        return [ActionPlanComponent(action_type=move_action, params=p) for p in params_list]
-
-
-class SchellingDecisionSelector(DecisionSelectorInterface):
-    """A simple policy: if an agent can move, it will."""
-
-    def select(self, sim_state, entity_id, actions) -> Optional[ActionPlanComponent]:
-        return actions[0] if actions else None
-
-
-class SchellingComponentFactory(ComponentFactoryInterface):
-    """Creates component instances from saved data (not used in this simple run)."""
-
-    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
-        if component_type.endswith("PositionComponent"):
-            return PositionComponent(**data)
-        if component_type.endswith("SchellingAgentComponent"):
-            return SchellingAgentComponent(**data)
-        raise TypeError(f"Unknown component type: {component_type}")
+# A helper function to dynamically import system classes from the config
+def import_class(class_path: str) -> Type:
+    """Dynamically imports a class from its string path."""
+    try:
+        module_path, class_name = class_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        return getattr(module, class_name)
+    except (ImportError, AttributeError, ValueError) as e:
+        print(f"[ERROR] Failed to import class at path '{class_path}': {e}")
+        raise
 
 
 def start_simulation(
@@ -54,40 +46,55 @@ def start_simulation(
     """The main entry point that sets up and runs the simulation."""
     config = OmegaConf.create(config_overrides)
 
-    # This function is async because the underlying engine loop is.
     async def run_async():
-        # 1. Initialize the world and loader
-        # The environment is initialized by the loader, so we pass a placeholder here.
-        env_placeholder = SchellingGridEnvironment(width=1, height=1)
+        db_manager = AsyncDatabaseManager()
+        await db_manager.check_connection()
+
+        run_uuid = uuid.UUID(run_id)
+        database_emitter = DatabaseEmitter(db_manager=db_manager, simulation_id=run_uuid)
+        mlflow_exporter = MLflowExporter(run_id=run_id, experiment_id=experiment_id)
+
+        # --- FIX: Use the directly imported classes ---
+        environment = SchellingGridEnvironment(**config.environment.params)
         loader = SchellingScenarioLoader(
-            simulation_state=None,  # The manager will create the state object
+            simulation_state=None,
             scenario_path=config.scenario_path,
         )
+        # --- End of fix ---
 
-        # 2. Instantiate the SimulationManager with our custom classes
         manager = SimulationManager(
             config=config,
-            environment=env_placeholder,
+            environment=environment,
             scenario_loader=loader,
             action_generator=SchellingActionGenerator(),
             decision_selector=SchellingDecisionSelector(),
             component_factory=SchellingComponentFactory(),
-            db_logger=None,  # Not needed for this local run
+            db_logger=db_manager,
             run_id=run_id,
             task_id=task_id,
             experiment_id=experiment_id,
         )
 
-        # 3. Register the systems that contain our simulation's logic
-        manager.register_system(SatisfactionSystem)
-        manager.register_system(MovementSystem)
-
-        # 4. Load the scenario to populate the world
-        # We manually set the state on the loader after the manager creates it
         loader.simulation_state = manager.simulation_state
+
+        segregation_calculator = SegregationCalculator()
+        manager.register_system(
+            MetricsSystem,
+            calculators=[segregation_calculator],
+            exporters=[mlflow_exporter, database_emitter],
+        )
+        manager.register_system(LoggingSystem, exporters=[database_emitter])
+
+        # Systems are still loaded dynamically from the config for flexibility
+        for system_path in config.systems:
+            system_class = import_class(system_path)
+            manager.register_system(system_class)
+
+        for action_path in config.actions:
+            importlib.import_module(action_path)
+
         loader.load()
 
-        # 5. Run the main simulation loop
         print(f"🚀 Starting Schelling Simulation (Run ID: {run_id}) for {config.simulation.steps} steps...")
         await manager.run()
         print(f"✅ Simulation {run_id} completed.")

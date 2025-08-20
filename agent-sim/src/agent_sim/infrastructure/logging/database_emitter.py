@@ -7,7 +7,6 @@ from agent_engine.logging.exporter_interface import ExporterInterface
 from agent_sim.infrastructure.database.async_database_manager import (
     AsyncDatabaseManager,
 )
-from agent_sim.infrastructure.database.models import Metric
 
 
 class DatabaseEmitter(ExporterInterface):
@@ -16,7 +15,6 @@ class DatabaseEmitter(ExporterInterface):
     def __init__(self, db_manager: AsyncDatabaseManager, simulation_id: uuid.UUID):
         self.db_manager = db_manager
         self.simulation_id = simulation_id
-        self.valid_metric_columns = {c.name for c in Metric.__table__.columns}
 
     async def log_event(self, event_data: Dict[str, Any]) -> None:
         action_plan = event_data.get("action_plan")
@@ -36,10 +34,9 @@ class DatabaseEmitter(ExporterInterface):
         )
 
     async def export_metrics(self, tick: int, metrics: Dict[str, Any]) -> None:
-        """Filters metrics and logs them to the database."""
-        db_metrics = {key: value for key, value in metrics.items() if key in self.valid_metric_columns}
-        if db_metrics:
-            await self.db_manager.log_metrics(simulation_id=self.simulation_id, tick=tick, metrics_data=db_metrics)
+        """Logs the complete metrics dictionary to the database."""
+        if metrics:
+            await self.db_manager.log_metrics(simulation_id=self.simulation_id, tick=tick, metrics_data=metrics)
 
     async def log_agent_state(self, tick: int, agent_id: str, components_data: Dict[str, Any]) -> None:
         """Logs agent state data to the database."""

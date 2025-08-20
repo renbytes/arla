@@ -1,40 +1,43 @@
-from typing import List, Optional
+# simulations/schelling_sim/providers.py
 
+from typing import Any, Dict, List, Optional
+
+from agent_core.agents.action_generator_interface import ActionGeneratorInterface
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
-from agent_core.core.ecs.abstractions import SimulationState
-from agent_core.core.ecs.component import ActionPlanComponent
+from agent_core.core.ecs.component import ActionPlanComponent, Component
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
 
-# Import world-specific components to check the agent's state
-from .components import SatisfactionComponent
+from .actions import MoveToEmptyCellAction
+from .components import GroupComponent, PositionComponent, SatisfactionComponent
+
+
+class SchellingActionGenerator(ActionGeneratorInterface):
+    """Generates possible moves for unsatisfied agents."""
+
+    def generate(self, sim_state, entity_id, tick) -> List[ActionPlanComponent]:
+        move_action = MoveToEmptyCellAction()
+        params_list = move_action.generate_possible_params(entity_id, sim_state, tick)
+        return [ActionPlanComponent(action_type=move_action, params=p) for p in params_list]
 
 
 class SchellingDecisionSelector(DecisionSelectorInterface):
-    """
-    A simple decision selector for the Schelling model.
-    If an agent is unsatisfied, it chooses the 'relocate' action.
-    If it is satisfied, it chooses no action and stays put.
-    """
+    """A simple policy: if an agent can move, it will."""
 
-    def select(
-        self,
-        simulation_state: SimulationState,
-        entity_id: str,
-        possible_actions: List[ActionPlanComponent],
-    ) -> Optional[ActionPlanComponent]:
-        """
-        Selects the best action for an agent based on its satisfaction level.
-        """
-        sat_comp = simulation_state.get_component(entity_id, SatisfactionComponent)
+    def select(self, sim_state, entity_id, actions) -> Optional[ActionPlanComponent]:
+        return actions[0] if actions else None
 
-        if not sat_comp:
-            return None
 
-        # If the agent is unsatisfied, we assume it chooses to relocate if that action is available.
-        if not sat_comp.is_satisfied:
-            for action in possible_actions:
-                if action.action_type and action.action_type.action_id == "relocate":
-                    return action
+class SchellingComponentFactory(ComponentFactoryInterface):
+    """Creates component instances from saved data."""
 
-        # If satisfied, or if no 'relocate' action is available when unsatisfied, the agent does nothing.
-        # The core `run` loop will then simply advance to the next agent.
-        return None
+    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
+        # Assumes the full class path is provided in a real restore scenario
+        class_name = component_type.split(".")[-1]
+
+        if class_name == "PositionComponent":
+            return PositionComponent(**data)
+        if class_name == "GroupComponent":
+            return GroupComponent(**data)
+        if class_name == "SatisfactionComponent":
+            return SatisfactionComponent(**data)
+        raise TypeError(f"Unknown component type: {component_type}")

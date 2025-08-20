@@ -13,7 +13,15 @@ ROOT = "."
 
 # 1. CONFIGURE WHICH PACKAGES TO SEARCH
 #    The script will look for directories at the root that start with these prefixes.
-SEARCH_PREFIXES = ["agent-core", "agent-engine", "agent-sim", "agent-concurrent", "agent-persist", "docs"]
+SEARCH_PREFIXES = [
+    "agent-core",
+    "agent-engine",
+    "agent-sim",
+    "agent-concurrent",
+    "agent-persist",
+    "docs",
+    "simulations",
+]
 
 # 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
 #    Within each found package, only these sub-folders will be searched.

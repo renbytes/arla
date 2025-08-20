@@ -15,7 +15,7 @@ class MLflowExporter(ExporterInterface):
     without crashing or slowing down the simulation.
     """
 
-    def __init__(self, run_id: str, experiment_id: str):
+    def __init__(self):
         self.enabled = False
         tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
 
@@ -23,12 +23,16 @@ class MLflowExporter(ExporterInterface):
             print("WARNING: MLflow logging disabled (MLFLOW_TRACKING_URI not set).")
             return
 
+        # This component now assumes it is running within an existing MLflow run.
+        # The run should be started by the parent process (e.g., the Celery task).
+        if mlflow.active_run() is None:
+            print("WARNING: MLflowExporter initialized outside of an active MLflow run. Disabling.")
+            return
+
         try:
             mlflow.set_tracking_uri(tracking_uri)
-            # This connects to an existing run created by the Celery/CLI orchestrator
-            mlflow.start_run(run_id=run_id, experiment_id=experiment_id)
             self.enabled = True
-            print(f"✅ MLflowExporter connected to tracking URI: {tracking_uri}")
+            print(f"✅ MLflowExporter is active for run ID: {mlflow.active_run().info.run_id}")
         except Exception as e:
             print(f"WARNING: MLflow connection failed: {e}. Disabling MLflow logging for this run.")
             self.enabled = False

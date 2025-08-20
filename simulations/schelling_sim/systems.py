@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Type
 from agent_core.core.ecs.component import Component
 from agent_engine.simulation.system import System
 
-from .components import PositionComponent, SchellingAgentComponent
+from .components import GroupComponent, PositionComponent, SatisfactionComponent
+from .environment import SchellingGridEnvironment
 
 
 class SatisfactionSystem(System):
@@ -16,7 +17,8 @@ class SatisfactionSystem(System):
 
     REQUIRED_COMPONENTS: List[Type[Component]] = [
         PositionComponent,
-        SchellingAgentComponent,
+        GroupComponent,
+        SatisfactionComponent,
     ]
 
     async def update(self, current_tick: int) -> None:
@@ -25,34 +27,33 @@ class SatisfactionSystem(System):
         status based on the types of their neighbors.
         """
         env = self.simulation_state.environment
-
-        # Check if environment has the necessary method instead of strict type checking
-        if not hasattr(env, "get_neighbors_of_position"):
+        if not isinstance(env, SchellingGridEnvironment):
             return
 
         all_agents = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
 
-        # Fixed B007 - renamed unused loop variable to _
         for _, components in all_agents.items():
             pos_comp = components.get(PositionComponent)
-            agent_comp = components.get(SchellingAgentComponent)
+            group_comp = components.get(GroupComponent)
+            satisfaction_comp = components.get(SatisfactionComponent)
 
-            if not all([pos_comp, agent_comp]):
+            if not all([pos_comp, group_comp, satisfaction_comp]):
                 continue
 
             neighbors = env.get_neighbors_of_position(pos_comp.position)
             if not neighbors:
-                agent_comp.is_satisfied = True
+                satisfaction_comp.is_satisfied = True
                 continue
 
             same_type_neighbors = 0
             for neighbor_id in neighbors.values():
-                neighbor_agent_comp = self.simulation_state.get_component(neighbor_id, SchellingAgentComponent)
-                if neighbor_agent_comp and neighbor_agent_comp.agent_type == agent_comp.agent_type:
+                neighbor_group_comp = self.simulation_state.get_component(neighbor_id, GroupComponent)
+                if neighbor_group_comp and neighbor_group_comp.agent_type == group_comp.agent_type:
                     same_type_neighbors += 1
 
             satisfaction_ratio = float(same_type_neighbors) / float(len(neighbors))
-            agent_comp.is_satisfied = satisfaction_ratio >= agent_comp.satisfaction_threshold
+
+            satisfaction_comp.is_satisfied = satisfaction_ratio >= satisfaction_comp.satisfaction_threshold
 
 
 class MovementSystem(System):
@@ -78,8 +79,7 @@ class MovementSystem(System):
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         env = self.simulation_state.environment
 
-        # Check for necessary method instead of strict type checking
-        if not all([pos_comp, hasattr(env, "move_entity")]):
+        if not all([pos_comp, isinstance(env, SchellingGridEnvironment)]):
             self._publish_outcome(event_data, success=False)
             return
 
