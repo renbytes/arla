@@ -41,19 +41,25 @@ class SatisfactionSystem(System):
                 continue
 
             neighbors = env.get_neighbors_of_position(pos_comp.position)
-            if not neighbors:
+            num_neighbors = len(neighbors)
+
+            # An agent with no neighbors is considered satisfied.
+            if num_neighbors == 0:
                 satisfaction_comp.is_satisfied = True
                 continue
 
+            # Count neighbors of the same group type.
             same_type_neighbors = 0
             for neighbor_id in neighbors.values():
                 neighbor_group_comp = self.simulation_state.get_component(neighbor_id, GroupComponent)
                 if neighbor_group_comp and neighbor_group_comp.agent_type == group_comp.agent_type:
                     same_type_neighbors += 1
 
-            satisfaction_ratio = float(same_type_neighbors) / float(len(neighbors))
-
-            satisfaction_comp.is_satisfied = satisfaction_ratio >= satisfaction_comp.satisfaction_threshold
+            # The agent is satisfied if the ratio of same-type neighbors
+            # to total neighbors meets or exceeds its personal threshold.
+            satisfaction_ratio = same_type_neighbors / num_neighbors
+            is_now_satisfied = satisfaction_ratio >= satisfaction_comp.satisfaction_threshold
+            satisfaction_comp.is_satisfied = is_now_satisfied
 
 
 class MovementSystem(System):

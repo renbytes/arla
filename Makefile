@@ -1,4 +1,4 @@
-.PHONY: setup up down run-example logs
+.PHONY: setup up down run-example logs test
 
 # Default target
 all: up
@@ -31,3 +31,8 @@ run-example:
 logs:
 	@echo "--- Tailing logs from all services..."
 	docker compose logs -f
+
+# Run the full test suite inside the Docker container using the full path
+test:
+	@echo "--- Testing: Running pytest test suite..."
+	docker compose exec app /app/.venv/bin/pytest

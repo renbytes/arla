@@ -8,7 +8,7 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from simulations.schelling_sim.actions import MoveToEmptyCellAction
 from simulations.schelling_sim.components import (
     PositionComponent,
-    SchellingAgentComponent,
+    SatisfactionComponent,
 )
 from simulations.schelling_sim.environment import SchellingGridEnvironment
 
@@ -20,23 +20,26 @@ def move_action():
 
 
 def test_action_id_and_name(move_action):
+    """Tests that the action's identifiers are correct."""
     assert move_action.action_id == "move_to_empty_cell"
     assert move_action.name == "Move to Empty Cell"
 
 
 def test_get_base_cost(move_action):
+    """Tests the base cost of the action."""
     assert move_action.get_base_cost(None) == 1.0
 
 
 def test_generate_possible_params_when_unsatisfied(move_action):
+    """Tests that a move is generated when an agent is unsatisfied."""
     mock_sim_state = Mock()
-    mock_agent_comp = SchellingAgentComponent(agent_type=1, satisfaction_threshold=0.5)
-    mock_agent_comp.is_satisfied = False
+    mock_satisfaction_comp = SatisfactionComponent(satisfaction_threshold=0.5)
+    mock_satisfaction_comp.is_satisfied = False
 
     mock_env = Mock(spec=SchellingGridEnvironment)
     mock_env.get_empty_cells.return_value = [(10, 10), (12, 15)]
     mock_sim_state.environment = mock_env
-    mock_sim_state.get_component.return_value = mock_agent_comp
+    mock_sim_state.get_component.return_value = mock_satisfaction_comp
 
     params = move_action.generate_possible_params("agent1", mock_sim_state, 1)
 
@@ -47,13 +50,29 @@ def test_generate_possible_params_when_unsatisfied(move_action):
 
 
 def test_generate_possible_params_when_satisfied(move_action):
+    """Tests that no move is generated when an agent is already satisfied."""
     mock_sim_state = Mock()
-    mock_agent_comp = SchellingAgentComponent(agent_type=1, satisfaction_threshold=0.5)
-    mock_agent_comp.is_satisfied = True
-    mock_sim_state.get_component.return_value = mock_agent_comp
+    mock_satisfaction_comp = SatisfactionComponent(satisfaction_threshold=0.5)
+    mock_satisfaction_comp.is_satisfied = True
+    mock_sim_state.get_component.return_value = mock_satisfaction_comp
 
     params = move_action.generate_possible_params("agent1", mock_sim_state, 1)
 
+    assert params == []
+
+
+def test_generate_possible_params_no_empty_cells(move_action):
+    """Tests that no move is generated when there are no empty cells."""
+    mock_sim_state = Mock()
+    mock_satisfaction_comp = SatisfactionComponent(satisfaction_threshold=0.5)
+    mock_satisfaction_comp.is_satisfied = False
+
+    mock_env = Mock(spec=SchellingGridEnvironment)
+    mock_env.get_empty_cells.return_value = []
+    mock_sim_state.environment = mock_env
+    mock_sim_state.get_component.return_value = mock_satisfaction_comp
+
+    params = move_action.generate_possible_params("agent1", mock_sim_state, 1)
     assert params == []
 
 
@@ -65,7 +84,7 @@ def test_execute_success(move_action):
     mock_sim_state = Mock()
     mock_pos_comp = PositionComponent(x=1, y=1)
     mock_sim_state.get_component.return_value = mock_pos_comp
-    params = {"target_x": 5, "target_y": 5}
+    params = {"target_x": 5, "target_y": 5, "direction": "east"}
 
     result = move_action.execute("agent1", mock_sim_state, params, 1)
 
@@ -76,20 +95,8 @@ def test_execute_success(move_action):
     assert mock_pos_comp.position == (1, 1)
 
 
-def test_execute_failure_no_empty_cells(move_action):
-    mock_sim_state = Mock()
-    mock_agent_comp = SchellingAgentComponent(agent_type=1, satisfaction_threshold=0.5)
-    mock_agent_comp.is_satisfied = False
-    mock_env = Mock(spec=SchellingGridEnvironment)
-    mock_env.get_empty_cells.return_value = []
-    mock_sim_state.environment = mock_env
-    mock_sim_state.get_component.return_value = mock_agent_comp
-
-    params = move_action.generate_possible_params("agent1", mock_sim_state, 1)
-    assert params == []
-
-
 def test_execute_failure_missing_component(move_action):
+    """Tests that execute fails gracefully if the agent is missing a PositionComponent."""
     mock_sim_state = Mock()
     mock_sim_state.get_component.return_value = None  # Simulate missing component
     params = {"target_x": 5, "target_y": 5}
@@ -100,4 +107,5 @@ def test_execute_failure_missing_component(move_action):
 
 
 def test_get_feature_vector(move_action):
+    """Tests the feature vector generation for the action."""
     assert move_action.get_feature_vector("agent1", None, {}) == [1.0]
