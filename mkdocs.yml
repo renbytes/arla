@@ -60,9 +60,7 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
-  - rss
-  - blog:
-    authors_file: "{blog}/.authors.yml"
+  - blog
 
 extra:
   social:
@@ -70,6 +68,8 @@ extra:
       link: https://github.com/renbytes
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/arla/
+  blog:
+    authors_file: "{blog}/.authors.yml"
 
 # Page tree
 nav:
