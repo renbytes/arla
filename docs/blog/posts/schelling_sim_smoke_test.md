@@ -21,11 +21,11 @@ Before we can trust our advanced cognitive systems, we must verify that the basi
 
 Our baseline implementation is purely rule-based and relies on three key world-specific components.
 
-**PositionComponent**: Stores the agent's `(x, y)` coordinates.
+**`PositionComponent`**: Stores the agent's `(x, y)` coordinates.
 
-**GroupComponent**: Assigns the agent's type (e.g., group `1` or `2`).
+**`GroupComponent`**: Assigns the agent's type (e.g., group `1` or `2`).
 
-**SatisfactionComponent**: A simple data container that holds the agent's satisfaction threshold and its current state.
+**`SatisfactionComponent`**: A simple data container that holds the agent's satisfaction threshold and its current state.
 
 ```python title="simulations/schelling_sim/components.py"
 
@@ -41,7 +41,7 @@ class SatisfactionComponent(Component):
 
 With these components in place, the logic is driven by two simple, world-specific systems:
 
-**SatisfactionSystem**: On every tick, this system iterates through all agents. It checks an agent's neighbors and updates the `is_satisfied` flag in its SatisfactionComponent based on whether the ratio of same-type neighbors meets its threshold.
+**`SatisfactionSystem`**: On every tick, this system iterates through all agents. It checks an agent's neighbors and updates the `is_satisfied` flag in its `SatisfactionComponent` based on whether the ratio of same-type neighbors meets its threshold.
 
 ```python title="simulations/schelling_sim/systems.py"
 
@@ -61,7 +61,7 @@ for _, components in all_agents.items():
     satisfaction_comp.is_satisfied = satisfaction_ratio >= satisfaction_comp.satisfaction_threshold
 ```
 
-**MovementSystem**: This system subscribes to the `execute_move_to_empty_cell_action` event. When triggered, it handles the logic of updating the agent's `PositionComponent` and moving the agent within the `SchellingGridEnvironment`.
+**`MovementSystem`**: This system subscribes to the `execute_move_to_empty_cell_action` event. When triggered, it handles the logic of updating the agent's `PositionComponent` and moving the agent within the `SchellingGridEnvironment`.
 
 This setup establishes our control group. The behavior is simple, deterministic, and verifiable.
 
@@ -75,7 +75,7 @@ With a validated baseline, we can now use the Schelling model as a laboratory fo
 
 ### Experiment 1: Adding Subjective Rewards
 
-Instead of a fixed reward for moving, what if the reward was subjective, influenced by the agent's emotional state? We can test this by enabling the AffectSystem and modifying our world's RewardCalculator.
+Instead of a fixed reward for moving, what if the reward was subjective, influenced by the agent's emotional state? We can test this by enabling the `AffectSystem` and modifying our world's `RewardCalculator`.
 
 The `ActionSystem` uses a dependency-injected `RewardCalculator` to determine the final reward for any action. We can create a custom calculator that accesses the agent's `EmotionComponent` and modifies the reward based on its emotional valence.
 
