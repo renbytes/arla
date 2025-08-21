@@ -1,0 +1,10 @@
+.blog-hero {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 20%;
+    max-width: 150px;
+    border-radius: 8px;
+    margin-top: 1em;
+    margin-bottom: 2em;
+}
