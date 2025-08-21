@@ -65,6 +65,10 @@ for _, components in all_agents.items():
 
 This setup establishes our control group. The behavior is simple, deterministic, and verifiable.
 
+And as expected, we see that the agents start with a low `satisfaction_rate` and explore until they meet an equilibrium at around 100% satisfaction. We also see the segregation_index starting near `1.0`—a randomly mixed population—and dropping to around `0.5` as the agents move and the population becomes more segregated.
+
+![MLFlow Metrics](../assets/schelling_mlflow.png)
+
 ## Phase 2: The Frontier of Cognitive Ablation
 
 With a validated baseline, we can now use the Schelling model as a laboratory for cognitive science. ARLA's architecture allows us to layer on advanced, world-agnostic cognitive systems from agent-engine and precisely measure their effects. This is the core of ablative analysis.
