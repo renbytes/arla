@@ -77,6 +77,15 @@ run-local:
 	  --scenario $(FILE) \
 	  --steps $(STEPS)
 
+## run-example: Run the Schelling simulation with default parameters.
+run-example:
+	@echo "▶️ Running Schelling Simulation Example (150 steps)..."
+	@docker compose exec app poetry run python -m agent_sim.main \
+	  --package "simulations.schelling_sim" \
+	  --config "simulations/schelling_sim/config/config.yml" \
+	  --scenario "simulations/schelling_sim/scenarios/default.json" \
+	  --steps 150
+
 ## make-gif: Creates a GIF from the most recent simulation render.
 make-gif:
 	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)..."

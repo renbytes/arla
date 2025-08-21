@@ -92,6 +92,9 @@ nav:
   - API Reference:
     - "agent-core": api/agent-core.md
     - "agent-engine": api/agent-engine.md
+  - Blog:
+    - "Overview": blog/index.md
+    - "All Posts": blog/posts/
 
 # Markdown extensions
 markdown_extensions:
