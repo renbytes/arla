@@ -23,7 +23,9 @@ else:
     sys.exit(1)
 
 # 2. Load the experiment definition file
-experiment_file = project_root / "simulations/schelling_sim/experiments/schelling_study.yml"
+experiment_file = (
+    project_root / "simulations/schelling_sim/experiments/schelling_study.yml"
+)
 print(f"✅ Loading experiment definition from: {experiment_file}")
 exp_def = OmegaConf.load(experiment_file)
 
