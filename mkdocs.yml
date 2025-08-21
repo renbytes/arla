@@ -63,13 +63,13 @@ plugins:
   - rss
 
 extra:
-  blog:
-    authors_file: "{blog}/.authors.yml"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/renbytes
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/arla/
+  blog:
+    authors_file: "{blog}/.authors.yml"
 
 # Page tree
 nav:
@@ -93,14 +93,6 @@ nav:
     - "agent-core": api/agent-core.md
     - "agent-engine": api/agent-engine.md
   - Blog: blog/index.md
-
-# Customization
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/renbytes
-    - icon: fontawesome/brands/python
-      link: https://pypi.org/project/arla/ # When we publish it
 
 # Markdown extensions
 markdown_extensions:
