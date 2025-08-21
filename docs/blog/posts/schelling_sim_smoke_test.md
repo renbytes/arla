@@ -1,5 +1,5 @@
 ---
-date: 2025-08-20
+date: 2025-08-21
 authors:
   - bordumb
 categories:
@@ -13,7 +13,7 @@ categories:
 
 Welcome back to the ARLA Development Blog! In our first post, we introduced our vision for a modular framework for building cognitively rich agents. Today, we're diving into the code to show how we're building and validating this platform, starting with a classic: the [Schelling Segregation Model](https://en.wikipedia.org/wiki/Schelling%27s_model_of_segregation).
 
-This isn't just an academic exercise. It's a critical, two-phase process to build a robust foundation for groundbreaking research. First, we implement a simple version to serve as a "smoke test." Then, we use that stable baseline to conduct sophisticated ablative studies on complex cognitive features.
+This isn't just an academic exercise. It's a critical, two-phase process to build a robust foundation for groundbreaking research. First, we implement a simple version to serve as a "smoke test." In later posts, we will use that stable baseline to conduct sophisticated ablative studies on complex cognitive features.
 
 ## Phase 1: The Baseline - A Rule-Based Schelling Model
 
@@ -27,8 +27,7 @@ Our baseline implementation is purely rule-based and relies on three key world-s
 
 **SatisfactionComponent**: A simple data container that holds the agent's satisfaction threshold and its current state.
 
-```python
-# simulations/schelling_sim/components.py
+```python title="simulations/schelling_sim/components.py"
 
 class SatisfactionComponent(Component):
     """Stores an agent's satisfaction state and threshold."""
@@ -44,8 +43,7 @@ With these components in place, the logic is driven by two simple, world-specifi
 
 **SatisfactionSystem**: On every tick, this system iterates through all agents. It checks an agent's neighbors and updates the `is_satisfied` flag in its SatisfactionComponent based on whether the ratio of same-type neighbors meets its threshold.
 
-```python
-# simulations/schelling_sim/systems.py
+```python title="simulations/schelling_sim/systems.py"
 
 # Inside SatisfactionSystem.update()
 for _, components in all_agents.items():
