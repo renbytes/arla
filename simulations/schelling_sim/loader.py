@@ -50,13 +50,22 @@ class SchellingScenarioLoader(ScenarioLoaderInterface):
             position = locations[i]
 
             self.simulation_state.add_entity(agent_id)
-            self.simulation_state.add_component(agent_id, PositionComponent(x=position[0], y=position[1]))
-
-            self.simulation_state.add_component(agent_id, GroupComponent(agent_type=agent_type))
             self.simulation_state.add_component(
-                agent_id, SatisfactionComponent(satisfaction_threshold=satisfaction_threshold)
+                agent_id, PositionComponent(x=position[0], y=position[1])
             )
 
-            self.simulation_state.add_component(agent_id, TimeBudgetComponent(initial_time_budget=1000))
+            self.simulation_state.add_component(
+                agent_id, GroupComponent(agent_type=agent_type)
+            )
+            self.simulation_state.add_component(
+                agent_id,
+                SatisfactionComponent(satisfaction_threshold=satisfaction_threshold),
+            )
 
-        environment.initialize_from_state(self.simulation_state, self.simulation_state.entities)
+            self.simulation_state.add_component(
+                agent_id, TimeBudgetComponent(initial_time_budget=1000)
+            )
+
+        environment.initialize_from_state(
+            self.simulation_state, self.simulation_state.entities
+        )

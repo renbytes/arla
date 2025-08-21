@@ -25,7 +25,9 @@ def default_config():
                     "arousal_learning_rate": 0.3,
                 },
                 noise_std=0.0,  # Set to 0 for predictable tests
-                appraisal_weights=SimpleNamespace(goal_relevance=0.7, agency=0.5, social_feedback=0.3),
+                appraisal_weights=SimpleNamespace(
+                    goal_relevance=0.7, agency=0.5, social_feedback=0.3
+                ),
             )
         )
     )
@@ -34,7 +36,9 @@ def default_config():
 @pytest.fixture
 def mock_appraisal_processor(mocker):
     """Mocks the AppraisalProcessor to control its output."""
-    mock_processor_class = mocker.patch("agent_engine.cognition.emotions.model.AppraisalProcessor")
+    mock_processor_class = mocker.patch(
+        "agent_engine.cognition.emotions.model.AppraisalProcessor"
+    )
     return mock_processor_class.return_value
 
 
@@ -57,8 +61,12 @@ def test_initialization(default_config):
     assert isinstance(dynamics.appraisal_processor, AppraisalProcessor)
 
 
-@patch("agent_engine.cognition.emotions.model.compute_emotional_valence", return_value=0.8)
-@patch("agent_engine.cognition.emotions.model.compute_emotional_arousal", return_value=0.7)
+@patch(
+    "agent_engine.cognition.emotions.model.compute_emotional_valence", return_value=0.8
+)
+@patch(
+    "agent_engine.cognition.emotions.model.compute_emotional_arousal", return_value=0.7
+)
 def test_update_emotion_with_appraisal(
     mock_compute_arousal, mock_compute_valence, mock_appraisal_processor, default_config
 ):
@@ -81,7 +89,9 @@ def test_update_emotion_with_appraisal(
     expected_arousal = (0.8 * 0.4) + (0.3 * 0.7)  # 0.32 + 0.21 = 0.53
 
     # Act
-    updated_state = emotional_dynamics.update_emotion_with_appraisal(current_emotion=current_emotion, **event_params)
+    updated_state = emotional_dynamics.update_emotion_with_appraisal(
+        current_emotion=current_emotion, **event_params
+    )
 
     # Assert
     mock_appraisal_processor.appraise_event.assert_called_once_with(**event_params)
@@ -94,9 +104,15 @@ def test_update_emotion_with_appraisal(
     assert updated_state["target_arousal"] == 0.7
 
 
-@patch("agent_engine.cognition.emotions.model.compute_emotional_valence", return_value=2.0)
-@patch("agent_engine.cognition.emotions.model.compute_emotional_arousal", return_value=-1.0)
-def test_update_emotion_clipping(mock_compute_arousal, mock_compute_valence, mock_appraisal_processor, default_config):
+@patch(
+    "agent_engine.cognition.emotions.model.compute_emotional_valence", return_value=2.0
+)
+@patch(
+    "agent_engine.cognition.emotions.model.compute_emotional_arousal", return_value=-1.0
+)
+def test_update_emotion_clipping(
+    mock_compute_arousal, mock_compute_valence, mock_appraisal_processor, default_config
+):
     """
     Tests that the final valence and arousal values are correctly clipped.
     """
@@ -112,7 +128,9 @@ def test_update_emotion_clipping(mock_compute_arousal, mock_compute_valence, moc
     }
 
     # Act
-    updated_state = emotional_dynamics.update_emotion_with_appraisal(current_emotion=current_emotion, **event_params)
+    updated_state = emotional_dynamics.update_emotion_with_appraisal(
+        current_emotion=current_emotion, **event_params
+    )
 
     # Assert
     assert updated_state["valence"] == 1.0
@@ -137,7 +155,12 @@ def test_update_emotion_with_noise(default_config):
     }
 
     # Act
-    results = [dynamics_with_noise.update_emotion_with_appraisal(current_emotion, **event_params) for _ in range(20)]
+    results = [
+        dynamics_with_noise.update_emotion_with_appraisal(
+            current_emotion, **event_params
+        )
+        for _ in range(20)
+    ]
     valences = [r["valence"] for r in results]
 
     # Assert

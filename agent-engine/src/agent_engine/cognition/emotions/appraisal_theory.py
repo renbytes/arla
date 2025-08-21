@@ -39,7 +39,9 @@ class AppraisalProcessor:
         """
         Perform cognitive appraisal of an event to determine emotional response
         """
-        goal_relevance = self._assess_goal_relevance(prediction_error, current_goal, action_success)
+        goal_relevance = self._assess_goal_relevance(
+            prediction_error, current_goal, action_success
+        )
         goal_congruence = self._assess_goal_congruence(prediction_error, action_success)
         agency = self._assess_agency(action_success, controllability_estimate)
         controllability = self._assess_controllability(prediction_error, social_context)
@@ -70,7 +72,9 @@ class AppraisalProcessor:
 
         return float(np.clip(base_relevance, 0.0, 1.0))
 
-    def _assess_goal_congruence(self, prediction_error: float, action_success: bool) -> float:
+    def _assess_goal_congruence(
+        self, prediction_error: float, action_success: bool
+    ) -> float:
         """Assess whether event helps (+1) or hinders (-1) goal achievement"""
         if action_success and prediction_error > 0:
             return min(prediction_error / 5.0, 1.0)
@@ -79,15 +83,21 @@ class AppraisalProcessor:
         else:
             return 0.0
 
-    def _assess_agency(self, action_success: bool, controllability_estimate: float) -> float:
+    def _assess_agency(
+        self, action_success: bool, controllability_estimate: float
+    ) -> float:
         """Assess personal agency in the outcome"""
         base_agency = 0.7 if action_success else 0.3
         return base_agency * controllability_estimate
 
-    def _assess_controllability(self, prediction_error: float, social_context: Dict[str, Any]) -> float:
+    def _assess_controllability(
+        self, prediction_error: float, social_context: Dict[str, Any]
+    ) -> float:
         """Assess future controllability of similar situations"""
         error_factor = max(0.2, 1.0 - abs(prediction_error) / 10.0)
-        social_factor = 0.8 if social_context.get("other_agents_present", False) else 1.0
+        social_factor = (
+            0.8 if social_context.get("other_agents_present", False) else 1.0
+        )
         return error_factor * social_factor
 
     def _assess_certainty(self, prediction_error: float) -> float:
@@ -116,11 +126,15 @@ def compute_emotional_valence(appraisal: AppraisalDimensions) -> float:
     return float(np.clip(total_valence, -1.0, 1.0))
 
 
-def compute_emotional_arousal(appraisal: AppraisalDimensions, prediction_error: float) -> float:
+def compute_emotional_arousal(
+    appraisal: AppraisalDimensions, prediction_error: float
+) -> float:
     """Compute arousal based on appraisal dimensions and prediction error magnitude"""
     error_arousal = min(abs(prediction_error) / 5.0, 1.0)
     relevance_multiplier = 1.0 + appraisal.goal_relevance
     uncertainty_boost = (1.0 - appraisal.certainty) * 0.5
     control_stress = (1.0 - appraisal.controllability) * 0.3
-    total_arousal = error_arousal * relevance_multiplier + uncertainty_boost + control_stress
+    total_arousal = (
+        error_arousal * relevance_multiplier + uncertainty_boost + control_stress
+    )
     return float(np.clip(total_arousal, 0.0, 1.0))

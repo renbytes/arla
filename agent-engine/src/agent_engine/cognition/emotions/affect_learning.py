@@ -27,7 +27,9 @@ def name_experience_cluster(
         if np.any(exp.action_type_one_hot):
             action_index = np.argmax(exp.action_type_one_hot)
             if action_index < len(action_ids):
-                action_instance_type = action_registry.get_action(action_ids[action_index])
+                action_instance_type = action_registry.get_action(
+                    action_ids[action_index]
+                )
                 action_instance = action_instance_type()
                 action_name = action_instance.name
 
@@ -78,7 +80,9 @@ def _cluster_experiences(
         return None, None
 
     try:
-        kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init="auto").fit(data_vectors)
+        kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init="auto").fit(
+            data_vectors
+        )
         return kmeans.labels_, kmeans.cluster_centers_
     except ValueError as e:
         print(f"Error during KMeans: {e}. Skipping emotion clustering.")
@@ -96,7 +100,10 @@ def discover_emotions(
     Performs unsupervised clustering on the agent's affective experience buffer
     to discover and name emotion categories.
     """
-    if len(affect_comp.affective_experience_buffer) < config.learning.memory.emotion_cluster_min_data:
+    if (
+        len(affect_comp.affective_experience_buffer)
+        < config.learning.memory.emotion_cluster_min_data
+    ):
         return
 
     # Convert buffer to a list ONCE to avoid iterator exhaustion
@@ -120,7 +127,9 @@ def discover_emotions(
             continue
 
         # Sample from the indices of the CURRENT CLUSTER, not the whole buffer
-        sample_indices = np.random.choice(cluster_indices, size=min(5, len(cluster_indices)), replace=False)
+        sample_indices = np.random.choice(
+            cluster_indices, size=min(5, len(cluster_indices)), replace=False
+        )
         sample_experiences = [experience_list[j] for j in sample_indices]
 
         emotion_name = name_experience_cluster(
@@ -146,7 +155,9 @@ def discover_emotions(
 
     affect_comp.learned_emotion_clusters = new_clusters
     affect_comp.affective_experience_buffer.clear()
-    print(f"Discovered {len(new_clusters)} emotion clusters for agent {agent_id}: {list(new_clusters.keys())}")
+    print(
+        f"Discovered {len(new_clusters)} emotion clusters for agent {agent_id}: {list(new_clusters.keys())}"
+    )
 
 
 def get_emotion_from_affect(

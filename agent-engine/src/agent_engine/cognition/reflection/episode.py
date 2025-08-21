@@ -32,5 +32,7 @@ class Episode(CoreEpisode):
             "goal_at_end": self.goal_at_end,
             "event_count": len(self.events),
             # Do not serialize all events to avoid large logs
-            "event_previews": [f"Tick {e.get('tick')}: {e.get('action_type')}" for e in self.events[:3]],
+            "event_previews": [
+                f"Tick {e.get('tick')}: {e.get('action_type')}" for e in self.events[:3]
+            ],
         }

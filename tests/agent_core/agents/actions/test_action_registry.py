@@ -39,7 +39,9 @@ class MockAction(ActionInterface):
     ) -> Dict[str, Any]:
         return {"status": "success"}
 
-    def get_feature_vector(self, entity_id: str, simulation_state: Any, params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self, entity_id: str, simulation_state: Any, params: Dict[str, Any]
+    ) -> List[float]:
         return [1.0, 0.0]
 
 
@@ -71,7 +73,9 @@ class AnotherMockAction(ActionInterface):
     ) -> Dict[str, Any]:
         return {}
 
-    def get_feature_vector(self, entity_id: str, simulation_state: Any, params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self, entity_id: str, simulation_state: Any, params: Dict[str, Any]
+    ) -> List[float]:
         return [0.0, 1.0]
 
 
@@ -112,7 +116,9 @@ def test_register_invalid_action_raises_type_error(fresh_registry: ActionRegistr
     ActionInterface raises a TypeError.
     """
     # Act & Assert
-    with pytest.raises(TypeError, match="Class InvalidAction must implement ActionInterface"):
+    with pytest.raises(
+        TypeError, match="Class InvalidAction must implement ActionInterface"
+    ):
         fresh_registry.register(InvalidAction)  # type: ignore[arg-type]
 
 
@@ -127,7 +133,9 @@ def test_register_duplicate_action_id_raises_value_error(
     fresh_registry.register(MockAction)  # Register the first time
 
     # Act & Assert
-    with pytest.raises(ValueError, match="Action with ID 'mock_action' is already registered."):
+    with pytest.raises(
+        ValueError, match="Action with ID 'mock_action' is already registered."
+    ):
         fresh_registry.register(MockAction)  # Attempt to register again
 
 
@@ -152,7 +160,9 @@ def test_get_nonexistent_action_raises_value_error(fresh_registry: ActionRegistr
     raises a ValueError.
     """
     # Act & Assert
-    with pytest.raises(ValueError, match="No action with ID 'nonexistent_action' is registered."):
+    with pytest.raises(
+        ValueError, match="No action with ID 'nonexistent_action' is registered."
+    ):
         fresh_registry.get_action("nonexistent_action")
 
 

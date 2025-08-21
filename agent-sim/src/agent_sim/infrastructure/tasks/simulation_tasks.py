@@ -18,9 +18,13 @@ from celery import Task
 # sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def _handle_simulation_exception(exc: Exception, task: Task, task_id: str, run_id_str: str) -> NoReturn:
+def _handle_simulation_exception(
+    exc: Exception, task: Task, task_id: str, run_id_str: str
+) -> NoReturn:
     """Logs failure to MLflow and DB, and decides whether to retry the task."""
-    error_msg = f"Simulation failed for run {run_id_str}: {str(exc)}\n{traceback.format_exc()}"
+    error_msg = (
+        f"Simulation failed for run {run_id_str}: {str(exc)}\n{traceback.format_exc()}"
+    )
     print(f"[{task_id}] ERROR: {error_msg}")
 
     if mlflow.active_run():
@@ -29,9 +33,16 @@ def _handle_simulation_exception(exc: Exception, task: Task, task_id: str, run_i
 
     db_manager = AsyncDatabaseManager()
     # Convert string ID to UUID object for the database call
-    async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id_str), "failed", error_msg))
+    async_runner.run_async(
+        db_manager.update_simulation_run_status(
+            uuid.UUID(run_id_str), "failed", error_msg
+        )
+    )
 
-    if any(keyword in str(exc).lower() for keyword in ["database is locked", "timeout", "connection"]):
+    if any(
+        keyword in str(exc).lower()
+        for keyword in ["database is locked", "timeout", "connection"]
+    ):
         print(f"[{task_id}] Retrying due to transient error...")
         raise task.retry(exc=exc, countdown=60, max_retries=3)
 
@@ -58,7 +69,9 @@ def run_simulation_task(
     print(f"[{task_id}] Received job for run '{run_id}'")
 
     # Convert string ID to UUID object for the database call
-    async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id), "running"))
+    async_runner.run_async(
+        db_manager.update_simulation_run_status(uuid.UUID(run_id), "running")
+    )
 
     # This call now works because run_id is a string
     with mlflow.start_run(run_id=run_id):
@@ -66,16 +79,24 @@ def run_simulation_task(
             mlflow.set_tag("status", "running")
             mlflow.set_tag("celery_task_id", task_id)
 
-            self.update_state(state="PROGRESS", meta={"status": "Running simulation", "progress": 10})
+            self.update_state(
+                state="PROGRESS", meta={"status": "Running simulation", "progress": 10}
+            )
 
             # Pass the string run_id to the simulation
             sim_module = importlib.import_module(f"{simulation_package}.run")
-            sim_module.start_simulation(run_id, task_id, experiment_id, config_overrides)
+            sim_module.start_simulation(
+                run_id, task_id, experiment_id, config_overrides
+            )
 
-            self.update_state(state="SUCCESS", meta={"status": "Completed", "progress": 100})
+            self.update_state(
+                state="SUCCESS", meta={"status": "Completed", "progress": 100}
+            )
             mlflow.set_tag("status", "completed")
             # Convert string ID to UUID object for the database call
-            async_runner.run_async(db_manager.update_simulation_run_status(uuid.UUID(run_id), "completed"))
+            async_runner.run_async(
+                db_manager.update_simulation_run_status(uuid.UUID(run_id), "completed")
+            )
             print(f"[{task_id}] Successfully completed simulation run: {run_id}")
             return {"run_id": run_id, "status": "completed"}
 
@@ -102,7 +123,9 @@ def run_experiment_task(
     try:
         mlflow_experiment = mlflow.get_experiment_by_name(experiment_name)
         mlflow_exp_id = (
-            mlflow_experiment.experiment_id if mlflow_experiment else mlflow.create_experiment(name=experiment_name)
+            mlflow_experiment.experiment_id
+            if mlflow_experiment
+            else mlflow.create_experiment(name=experiment_name)
         )
 
         db_experiment_uuid = async_runner.run_async(
@@ -115,7 +138,9 @@ def run_experiment_task(
             )
         )
     except Exception as e:
-        print(f"[bold red]FATAL: Could not create/get MLflow/DB experiment. Error: {e}[/bold red]")
+        print(
+            f"[bold red]FATAL: Could not create/get MLflow/DB experiment. Error: {e}[/bold red]"
+        )
         raise
 
     job_ids = []
@@ -128,7 +153,9 @@ def run_experiment_task(
             )
 
             # 1. Let MLflow create the run and give us its string UUID
-            with mlflow.start_run(experiment_id=mlflow_exp_id, run_name=run_name) as run:
+            with mlflow.start_run(
+                experiment_id=mlflow_exp_id, run_name=run_name
+            ) as run:
                 mlflow_run_id_str = run.info.run_id
                 mlflow.set_tag("status", "queued")
 

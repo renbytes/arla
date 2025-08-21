@@ -75,7 +75,9 @@ def test_on_action_executed_uses_causal_reward(mock_learning_step, system_setup)
     system.on_action_executed(event_data)
 
     # ASSERT
-    mock_causal_system.estimate_causal_effect.assert_called_once_with(agent_id=agent_id, treatment_value="move")
+    mock_causal_system.estimate_causal_effect.assert_called_once_with(
+        agent_id=agent_id, treatment_value="move"
+    )
     mock_encoder.encode_internal_state.assert_called_once()
 
     mock_learning_step.assert_called_once()

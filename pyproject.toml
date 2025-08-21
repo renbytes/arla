@@ -2,7 +2,7 @@
 name = "arla"
 version = "0.1.0"
 description = "A modular, scalable framework for running multi-agent simulations with affective reflective learning."
-authors = ["Your Name <your@email.com>"]
+authors = ["Bordumb <bordumbb@gmail.com>"]
 readme = "README.md"
 homepage = "https://github.com/renbytes/arla"
 repository = "https://github.com/renbytes/arla"

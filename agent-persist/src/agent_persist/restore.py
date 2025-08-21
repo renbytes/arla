@@ -49,7 +49,9 @@ def restore_state_from_snapshot(
                 component_instance = component_class(**comp_snapshot.data)
                 sim_state.add_component(agent_id, component_instance)
             except Exception as e:
-                print(f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}")
+                print(
+                    f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}"
+                )
 
     # 4. Restore the environment state if it exists
     # This check is now safe because sim_state.environment is guaranteed to be assigned.

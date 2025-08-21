@@ -51,7 +51,10 @@ class MockActionGenerator(ActionGeneratorInterface):
 
 class MockDecisionSelector(DecisionSelectorInterface):
     def select(
-        self, simulation_state: Any, entity_id: str, possible_actions: List[ActionPlanComponent]
+        self,
+        simulation_state: Any,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
     ) -> Optional[ActionPlanComponent]:
         # Always select the first action for deterministic behavior
         return possible_actions[0] if possible_actions else None

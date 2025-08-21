@@ -75,8 +75,12 @@ class AffectSystem(System):
         components = self.simulation_state.entities.get(entity_id, {})
 
         if not all(comp_type in components for comp_type in self.REQUIRED_COMPONENTS):
-            missing = [t.__name__ for t in self.REQUIRED_COMPONENTS if t not in components]
-            print(f"WARNING: AffectSystem missing components for {entity_id}: {missing}")
+            missing = [
+                t.__name__ for t in self.REQUIRED_COMPONENTS if t not in components
+            ]
+            print(
+                f"WARNING: AffectSystem missing components for {entity_id}: {missing}"
+            )
             return
 
         self._process_affective_response(
@@ -100,12 +104,18 @@ class AffectSystem(System):
         emotion_comp = cast(EmotionComponent, components[EmotionComponent])
         goal_comp = cast(GoalComponent, components[GoalComponent])
 
-        prediction_error = action_outcome.reward - getattr(affect_comp, "prev_reward", 0.0)
+        prediction_error = action_outcome.reward - getattr(
+            affect_comp, "prev_reward", 0.0
+        )
         affect_comp.prev_reward = action_outcome.reward
         affect_comp.prediction_delta_magnitude = abs(prediction_error)
-        affect_comp.predictive_delta_smooth = 0.8 * affect_comp.predictive_delta_smooth + 0.2 * abs(prediction_error)
+        affect_comp.predictive_delta_smooth = (
+            0.8 * affect_comp.predictive_delta_smooth + 0.2 * abs(prediction_error)
+        )
 
-        social_context = self._get_social_context(entity_id, action_plan, action_outcome)
+        social_context = self._get_social_context(
+            entity_id, action_plan, action_outcome
+        )
 
         controllability = self.controllability_provider.get_controllability_score(
             entity_id=entity_id,
@@ -126,8 +136,10 @@ class AffectSystem(System):
         emotion_comp.valence = updated_emotion["valence"]
         emotion_comp.arousal = updated_emotion["arousal"]
 
-        vitality_metrics = self.vitality_metrics_provider.get_normalized_vitality_metrics(
-            entity_id=entity_id, components=components, config=self.config
+        vitality_metrics = (
+            self.vitality_metrics_provider.get_normalized_vitality_metrics(
+                entity_id=entity_id, components=components, config=self.config
+            )
         )
 
         exp = self._create_affective_experience(
@@ -148,7 +160,9 @@ class AffectSystem(System):
 
         emotion_comp.current_emotion_category = get_emotion_from_affect(
             **exp.to_dict(),
-            learned_emotion_clusters=getattr(affect_comp, "learned_emotion_clusters", {}),
+            learned_emotion_clusters=getattr(
+                affect_comp, "learned_emotion_clusters", {}
+            ),
         )
 
     def _create_affective_experience(
@@ -190,14 +204,20 @@ class AffectSystem(System):
             is_positive_outcome=outcome.reward > 0,
         )
 
-    def _get_social_context(self, entity_id: str, plan: Any, outcome: ActionOutcome) -> Dict[str, Any]:
+    def _get_social_context(
+        self, entity_id: str, plan: Any, outcome: ActionOutcome
+    ) -> Dict[str, Any]:
         """Pure helper to construct the social context for appraisal."""
         return {}
 
     async def update(self, current_tick: int) -> None:
         """Applies passive decay to cognitive dissonance for all relevant entities."""
-        target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
+        target_entities = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
         for components in target_entities.values():
             affect_comp = cast(AffectComponent, components.get(AffectComponent))
             if affect_comp:
-                affect_comp.cognitive_dissonance = max(0.0, affect_comp.cognitive_dissonance * 0.99)
+                affect_comp.cognitive_dissonance = max(
+                    0.0, affect_comp.cognitive_dissonance * 0.99
+                )

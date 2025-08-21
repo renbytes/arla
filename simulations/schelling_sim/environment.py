@@ -30,7 +30,9 @@ class SchellingGridEnvironment(EnvironmentInterface):
         self.grid: Dict[Tuple[int, int], str] = {}
         self.agent_positions: Dict[str, Tuple[int, int]] = {}
 
-    def initialize_from_state(self, simulation_state: Any, agent_components: Dict[str, Dict[Any, Any]]) -> None:
+    def initialize_from_state(
+        self, simulation_state: Any, agent_components: Dict[str, Dict[Any, Any]]
+    ) -> None:
         """Populates the grid based on the initial state of agent components."""
         self.grid.clear()
         self.agent_positions.clear()
@@ -44,7 +46,9 @@ class SchellingGridEnvironment(EnvironmentInterface):
         self.grid[position] = entity_id
         self.agent_positions[entity_id] = position
 
-    def move_entity(self, entity_id: str, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
+    def move_entity(
+        self, entity_id: str, from_pos: Tuple[int, int], to_pos: Tuple[int, int]
+    ) -> bool:
         """Moves an entity from one position to another."""
         if self.grid.get(to_pos) is not None:
             return False  # Target cell is occupied
@@ -56,7 +60,9 @@ class SchellingGridEnvironment(EnvironmentInterface):
         self.agent_positions[entity_id] = to_pos
         return True
 
-    def get_neighbors_of_position(self, position: Tuple[int, int]) -> Dict[Tuple[int, int], str]:
+    def get_neighbors_of_position(
+        self, position: Tuple[int, int]
+    ) -> Dict[Tuple[int, int], str]:
         """
         Gets all neighboring entities for a given position with toroidal wrapping.
         """
@@ -131,7 +137,9 @@ class SchellingGridEnvironment(EnvironmentInterface):
         # Not required for this simulation, but must be implemented
         return []
 
-    def update_entity_position(self, entity_id: str, old_pos: Optional[Any], new_pos: Any) -> None:
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Any], new_pos: Any
+    ) -> None:
         if old_pos:
             self.move_entity(entity_id, old_pos, new_pos)
         else:

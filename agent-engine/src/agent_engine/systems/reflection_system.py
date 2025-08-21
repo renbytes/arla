@@ -67,8 +67,12 @@ class ReflectionSystem(System):
 
         self.narrative_context_provider = narrative_context_provider
         self.event_buffer: Dict[str, List[Dict[str, Any]]] = {}
-        self.event_bus.subscribe("action_executed", self.on_action_executed_for_chunking)
-        self.event_bus.subscribe("reflection_requested_by_action", self.on_reflection_requested)
+        self.event_bus.subscribe(
+            "action_executed", self.on_action_executed_for_chunking
+        )
+        self.event_bus.subscribe(
+            "reflection_requested_by_action", self.on_reflection_requested
+        )
 
     def on_action_executed_for_chunking(self, event_data: Dict[str, Any]) -> None:
         """Buffers events for each agent to be chunked into episodes later."""
@@ -94,17 +98,25 @@ class ReflectionSystem(System):
         if not (current_tick > 0 and current_tick % reflection_interval == 0):
             return
 
-        target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
+        target_entities = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
             if time_comp and time_comp.is_active:
-                await self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection=False)
+                await self._run_reflection_cycle(
+                    entity_id, components, current_tick, is_final_reflection=False
+                )
 
-    async def update_for_entity(self, entity_id: str, current_tick: int, is_final_reflection: bool) -> None:
+    async def update_for_entity(
+        self, entity_id: str, current_tick: int, is_final_reflection: bool
+    ) -> None:
         """Allows forcing a reflection cycle for a specific entity."""
         components = self.simulation_state.entities.get(entity_id)
         if components:
-            await self._run_reflection_cycle(entity_id, components, current_tick, is_final_reflection)
+            await self._run_reflection_cycle(
+                entity_id, components, current_tick, is_final_reflection
+            )
 
     async def _run_reflection_cycle(
         self,
@@ -115,7 +127,9 @@ class ReflectionSystem(System):
     ) -> None:
         """Orchestrates the full reflection process for a single agent."""
         if not self._all_required_components_present(components):
-            print(f"ReflectionSystem: Skipping for {entity_id} due to missing components.")
+            print(
+                f"ReflectionSystem: Skipping for {entity_id} due to missing components."
+            )
             return
 
         self._chunk_and_process_episodes(entity_id, components, current_tick)
@@ -124,7 +138,9 @@ class ReflectionSystem(System):
         if final_context:
             self._validate_and_publish_outcomes(entity_id, current_tick, final_context)
 
-    def _all_required_components_present(self, components: Dict[Type[Component], Component]) -> bool:
+    def _all_required_components_present(
+        self, components: Dict[Type[Component], Component]
+    ) -> bool:
         """Checks if all components required by the system are present for an entity."""
         return all(comp_type in components for comp_type in self.REQUIRED_COMPONENTS)
 
@@ -141,7 +157,9 @@ class ReflectionSystem(System):
 
         buffered_events = self.event_buffer.get(entity_id, [])
         if buffered_events:
-            new_episode = self._chunk_events_into_episode(entity_id, buffered_events, current_tick)
+            new_episode = self._chunk_events_into_episode(
+                entity_id, buffered_events, current_tick
+            )
             if new_episode:
                 episode_comp.episodes.append(new_episode)
                 self.event_buffer[entity_id] = []
@@ -178,7 +196,9 @@ class ReflectionSystem(System):
         context["llm_final_account"] = final_account
         return context
 
-    def _validate_and_publish_outcomes(self, entity_id: str, tick: int, context: Dict[str, Any]) -> None:
+    def _validate_and_publish_outcomes(
+        self, entity_id: str, tick: int, context: Dict[str, Any]
+    ) -> None:
         """Validates the reflection and publishes resulting events."""
         confidence = 0.8  # Simplified for now
         final_account = context.get("llm_final_account", "")
@@ -201,7 +221,9 @@ class ReflectionSystem(System):
             {"tick": tick, "entity_id": entity_id, "context": context},
         )
 
-    def _chunk_events_into_episode(self, entity_id: str, events: List[Dict[str, Any]], tick: int) -> Optional[Episode]:
+    def _chunk_events_into_episode(
+        self, entity_id: str, events: List[Dict[str, Any]], tick: int
+    ) -> Optional[Episode]:
         """Chunks buffered events into a single narrative Episode."""
         if not events:
             return None
@@ -210,8 +232,14 @@ class ReflectionSystem(System):
         event_summaries = []
         for e in events:
             action_plan = e.get("action_plan")
-            if action_plan and hasattr(action_plan, "action_type") and hasattr(action_plan.action_type, "name"):
-                event_summaries.append(f"Tick {e['current_tick']}: action {action_plan.action_type.name}")
+            if (
+                action_plan
+                and hasattr(action_plan, "action_type")
+                and hasattr(action_plan.action_type, "name")
+            ):
+                event_summaries.append(
+                    f"Tick {e['current_tick']}: action {action_plan.action_type.name}"
+                )
 
         if not event_summaries:
             return None
@@ -230,5 +258,11 @@ class ReflectionSystem(System):
         )
         theme = theme_raw.strip().replace('"', "") if theme_raw else "unknown_theme"
 
-        processed_events = [outcome.details for e in events if (outcome := e.get("action_outcome")) is not None]
-        return Episode(start_tick=start_tick, end_tick=tick, theme=theme, events=processed_events)
+        processed_events = [
+            outcome.details
+            for e in events
+            if (outcome := e.get("action_outcome")) is not None
+        ]
+        return Episode(
+            start_tick=start_tick, end_tick=tick, theme=theme, events=processed_events
+        )

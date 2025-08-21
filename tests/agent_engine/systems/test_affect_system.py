@@ -33,8 +33,12 @@ def mock_simulation_state():
             GoalComponent: goal_comp,
         }
     }
-    state.get_entities_with_components.return_value = {"agent1": state.entities["agent1"]}
-    state.get_component.side_effect = lambda eid, ctype: state.entities.get(eid, {}).get(ctype)
+    state.get_entities_with_components.return_value = {
+        "agent1": state.entities["agent1"]
+    }
+    state.get_component.side_effect = lambda eid, ctype: state.entities.get(
+        eid, {}
+    ).get(ctype)
     return state
 
 
@@ -58,7 +62,9 @@ def mock_providers():
 @pytest.fixture
 def mock_emotional_dynamics(mocker):
     """Mocks the EmotionalDynamics class."""
-    mock_dynamics_class = mocker.patch("agent_engine.systems.affect_system.EmotionalDynamics")
+    mock_dynamics_class = mocker.patch(
+        "agent_engine.systems.affect_system.EmotionalDynamics"
+    )
     mock_instance = mock_dynamics_class.return_value
     mock_instance.update_emotion_with_appraisal.return_value = {
         "valence": 0.5,
@@ -85,7 +91,9 @@ def affect_system(
     """Provides an initialized AffectSystem with its core dependencies mocked."""
     mock_registry.action_ids = ["test_action"]
     mock_simulation_state.event_bus = mock_event_bus
-    mock_config = SimpleNamespace(learning=SimpleNamespace(memory=SimpleNamespace(emotion_cluster_min_data=50)))
+    mock_config = SimpleNamespace(
+        learning=SimpleNamespace(memory=SimpleNamespace(emotion_cluster_min_data=50))
+    )
     system = AffectSystem(
         simulation_state=mock_simulation_state,
         config=mock_config,
@@ -108,7 +116,9 @@ def test_on_action_executed_updates_affect_and_emotion(
     mock_emotional_dynamics,
 ):
     """Tests the full event handler cycle for a standard action outcome."""
-    action_outcome = ActionOutcome(success=True, message="", base_reward=5.0, details={})
+    action_outcome = ActionOutcome(
+        success=True, message="", base_reward=5.0, details={}
+    )
     mock_action_plan = MagicMock()
     mock_action_plan.action_type.action_id = "test_action"
     event_data = {
@@ -129,7 +139,9 @@ def test_on_action_executed_updates_affect_and_emotion(
     assert emotion_comp.current_emotion_category == "discovered_joy"
 
 
-def test_on_action_executed_missing_components(affect_system, mock_simulation_state, mock_providers):
+def test_on_action_executed_missing_components(
+    affect_system, mock_simulation_state, mock_providers
+):
     """Tests that the system gracefully handles an entity with missing components."""
     event_data = {
         "entity_id": "agent_missing_comps",
@@ -144,12 +156,16 @@ def test_on_action_executed_missing_components(affect_system, mock_simulation_st
 
 
 @patch("agent_engine.systems.affect_system.discover_emotions")
-def test_emotion_discovery_is_triggered(mock_discover, affect_system, mock_simulation_state):
+def test_emotion_discovery_is_triggered(
+    mock_discover, affect_system, mock_simulation_state
+):
     """Tests that the discover_emotions function is called when the buffer is full."""
     affect_system.config.learning.memory.emotion_cluster_min_data = 4
     event_data = {
         "entity_id": "agent1",
-        "action_outcome": ActionOutcome(success=True, message="", base_reward=5.0, details={}),
+        "action_outcome": ActionOutcome(
+            success=True, message="", base_reward=5.0, details={}
+        ),
         "action_plan": MagicMock(),
         "current_tick": 100,
     }

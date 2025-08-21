@@ -41,7 +41,9 @@ class MoveToEmptyCellAction(ActionInterface):
         empty cells available.
         """
         # --- FIX: Use the SatisfactionComponent to check the agent's state ---
-        satisfaction_comp = simulation_state.get_component(entity_id, SatisfactionComponent)
+        satisfaction_comp = simulation_state.get_component(
+            entity_id, SatisfactionComponent
+        )
 
         # Only generate a move action if the agent is unsatisfied.
         if not satisfaction_comp or satisfaction_comp.is_satisfied:
@@ -72,7 +74,11 @@ class MoveToEmptyCellAction(ActionInterface):
         """
         pos_comp = simulation_state.get_component(entity_id, PositionComponent)
         if not pos_comp:
-            return ActionOutcome(success=False, message="Agent has no PositionComponent.", base_reward=-0.1)
+            return ActionOutcome(
+                success=False,
+                message="Agent has no PositionComponent.",
+                base_reward=-0.1,
+            )
 
         target_pos = (params.get("target_x"), params.get("target_y"))
         return ActionOutcome(

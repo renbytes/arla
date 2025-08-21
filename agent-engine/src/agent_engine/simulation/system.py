@@ -61,7 +61,9 @@ class SystemManager:
         Instantiates and registers a system, passing extra keyword arguments
         to its constructor. This is crucial for dependency injection.
         """
-        system_instance = system_class(self.simulation_state, self.config, self.cognitive_scaffold, **kwargs)
+        system_instance = system_class(
+            self.simulation_state, self.config, self.cognitive_scaffold, **kwargs
+        )
         self._systems.append(system_instance)
         print(f"Registered System: {system_instance}")
 
@@ -82,5 +84,7 @@ class SystemManager:
         for system_instance in self._systems:
             if isinstance(system_instance, system_type):
                 return system_instance
-        print(f"Warning: System of type {system_type.__name__} not found in SystemManager.")
+        print(
+            f"Warning: System of type {system_type.__name__} not found in SystemManager."
+        )
         return None

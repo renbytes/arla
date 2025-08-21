@@ -75,7 +75,9 @@ class Action(ActionInterface):
         raise NotImplementedError
 
     @abstractmethod
-    def get_feature_vector(self, entity_id: str, simulation_state: Any, params: Dict[str, Any]) -> List[float]:
+    def get_feature_vector(
+        self, entity_id: str, simulation_state: Any, params: Dict[str, Any]
+    ) -> List[float]:
         raise NotImplementedError
 
     @staticmethod

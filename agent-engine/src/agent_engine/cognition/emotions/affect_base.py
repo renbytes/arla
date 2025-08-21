@@ -109,8 +109,12 @@ def update_affect_state(
     new_prediction_delta_magnitude = abs(prediction_error)
 
     # Update predictive_delta_smooth using the current and previous smoothed value
-    new_predictive_delta_smooth = 0.8 * prev_predictive_delta_smooth + 0.2 * abs(prediction_error)
-    new_predictive_delta_smooth = np.clip(new_predictive_delta_smooth, 0.0, 1.0)  # Keep within [0, 1]
+    new_predictive_delta_smooth = 0.8 * prev_predictive_delta_smooth + 0.2 * abs(
+        prediction_error
+    )
+    new_predictive_delta_smooth = np.clip(
+        new_predictive_delta_smooth, 0.0, 1.0
+    )  # Keep within [0, 1]
 
     return (
         new_prediction_delta_magnitude,

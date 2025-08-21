@@ -44,7 +44,9 @@ async def test_on_action_executed_logs_data(system_setup):
     system, mock_state, _, mock_encoder, agent_id = system_setup
 
     # 1. Simulate the update call to cache the pre-action state
-    mock_state.get_entities_with_components.return_value = {agent_id: mock_state.entities[agent_id]}
+    mock_state.get_entities_with_components.return_value = {
+        agent_id: mock_state.entities[agent_id]
+    }
     mock_encoder.encode_state_for_causal_graph.return_value = (
         "STATE",
         "health_ok",
@@ -81,9 +83,12 @@ async def test_update_builds_model_periodically(mock_causal_model, system_setup)
     mem_comp = mock_state.get_component(agent_id, MemoryComponent)
 
     mem_comp.causal_data = [
-        {"state_health": "ok", "state_location": "A", "action": "move", "outcome": 1} for _ in range(25)
+        {"state_health": "ok", "state_location": "A", "action": "move", "outcome": 1}
+        for _ in range(25)
     ]
-    mock_state.get_entities_with_components.return_value = {agent_id: {MemoryComponent: mem_comp}}
+    mock_state.get_entities_with_components.return_value = {
+        agent_id: {MemoryComponent: mem_comp}
+    }
 
     # Patch the action_registry to ensure it's not empty, preventing errors.
     with patch(

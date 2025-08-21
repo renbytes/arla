@@ -64,11 +64,15 @@ class QLearningSystem(System):
         """
         Caches the current state features for each ACTIVE learning agent.
         """
-        target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
+        target_entities = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
             if time_comp and time_comp.is_active:
-                current_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config)
+                current_state_features = self.state_encoder.encode_state(
+                    self.simulation_state, entity_id, self.config
+                )
                 self.previous_states[entity_id] = current_state_features
 
     def on_action_executed(self, event_data: Dict[str, Any]) -> None:
@@ -79,7 +83,9 @@ class QLearningSystem(System):
         current_tick = event_data["current_tick"]
 
         q_comp = self.simulation_state.get_component(entity_id, QLearningComponent)
-        if not isinstance(q_comp, QLearningComponent) or not isinstance(action_plan.action_type, ActionInterface):
+        if not isinstance(q_comp, QLearningComponent) or not isinstance(
+            action_plan.action_type, ActionInterface
+        ):
             return
 
         old_state_features = self.previous_states.get(entity_id)
@@ -92,18 +98,26 @@ class QLearningSystem(System):
 
         final_learning_reward = action_outcome.reward
         if causal_reward_estimate is not None:
-            final_learning_reward = 0.5 * action_outcome.reward + 0.5 * causal_reward_estimate
+            final_learning_reward = (
+                0.5 * action_outcome.reward + 0.5 * causal_reward_estimate
+            )
 
         target_id = action_plan.params.get("target_agent_id")
-        new_state_features = self.state_encoder.encode_state(self.simulation_state, entity_id, self.config, target_id)
+        new_state_features = self.state_encoder.encode_state(
+            self.simulation_state, entity_id, self.config, target_id
+        )
         action_features = action_plan.action_type.get_feature_vector(
             entity_id, self.simulation_state, action_plan.params
         )
 
         entity_components = self.simulation_state.entities.get(entity_id, {})
-        internal_features = self.state_encoder.encode_internal_state(entity_components, self.config)
+        internal_features = self.state_encoder.encode_internal_state(
+            entity_components, self.config
+        )
 
-        possible_next_actions = self._generate_possible_action_plans(entity_id, current_tick)
+        possible_next_actions = self._generate_possible_action_plans(
+            entity_id, current_tick
+        )
 
         self._perform_learning_step(
             entity_id,
@@ -131,10 +145,18 @@ class QLearningSystem(System):
     ) -> None:
         """Pure Q-learning logic using the Bellman equation."""
         device = self.simulation_state.device
-        old_state_t = torch.tensor(old_state, dtype=torch.float32).unsqueeze(0).to(device)
-        new_state_t = torch.tensor(new_state, dtype=torch.float32).unsqueeze(0).to(device)
-        action_t = torch.tensor(action_features, dtype=torch.float32).unsqueeze(0).to(device)
-        internal_t = torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0).to(device)
+        old_state_t = (
+            torch.tensor(old_state, dtype=torch.float32).unsqueeze(0).to(device)
+        )
+        new_state_t = (
+            torch.tensor(new_state, dtype=torch.float32).unsqueeze(0).to(device)
+        )
+        action_t = (
+            torch.tensor(action_features, dtype=torch.float32).unsqueeze(0).to(device)
+        )
+        internal_t = (
+            torch.tensor(internal_features, dtype=torch.float32).unsqueeze(0).to(device)
+        )
         reward_t = torch.tensor(reward, dtype=torch.float32).to(device)
 
         q_comp.optimizer.zero_grad()
@@ -144,14 +166,16 @@ class QLearningSystem(System):
         if possible_next_actions:
             with torch.no_grad():
                 next_action_features_list = [
-                    plan.action_type.get_feature_vector(entity_id, self.simulation_state, plan.params)
+                    plan.action_type.get_feature_vector(
+                        entity_id, self.simulation_state, plan.params
+                    )
                     for plan in possible_next_actions
                     if isinstance(plan.action_type, ActionInterface)
                 ]
                 if next_action_features_list:
-                    next_action_tensors = torch.tensor(np.array(next_action_features_list), dtype=torch.float32).to(
-                        device
-                    )
+                    next_action_tensors = torch.tensor(
+                        np.array(next_action_features_list), dtype=torch.float32
+                    ).to(device)
                     num_next = next_action_tensors.shape[0]
                     next_q_values = q_comp.utility_network(
                         new_state_t.expand(num_next, -1),
@@ -178,11 +202,17 @@ class QLearningSystem(System):
                 },
             )
 
-    def _generate_possible_action_plans(self, entity_id: str, current_tick: int) -> List[ActionPlanComponent]:
+    def _generate_possible_action_plans(
+        self, entity_id: str, current_tick: int
+    ) -> List[ActionPlanComponent]:
         """Helper to generate all possible actions for an agent."""
         all_plans: List[ActionPlanComponent] = []
         for action_class in action_registry.get_all_actions():
             action_instance = action_class()
-            for params in action_instance.generate_possible_params(entity_id, self.simulation_state, current_tick):
-                all_plans.append(ActionPlanComponent(action_type=action_instance, params=params))
+            for params in action_instance.generate_possible_params(
+                entity_id, self.simulation_state, current_tick
+            ):
+                all_plans.append(
+                    ActionPlanComponent(action_type=action_instance, params=params)
+                )
         return all_plans

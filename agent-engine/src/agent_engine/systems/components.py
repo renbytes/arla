@@ -22,8 +22,12 @@ class QLearningComponent(Component):
         q_learning_alpha: float,
         device: torch.device,
     ) -> None:
-        self.utility_network = UtilityNetwork(state_feature_dim, internal_state_dim, action_feature_dim).to(device)
-        self.optimizer = torch.optim.Adam(self.utility_network.parameters(), lr=q_learning_alpha)
+        self.utility_network = UtilityNetwork(
+            state_feature_dim, internal_state_dim, action_feature_dim
+        ).to(device)
+        self.optimizer = torch.optim.Adam(
+            self.utility_network.parameters(), lr=q_learning_alpha
+        )
         self.loss_fn = torch.nn.MSELoss()
         self.current_epsilon: float = 0.0
 
@@ -48,7 +52,9 @@ class QLearningComponent(Component):
         if torch.isnan(torch.tensor(self.current_epsilon)):
             errors.append("current_epsilon is NaN.")
         elif not (0.0 <= self.current_epsilon <= 1.0):
-            errors.append(f"current_epsilon is out of bounds [0.0, 1.0]. Got: {self.current_epsilon}")
+            errors.append(
+                f"current_epsilon is out of bounds [0.0, 1.0]. Got: {self.current_epsilon}"
+            )
 
         # Return True if no errors were found
         return len(errors) == 0, errors

@@ -34,7 +34,9 @@ def satisfaction_system(mock_simulation_state):
     return SatisfactionSystem(mock_simulation_state, None, None)
 
 
-def test_update_satisfaction_becomes_satisfied(satisfaction_system, mock_simulation_state):
+def test_update_satisfaction_becomes_satisfied(
+    satisfaction_system, mock_simulation_state
+):
     """Tests an agent becomes satisfied when its neighbor ratio meets the threshold."""
     # Arrange
     agent_id = "agent_A"
@@ -56,13 +58,17 @@ def test_update_satisfaction_becomes_satisfied(satisfaction_system, mock_simulat
     }
 
     # Configure mocks to use the component store
-    mock_simulation_state.get_entities_with_components.return_value = {agent_id: all_comps[agent_id]}
+    mock_simulation_state.get_entities_with_components.return_value = {
+        agent_id: all_comps[agent_id]
+    }
     mock_simulation_state.environment.get_neighbors_of_position.return_value = {
         (1, 0): "neighbor1",
         (1, 2): "neighbor2",
         (0, 1): "neighbor3",
     }
-    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(eid, {}).get(ctype)
+    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(
+        eid, {}
+    ).get(ctype)
 
     # Act
     asyncio.run(satisfaction_system.update(current_tick=1))
@@ -71,7 +77,9 @@ def test_update_satisfaction_becomes_satisfied(satisfaction_system, mock_simulat
     assert satisfaction_comp.is_satisfied is True
 
 
-def test_update_satisfaction_becomes_unsatisfied(satisfaction_system, mock_simulation_state):
+def test_update_satisfaction_becomes_unsatisfied(
+    satisfaction_system, mock_simulation_state
+):
     """Tests an agent becomes unsatisfied when its neighbor ratio falls below the threshold."""
     # Arrange
     agent_id = "agent_A"
@@ -91,13 +99,17 @@ def test_update_satisfaction_becomes_unsatisfied(satisfaction_system, mock_simul
         "neighbor3": {GroupComponent: GroupComponent(agent_type=2)},
     }
 
-    mock_simulation_state.get_entities_with_components.return_value = {agent_id: all_comps[agent_id]}
+    mock_simulation_state.get_entities_with_components.return_value = {
+        agent_id: all_comps[agent_id]
+    }
     mock_simulation_state.environment.get_neighbors_of_position.return_value = {
         (1, 0): "neighbor1",
         (1, 2): "neighbor2",
         (0, 1): "neighbor3",
     }
-    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(eid, {}).get(ctype)
+    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(
+        eid, {}
+    ).get(ctype)
 
     # Act
     asyncio.run(satisfaction_system.update(current_tick=1))
@@ -123,7 +135,9 @@ def test_update_isolated_agent_is_satisfied(satisfaction_system, mock_simulation
         }
     }
 
-    mock_simulation_state.get_entities_with_components.return_value = {agent_id: all_comps[agent_id]}
+    mock_simulation_state.get_entities_with_components.return_value = {
+        agent_id: all_comps[agent_id]
+    }
     mock_simulation_state.environment.get_neighbors_of_position.return_value = {}
 
     # Act
@@ -133,7 +147,9 @@ def test_update_isolated_agent_is_satisfied(satisfaction_system, mock_simulation
     assert satisfaction_comp.is_satisfied is True
 
 
-def test_update_agent_with_high_threshold_becomes_unsatisfied(satisfaction_system, mock_simulation_state):
+def test_update_agent_with_high_threshold_becomes_unsatisfied(
+    satisfaction_system, mock_simulation_state
+):
     """Tests that an agent's specific threshold is respected."""
     # Arrange
     agent_id = "agent_A"
@@ -153,13 +169,17 @@ def test_update_agent_with_high_threshold_becomes_unsatisfied(satisfaction_syste
         "neighbor3": {GroupComponent: GroupComponent(agent_type=2)},
     }
 
-    mock_simulation_state.get_entities_with_components.return_value = {agent_id: all_comps[agent_id]}
+    mock_simulation_state.get_entities_with_components.return_value = {
+        agent_id: all_comps[agent_id]
+    }
     mock_simulation_state.environment.get_neighbors_of_position.return_value = {
         (1, 0): "neighbor1",
         (1, 2): "neighbor2",
         (0, 1): "neighbor3",
     }
-    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(eid, {}).get(ctype)
+    mock_simulation_state.get_component.side_effect = lambda eid, ctype: all_comps.get(
+        eid, {}
+    ).get(ctype)
 
     # Act
     asyncio.run(satisfaction_system.update(current_tick=1))

@@ -36,9 +36,13 @@ class DatabaseEmitter(ExporterInterface):
     async def export_metrics(self, tick: int, metrics: Dict[str, Any]) -> None:
         """Logs the complete metrics dictionary to the database."""
         if metrics:
-            await self.db_manager.log_metrics(simulation_id=self.simulation_id, tick=tick, metrics_data=metrics)
+            await self.db_manager.log_metrics(
+                simulation_id=self.simulation_id, tick=tick, metrics_data=metrics
+            )
 
-    async def log_agent_state(self, tick: int, agent_id: str, components_data: Dict[str, Any]) -> None:
+    async def log_agent_state(
+        self, tick: int, agent_id: str, components_data: Dict[str, Any]
+    ) -> None:
         """Logs agent state data to the database."""
         await self.db_manager.log_agent_state(
             simulation_id=self.simulation_id,

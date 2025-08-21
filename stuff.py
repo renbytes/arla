@@ -30,9 +30,13 @@ def create_concatenated_file(file_list, output_filename):
                     outfile.write(f"*** File not found: {file_path} ***\n\n")
                 except Exception as e:
                     outfile.write(f"*** Error reading file {file_path}: {e} ***\n\n")
-        print(f"Successfully created '{output_filename}' with the content of {len(file_list)} files.")
+        print(
+            f"Successfully created '{output_filename}' with the content of {len(file_list)} files."
+        )
     except IOError as e:
-        print(f"Error: Could not write to the output file '{output_filename}'. Reason: {e}")
+        print(
+            f"Error: Could not write to the output file '{output_filename}'. Reason: {e}"
+        )
 
 
 if __name__ == "__main__":

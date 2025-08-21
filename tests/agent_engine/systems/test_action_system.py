@@ -28,7 +28,9 @@ def mock_simulation_state():
         "agent1": {
             ActionOutcomeComponent: ActionOutcomeComponent(),
             CompetenceComponent: CompetenceComponent(),
-            TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0, lifespan_std_dev_percent=0.0),
+            TimeBudgetComponent: TimeBudgetComponent(
+                initial_time_budget=100.0, lifespan_std_dev_percent=0.0
+            ),
         }
     }
 
@@ -79,7 +81,9 @@ def action_system(mock_simulation_state, mock_reward_calculator, mock_event_bus)
 
 
 class TestActionSystem:
-    def test_on_action_chosen_dispatches_specific_event(self, action_system, mock_event_bus):
+    def test_on_action_chosen_dispatches_specific_event(
+        self, action_system, mock_event_bus
+    ):
         """
         Tests that receiving an 'action_chosen' event correctly publishes a
         more specific 'execute_{action_id}_action' event.
@@ -96,7 +100,9 @@ class TestActionSystem:
         action_system.on_action_chosen(event_data)
 
         # Assert
-        mock_event_bus.publish.assert_called_once_with("execute_test_action_action", event_data)
+        mock_event_bus.publish.assert_called_once_with(
+            "execute_test_action_action", event_data
+        )
 
     def test_on_action_outcome_ready_full_cycle(
         self,
@@ -110,7 +116,9 @@ class TestActionSystem:
         updating components, and publishing the final 'action_executed' event.
         """
         # Arrange
-        base_outcome = ActionOutcome(success=True, message="", base_reward=10.0, details={"target": "rock"})
+        base_outcome = ActionOutcome(
+            success=True, message="", base_reward=10.0, details={"target": "rock"}
+        )
 
         mock_action_type = MagicMock(spec=ActionInterface)
         mock_action_type.name = "Test Action"
@@ -118,7 +126,9 @@ class TestActionSystem:
         # Mock the get_base_cost method to return a value
         mock_action_type.get_base_cost.return_value = 1.0
 
-        mock_action_plan = ActionPlanComponent(action_type=mock_action_type, intent=Intent.SOLITARY)
+        mock_action_plan = ActionPlanComponent(
+            action_type=mock_action_type, intent=Intent.SOLITARY
+        )
 
         event_data = {
             "entity_id": "agent1",
@@ -144,7 +154,9 @@ class TestActionSystem:
         assert call_kwargs["action_type"] is mock_action_type
         assert call_kwargs["action_intent"] == "SOLITARY"
         assert call_kwargs["outcome_details"] == {"target": "rock"}
-        assert call_kwargs["entity_components"] == mock_simulation_state.entities["agent1"]
+        assert (
+            call_kwargs["entity_components"] == mock_simulation_state.entities["agent1"]
+        )
 
         # 2. Verify the agent's components were updated
         assert aoc.success is True
@@ -185,7 +197,9 @@ class TestActionSystem:
         action_system.on_action_chosen({"action_plan_component": invalid_plan})
         mock_event_bus.publish.assert_not_called()
 
-    def test_on_action_outcome_ready_handles_invalid_plan(self, action_system, mock_event_bus):
+    def test_on_action_outcome_ready_handles_invalid_plan(
+        self, action_system, mock_event_bus
+    ):
         """
         Tests that the outcome handler gracefully ignores an event with an invalid action plan.
         """
@@ -193,7 +207,9 @@ class TestActionSystem:
         event_data = {
             "entity_id": "agent1",
             "action_outcome": MagicMock(),
-            "original_action_plan": ActionPlanComponent(action_type="not_an_action"),  # Invalid type
+            "original_action_plan": ActionPlanComponent(
+                action_type="not_an_action"
+            ),  # Invalid type
             "current_tick": 50,
         }
 

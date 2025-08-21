@@ -58,7 +58,9 @@ class IdentitySystem(System):
         if not isinstance(identity_comp, IdentityComponent):
             return
 
-        inferred_traits = self._infer_domain_traits_from_context(entity_id, context, current_tick)
+        inferred_traits = self._infer_domain_traits_from_context(
+            entity_id, context, current_tick
+        )
         if not inferred_traits:
             return
 
@@ -93,7 +95,12 @@ class IdentitySystem(System):
             trait_embeddings = [
                 embedding * strength
                 for name, strength in traits.items()
-                if (embedding := get_embedding_with_cache(name, embedding_dim, llm_config)) is not None
+                if (
+                    embedding := get_embedding_with_cache(
+                        name, embedding_dim, llm_config
+                    )
+                )
+                is not None
             ]
 
             if not trait_embeddings:
@@ -124,7 +131,9 @@ class IdentitySystem(System):
         if not narrative:
             return {}
 
-        domain_definitions = "\n".join([f"- {d.value.upper()}: ..." for d in IdentityDomain])
+        domain_definitions = "\n".join(
+            [f"- {d.value.upper()}: ..." for d in IdentityDomain]
+        )
         llm_prompt = f"""Analyze the narrative below and identify 1-2 key traits for EACH domain.
             Assign each trait a score from 0.0 to 1.0.
 
@@ -149,12 +158,18 @@ class IdentitySystem(System):
             )
             return self._parse_structured_llm_traits(raw_response)
         except Exception as e:
-            print(f"Error in structured LLM trait inference for Entity {entity_id}: {e}")
+            print(
+                f"Error in structured LLM trait inference for Entity {entity_id}: {e}"
+            )
             return {}
 
-    def _parse_structured_llm_traits(self, llm_response: str) -> Dict[IdentityDomain, Dict[str, float]]:
+    def _parse_structured_llm_traits(
+        self, llm_response: str
+    ) -> Dict[IdentityDomain, Dict[str, float]]:
         """Parses the structured response from the LLM."""
-        domain_traits: Dict[IdentityDomain, Dict[str, float]] = {domain: {} for domain in IdentityDomain}
+        domain_traits: Dict[IdentityDomain, Dict[str, float]] = {
+            domain: {} for domain in IdentityDomain
+        }
         current_domain: Optional[IdentityDomain] = None
         for line in llm_response.splitlines():
             line = line.strip()

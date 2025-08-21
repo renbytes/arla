@@ -21,7 +21,9 @@ class ExporterInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def log_agent_state(self, tick: int, agent_id: str, components_data: Dict[str, Any]) -> None:
+    async def log_agent_state(
+        self, tick: int, agent_id: str, components_data: Dict[str, Any]
+    ) -> None:
         """Logs a snapshot of an agent's components for a given tick."""
         raise NotImplementedError
 

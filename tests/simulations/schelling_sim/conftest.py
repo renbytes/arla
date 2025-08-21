@@ -24,7 +24,9 @@ class MockSchellingEnvironment(SchellingGridEnvironment):
             if pos in self.grid:
                 del self.grid[pos]
 
-    def update_entity_position(self, entity_id: str, old_pos: Optional[Any], new_pos: Any) -> None:
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Any], new_pos: Any
+    ) -> None:
         # Simple update logic for the mock
         if old_pos in self.grid:
             del self.grid[old_pos]
@@ -49,8 +51,12 @@ def mock_schelling_environment(mock_simulation_state: Mock) -> Mock:
     mock_env.height = 10
     mock_env.grid = {}
     mock_env.entity_positions = {}
-    mock_env.get_valid_positions.return_value = [(x, y) for x in range(10) for y in range(10)]
-    mock_env.get_empty_cells.return_value = [(x, y) for x in range(10) for y in range(10)]
+    mock_env.get_valid_positions.return_value = [
+        (x, y) for x in range(10) for y in range(10)
+    ]
+    mock_env.get_empty_cells.return_value = [
+        (x, y) for x in range(10) for y in range(10)
+    ]
     return mock_env
 
 
@@ -70,6 +76,9 @@ def populated_environment(mock_schelling_environment: Mock) -> Mock:
         "agent_D": (1, 1),
     }
     mock_schelling_environment.get_empty_cells.return_value = [
-        (x, y) for x in range(10) for y in range(10) if (x, y) not in mock_schelling_environment.grid
+        (x, y)
+        for x in range(10)
+        for y in range(10)
+        if (x, y) not in mock_schelling_environment.grid
     ]
     return mock_schelling_environment

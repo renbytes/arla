@@ -134,7 +134,11 @@ def goal_system(
         mock_simulation_state.event_bus = mock_event_bus
 
         mock_config = SimpleNamespace(
-            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+            agent=SimpleNamespace(
+                cognitive=SimpleNamespace(
+                    embeddings=SimpleNamespace(main_embedding_dim=4)
+                )
+            ),
             llm=SimpleNamespace(embedding_model="test-model"),
         )
         system = GoalSystem(
@@ -148,7 +152,9 @@ def goal_system(
 # Test Cases
 
 
-def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitive_scaffold, mocker):
+def test_on_update_goals_event(
+    goal_system, mock_simulation_state, mock_cognitive_scaffold, mocker
+):
     """
     Tests the main event handler to ensure it orchestrates the goal update cycle.
     """
@@ -191,7 +197,9 @@ def test_on_update_goals_event(goal_system, mock_simulation_state, mock_cognitiv
     assert goal_comp.current_symbolic_goal == "acquire resources"
 
 
-def test_invent_and_refine_goals_insufficient_memory(goal_system, mock_simulation_state, mock_cognitive_scaffold):
+def test_invent_and_refine_goals_insufficient_memory(
+    goal_system, mock_simulation_state, mock_cognitive_scaffold
+):
     """
     Tests that goal invention is skipped if there are not enough successful memories.
     """
@@ -200,7 +208,9 @@ def test_invent_and_refine_goals_insufficient_memory(goal_system, mock_simulatio
     mem_comp.episodic_memory = []  # Clear memories
 
     # Act
-    goal_system._invent_and_refine_goals("agent1", mock_simulation_state.entities["agent1"], 100)
+    goal_system._invent_and_refine_goals(
+        "agent1", mock_simulation_state.entities["agent1"], 100
+    )
 
     # Assert
     mock_cognitive_scaffold.query.assert_not_called()
@@ -224,7 +234,9 @@ def test_select_best_goal(goal_system, mock_simulation_state):
     narrative = "My goal is to achieve the existing goal."
 
     # Mock the embedding function to return a specific context embedding
-    with patch("agent_engine.systems.goal_system.get_embedding_with_cache") as mock_embed:
+    with patch(
+        "agent_engine.systems.goal_system.get_embedding_with_cache"
+    ) as mock_embed:
         # Return an embedding similar to the "existing_goal"
         mock_embed.return_value = np.array([0.1, 0.2, 0.3, 0.4])
 
@@ -237,7 +249,9 @@ def test_select_best_goal(goal_system, mock_simulation_state):
     assert best_goal == "existing_goal"
 
 
-def test_on_update_goals_event_missing_components(goal_system, mock_simulation_state, mock_cognitive_scaffold):
+def test_on_update_goals_event_missing_components(
+    goal_system, mock_simulation_state, mock_cognitive_scaffold
+):
     """
     Tests that the system handles an entity with missing components gracefully.
     """

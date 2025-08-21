@@ -40,7 +40,9 @@ class MetricsSystem(System):
                 metrics_to_add = calculator.calculate_metrics(self.simulation_state)
                 all_metrics.update(metrics_to_add)
             except Exception as e:
-                print(f"Warning: Metric calculator {calculator.__class__.__name__} failed: {e}")
+                print(
+                    f"Warning: Metric calculator {calculator.__class__.__name__} failed: {e}"
+                )
 
         # Pass the final, combined dictionary to EVERY exporter
         if all_metrics:
@@ -48,4 +50,6 @@ class MetricsSystem(System):
                 try:
                     await exporter.export_metrics(current_tick, all_metrics)
                 except Exception as e:
-                    print(f"Warning: Metrics exporter {exporter.__class__.__name__} failed: {e}")
+                    print(
+                        f"Warning: Metrics exporter {exporter.__class__.__name__} failed: {e}"
+                    )

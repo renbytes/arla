@@ -15,7 +15,9 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 else:
     # This warning helps in debugging if the .env file is ever misplaced.
-    print(f"WARNING: .env file not found at {env_path}. Using default environment variables.")
+    print(
+        f"WARNING: .env file not found at {env_path}. Using default environment variables."
+    )
 
 # Configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

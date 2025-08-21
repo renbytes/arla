@@ -22,7 +22,9 @@ from agent_engine.cognition.reflection.validation import (
 def mock_cognitive_scaffold():
     """Mocks the CognitiveScaffold to return a predictable summary."""
     scaffold = MagicMock()
-    scaffold.query.return_value = "The agent moved and then successfully extracted resources."
+    scaffold.query.return_value = (
+        "The agent moved and then successfully extracted resources."
+    )
     return scaffold
 
 
@@ -33,7 +35,9 @@ def sample_episode():
         {"tick": 10, "action_type": "MOVE", "reward": 0.1},
         {"tick": 12, "action_type": "EXTRACT", "reward": 5.0},
     ]
-    return Episode(start_tick=10, end_tick=15, theme="A successful outing", events=events)
+    return Episode(
+        start_tick=10, end_tick=15, theme="A successful outing", events=events
+    )
 
 
 @pytest.fixture
@@ -47,18 +51,26 @@ def rule_validator(sample_episode, mock_cognitive_scaffold, mock_openai_key):
     """Provides an initialized RuleValidator with mocked dependencies."""
 
     # Mock the embedding function to prevent network calls
-    with patch("agent_engine.cognition.reflection.validation.get_embedding_with_cache") as mock_get_embedding:
+    with patch(
+        "agent_engine.cognition.reflection.validation.get_embedding_with_cache"
+    ) as mock_get_embedding:
         # Configure the mock embedding function to return different vectors for different inputs
         def embedding_side_effect(text, *args, **kwargs):
             if "happy" in text.lower():
                 return np.array([1.0, 0.9, 0.8, 0.7])  # Reflection embedding
             else:
-                return np.array([1.0, 0.88, 0.82, 0.71])  # Factual summary embedding (very similar)
+                return np.array(
+                    [1.0, 0.88, 0.82, 0.71]
+                )  # Factual summary embedding (very similar)
 
         mock_get_embedding.side_effect = embedding_side_effect
 
         mock_config = SimpleNamespace(
-            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+            agent=SimpleNamespace(
+                cognitive=SimpleNamespace(
+                    embeddings=SimpleNamespace(main_embedding_dim=4)
+                )
+            ),
             llm=SimpleNamespace(),  # Add llm attribute for the second access
         )
 
@@ -131,7 +143,9 @@ def test_calculate_confidence_score_coherent_and_aligned():
     token_uncertainty = 0.8
 
     # Act
-    confidence = calculate_confidence_score(coherence, factual_alignment, token_uncertainty)
+    confidence = calculate_confidence_score(
+        coherence, factual_alignment, token_uncertainty
+    )
 
     # Assert
     expected_confidence = (0.9 * 0.7) + (0.8 * 0.3)  # 0.63 + 0.24 = 0.87

@@ -29,7 +29,9 @@ def get_client() -> OpenAI:
 embedding_cache: Dict[Tuple[str, str], np.ndarray] = {}
 
 
-def get_embedding_with_cache(text: str, embedding_dim: int, llm_config: Optional[Any] = None) -> Optional[np.ndarray]:
+def get_embedding_with_cache(
+    text: str, embedding_dim: int, llm_config: Optional[Any] = None
+) -> Optional[np.ndarray]:
     """Gets an embedding for a single text string, using a cache to avoid repeat API calls."""
     # Use direct attribute access on the Pydantic model
     model_name = llm_config.embedding_model if llm_config else "text-embedding-ada-002"
@@ -50,14 +52,18 @@ class EmbeddingValidationError(Exception):
     """Raised when embedding validation fails."""
 
 
-def validate_embedding(embedding: Any, expected_dim: int, name: str = "embedding") -> bool:
+def validate_embedding(
+    embedding: Any, expected_dim: int, name: str = "embedding"
+) -> bool:
     """Validate embedding dimensions and properties."""
     if embedding is None:
         raise EmbeddingValidationError(f"{name} is None")
     if not isinstance(embedding, np.ndarray):
         raise EmbeddingValidationError(f"{name} is not a numpy array")
     if embedding.shape[0] != expected_dim:
-        raise EmbeddingValidationError(f"{name} dimension mismatch: got {embedding.shape[0]}, expected {expected_dim}")
+        raise EmbeddingValidationError(
+            f"{name} dimension mismatch: got {embedding.shape[0]}, expected {expected_dim}"
+        )
     if np.any(np.isnan(embedding)):
         raise EmbeddingValidationError(f"{name} contains NaN values")
     if np.any(np.isinf(embedding)):
@@ -78,7 +84,9 @@ def get_embedding_from_llm(
     try:
         response = client.embeddings.create(input=text, model=model_name)
         embedding = np.array(response.data[0].embedding).astype(np.float32)
-        validate_embedding(embedding, expected_embedding_dim, f"embedding for '{text[:50]}...'")
+        validate_embedding(
+            embedding, expected_embedding_dim, f"embedding for '{text[:50]}...'"
+        )
         return embedding
     except EmbeddingValidationError:
         raise
@@ -87,7 +95,9 @@ def get_embedding_from_llm(
         return None
 
 
-def get_embeddings_from_llm_batch(texts: List[str], llm_config: Optional[Any] = None) -> Optional[List[np.ndarray]]:
+def get_embeddings_from_llm_batch(
+    texts: List[str], llm_config: Optional[Any] = None
+) -> Optional[List[np.ndarray]]:
     """Gets embeddings for a list of texts in a single, efficient API call."""
     if not texts:
         return []
@@ -104,7 +114,9 @@ def get_embeddings_from_llm_batch(texts: List[str], llm_config: Optional[Any] = 
         return None
 
 
-def query_llm(prompt_text: str, llm_config: Optional[Any] = None) -> tuple[str, int, float]:
+def query_llm(
+    prompt_text: str, llm_config: Optional[Any] = None
+) -> tuple[str, int, float]:
     """Queries the LLM, returning the response, token usage, and estimated cost."""
     client = get_client()
 
@@ -112,7 +124,9 @@ def query_llm(prompt_text: str, llm_config: Optional[Any] = None) -> tuple[str, 
     model_name = llm_config.completion_model if llm_config else "gpt-4.1-nano"
     temp = llm_config.temperature if llm_config else 0.1
     max_tok = llm_config.max_tokens if llm_config else 700
-    prompt_prefix = llm_config.reflection_prompt_prefix if llm_config else "In 300 words or less, "
+    prompt_prefix = (
+        llm_config.reflection_prompt_prefix if llm_config else "In 300 words or less, "
+    )
 
     pricing = {
         "gpt-4o-mini": {"prompt": 0.15 / 1_000_000, "completion": 0.60 / 1_000_000},
@@ -129,7 +143,11 @@ def query_llm(prompt_text: str, llm_config: Optional[Any] = None) -> tuple[str, 
         )
 
         response_text = ""
-        if response.choices and response.choices[0].message and response.choices[0].message.content:
+        if (
+            response.choices
+            and response.choices[0].message
+            and response.choices[0].message.content
+        ):
             response_text = response.choices[0].message.content.strip()
 
         usage = response.usage
@@ -137,7 +155,9 @@ def query_llm(prompt_text: str, llm_config: Optional[Any] = None) -> tuple[str, 
             prompt_tokens = usage.prompt_tokens
             completion_tokens = usage.completion_tokens
             total_tokens = usage.total_tokens
-            cost = (prompt_tokens * model_pricing["prompt"]) + (completion_tokens * model_pricing["completion"])
+            cost = (prompt_tokens * model_pricing["prompt"]) + (
+                completion_tokens * model_pricing["completion"]
+            )
             return response_text, total_tokens, cost
         else:
             return response_text, 0, 0.0
