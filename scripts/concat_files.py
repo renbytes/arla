@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Concatenates the text of specified files across multiple 'agent-*' packages
-in the monorepo. Edit the settings to control the output.
+Concatenates the text of specified files and directories across the monorepo,
+including root-level configuration files. Edit the settings to control the output.
 """
 
 from pathlib import Path
@@ -11,7 +11,7 @@ from typing import List, Sequence
 # The root of your monorepo (where this script should be run from).
 ROOT = "."
 
-# 1. CONFIGURE WHICH PACKAGES TO SEARCH
+# 1. CONFIGURE WHICH PACKAGES/DIRECTORIES TO SEARCH RECURSIVELY
 #    The script will look for directories at the root that start with these prefixes.
 SEARCH_PREFIXES = [
     "agent-core",
@@ -23,64 +23,73 @@ SEARCH_PREFIXES = [
     "simulations",
 ]
 
-# 2. CONFIGURE WHICH SUB-DIRECTORIES TO INCLUDE
-#    Within each found package, only these sub-folders will be searched.
-INCLUDE_SUBDIRS = []
+# 2. CONFIGURE WHICH ROOT-LEVEL FILES TO INCLUDE
+#    These files will be searched for directly in the ROOT directory.
+#    Use this for top-level configuration like Dockerfile, Makefile, etc.
+INCLUDE_ROOT_FILES = [
+    "Dockerfile",
+    "docker-compose.yml",
+    "Makefile",
+    "pyproject.toml",
+    ".env.example",
+]
 
-# 3. CONFIGURE WHICH FILE TYPES TO INCLUDE
+# 3. CONFIGURE WHICH FILE TYPES TO INCLUDE (within SEARCH_PREFIXES directories)
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
-INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", "Dockerfile", ".md", ".txt"]
+INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", ".md", ".txt"]
 
 # 4. CONFIGURE DIRS/FILES TO EXCLUDE
 #    Any path containing these names will be skipped.
-EXCLUDE = [".git", "__pycache__", ".ruff_cache", ".pytest_cache", ".egg-info"]
+EXCLUDE = [".git", "__pycache__", ".ruff_cache", ".pytest_cache", ".egg-info", ".venv"]
 
 # 5. CONFIGURE OUTPUT
 ENCODING = "utf-8"
-JOIN_WITH = "\n\n"
-OUTPUT_FILE = "all_code.txt"  # The name of the concatenated output file.
+JOIN_WITH = "\n\n" + "─" * 160 + "\n"  # A more prominent separator between files
+OUTPUT_FILE = "all_code_and_configs.txt"  # The name of the concatenated output file.
 BANNER_CHAR = "─"
-BANNER_WIDTH = 80
+BANNER_WIDTH = 160
 # ───────────────────────────────────────────────────────────────────────────────
 
 
 def _gather_files(
     root: Path,
     prefixes: Sequence[str],
-    include_subdirs: Sequence[str],
+    root_files: Sequence[str],
     include_exts: set[str],
     exclude: set[str],
 ) -> List[Path]:
-    """Finds all target files based on the configuration.
-
-    If `include_subdirs` is empty, the entire package directory under each
-    matching prefix is searched recursively.
-    """
+    """Finds all target files based on the configuration."""
     files: List[Path] = []
 
-    # 1. Find all package dirs at the root that match the prefixes
-    package_dirs = [d for d in root.iterdir() if d.is_dir() and any(d.name.startswith(p) for p in prefixes)]
+    # 1. Gather specified root-level files first
+    for filename in root_files:
+        path = root / filename
+        if path.is_file():
+            files.append(path)
+        else:
+            print(f"Warning: Root file not found: {filename}")
 
-    # 2. Determine which directories to search
-    if include_subdirs:  # user specified sub-folders
-        search_paths: List[Path] = []
-        for pkg_dir in package_dirs:
-            for subdir_name in include_subdirs:
-                path_to_search = pkg_dir / subdir_name
-                if path_to_search.is_dir():
-                    search_paths.append(path_to_search)
-    else:  # empty => search entire package
-        search_paths = list(package_dirs)
+    # 2. Find all package dirs at the root that match the prefixes
+    package_dirs = [
+        d
+        for d in root.iterdir()
+        if d.is_dir() and any(d.name.startswith(p) for p in prefixes)
+    ]
 
-    # 3. Recursively find all files in the target search paths
-    for base in search_paths:
+    # 3. Recursively find all files in the target package directories
+    for base in package_dirs:
         for path in base.rglob("*"):
+            # Skip if any part of the path is in the exclude list
             if any(part in exclude for part in path.relative_to(root).parts):
                 continue
-            if path.is_file() and (not include_exts or path.suffix.lower() in include_exts):
+            # Check if the file has an allowed extension
+            if path.is_file() and (
+                not include_exts or path.suffix.lower() in include_exts
+            ):
                 files.append(path)
 
-    return sorted(files, key=lambda p: p.relative_to(root).as_posix())
+    # Return a sorted and unique list of files
+    return sorted(list(set(files)), key=lambda p: p.relative_to(root).as_posix())
 
 
 def _banner(rel_path: str) -> str:
@@ -99,7 +108,9 @@ def dump_repo_contents() -> str:
     exclude = set(EXCLUDE)
 
     parts: List[str] = []
-    found_files = _gather_files(root, SEARCH_PREFIXES, INCLUDE_SUBDIRS, include_exts, exclude)
+    found_files = _gather_files(
+        root, SEARCH_PREFIXES, INCLUDE_ROOT_FILES, include_exts, exclude
+    )
 
     print(f"Found {len(found_files)} files to concatenate...")
 

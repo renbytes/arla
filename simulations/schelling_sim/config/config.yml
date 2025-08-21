@@ -4,7 +4,7 @@ simulation:
   steps: 200 # Increased steps to better see the effect
   log_directory: "data/logs/schelling_sim"
   random_seed: 42
-  satisfaction_threshold: 0.4
+  satisfaction_threshold: 0.9
 
 environment:
   class: "simulations.schelling_sim.environment.SchellingGridEnvironment"
@@ -41,3 +41,9 @@ logging:
     - "simulations.schelling_sim.components.PositionComponent"
     - "simulations.schelling_sim.components.GroupComponent"
     - "simulations.schelling_sim.components.SatisfactionComponent"
+
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/schelling_sim"
+  frames_per_second: 1
+  pixel_scale: 10

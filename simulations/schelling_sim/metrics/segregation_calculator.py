@@ -22,7 +22,9 @@ class SegregationCalculator(MetricsCalculatorInterface):
         Returns:
             A dictionary containing the calculated metrics.
         """
-        all_agents = simulation_state.get_entities_with_components([GroupComponent, SatisfactionComponent])
+        all_agents = simulation_state.get_entities_with_components(
+            [GroupComponent, SatisfactionComponent]
+        )
 
         if not all_agents:
             return {
@@ -52,10 +54,24 @@ class SegregationCalculator(MetricsCalculatorInterface):
         total_agents = len(all_agents)
         p1 = group_1_count / total_agents if total_agents > 0 else 0
         p2 = group_2_count / total_agents if total_agents > 0 else 0
-        segregation_index = 1 - (satisfied_count / total_agents) * (2 * p1 * p2) if total_agents > 0 else 0
+        satisfaction_rate = satisfied_count / total_agents if total_agents > 0 else 1.0
+
+        segregation_index = (
+            1 - (satisfaction_rate) * (2 * p1 * p2) if total_agents > 0 else 0
+        )
+
+        current_tick = simulation_state.current_tick
+        print(f"--- Tick {current_tick}: Segregation Metrics ---")
+        print(f"  Satisfied Count: {satisfied_count}, Total Agents: {total_agents}")
+        print(f"  Satisfaction Rate: {satisfaction_rate:.4f}")
+        print(f"  P1: {p1:.4f}, P2: {p2:.4f}")
+        print(f"  Term to Subtract: {(satisfaction_rate) * (2 * p1 * p2):.4f}")
+        print(f"  Calculated Segregation Index: {segregation_index:.4f}")
 
         return {
-            "satisfaction_rate": satisfied_count / total_agents if total_agents > 0 else 1.0,
+            "satisfaction_rate": satisfied_count / total_agents
+            if total_agents > 0
+            else 1.0,
             "segregation_index": segregation_index,
             "active_agents": total_agents,
         }
