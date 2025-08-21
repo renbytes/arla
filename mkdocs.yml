@@ -65,6 +65,9 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
+  - rss:
+    blog_dir: blog
+    pretty: true
 
 # Page tree
 nav:
