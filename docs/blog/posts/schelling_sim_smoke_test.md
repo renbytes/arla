@@ -9,7 +9,7 @@ categories:
 
 # From Schelling to Psyche: A Technical Look at Validating ARLA
 
-![Animation of the Schelling Segregation Model](../assets/schelling_simulation.gif)
+![Animation of the Schelling Segregation Model](../assets/schelling_simulation.gif){: .blog-hero }
 
 Welcome back to the ARLA Development Blog! In our first post, we introduced our vision for a modular framework for building cognitively rich agents. Today, we're diving into the code to show how we're building and validating this platform, starting with a classic: the [Schelling Segregation Model](https://en.wikipedia.org/wiki/Schelling%27s_model_of_segregation).
 

@@ -14,9 +14,6 @@ docs_dir: docs
 # Copyright
 copyright: Copyright &copy; 2025 Bordumb / Renbytes
 
-blog:
-  authors_file: "{blog}/.authors.yml"
-
 # Configuration
 theme:
   name: material
@@ -50,12 +47,10 @@ theme:
 # Plugins
 plugins:
   - search
-  - blog
   - autorefs
   - mkdocstrings:
       handlers:
         python:
-          # This is the key change: tell mkdocstrings where to find ALL the code.
           setup_paths:
             - agent-core/src
             - agent-engine/src
@@ -65,9 +60,16 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
-  - rss:
-    blog_dir: blog
-    pretty: true
+  - rss
+
+extra:
+  blog:
+    authors_file: "{blog}/.authors.yml"
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/renbytes
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/arla/
 
 # Page tree
 nav:
@@ -121,3 +123,6 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_css:
+  - stylesheets/custom.css
