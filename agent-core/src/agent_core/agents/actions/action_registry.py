@@ -37,14 +37,18 @@ class ActionRegistry:
                 importlib.import_module(path)
                 print(f"  Successfully loaded action module: {path}")
             except ImportError as e:
-                print(f"WARNING: Could not import action module at '{path}'. Error: {e}")
+                print(
+                    f"WARNING: Could not import action module at '{path}'. Error: {e}"
+                )
 
     def register(self, action_class: Type[ActionInterface]) -> Type[ActionInterface]:
         """
         A decorator to register any class that implements the ActionInterface.
         """
         if not issubclass(action_class, ActionInterface):
-            raise TypeError(f"Class {action_class.__name__} must implement ActionInterface to be registered.")
+            raise TypeError(
+                f"Class {action_class.__name__} must implement ActionInterface to be registered."
+            )
 
         try:
             instance = action_class()
@@ -56,7 +60,9 @@ class ActionRegistry:
             ) from e
 
         if not isinstance(action_id, str) or not action_id:
-            raise TypeError(f"Action class {action_class.__name__} has an invalid 'action_id' property.")
+            raise TypeError(
+                f"Action class {action_class.__name__} has an invalid 'action_id' property."
+            )
 
         if action_id in self._actions:
             raise ValueError(f"Action with ID '{action_id}' is already registered.")

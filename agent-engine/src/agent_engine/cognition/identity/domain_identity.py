@@ -79,7 +79,9 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
             norm_new_traits, current_domain.embedding, current_domain.confidence
         )
         validation_score = self._assess_social_validation(context, domain)
-        resistance = self._calculate_resistance(current_domain, consistency_score, validation_score)
+        resistance = self._calculate_resistance(
+            current_domain, consistency_score, validation_score
+        )
 
         update_threshold = 0.3 + (current_domain.stability * 0.4)
 
@@ -100,7 +102,9 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
             constrained_delta = identity_delta * update_strength * (1 - resistance)
 
             current_domain.embedding = current_domain.embedding + constrained_delta
-            current_domain.embedding = self._normalize_embedding(current_domain.embedding)
+            current_domain.embedding = self._normalize_embedding(
+                current_domain.embedding
+            )
 
             current_domain.confidence = min(1.0, current_domain.confidence + 0.1)
             current_domain.social_validation = validation_score
@@ -141,7 +145,9 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         confidence_modulated = consistency ** (1 + current_confidence)
         return float(np.clip(confidence_modulated, 0.0, 1.0))
 
-    def _assess_social_validation(self, context: Dict[str, Any], domain: IdentityDomain) -> float:
+    def _assess_social_validation(
+        self, context: Dict[str, Any], domain: IdentityDomain
+    ) -> float:
         """Assess social validation for identity claims."""
         social_feedback = context.get("social_feedback", {})
         if not social_feedback:
@@ -162,7 +168,10 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         peer_recognition = social_feedback.get("peer_recognition", 0.0)
 
         validation_score = (
-            positive_interactions * 0.3 + social_approval * 0.4 + peer_recognition * 0.3 - negative_interactions * 0.2
+            positive_interactions * 0.3
+            + social_approval * 0.4
+            + peer_recognition * 0.3
+            - negative_interactions * 0.2
         )
         final_validation = base_validation * 0.3 + validation_score * 0.7
         return float(np.clip(final_validation, 0.0, 1.0))
@@ -178,7 +187,12 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         consistency_resistance = (1 - consistency_score) * 0.5
         validation_resistance = (1 - validation_score) * 0.3
         confidence_resistance = current_domain.confidence * 0.2
-        total_resistance = stability_resistance + consistency_resistance + validation_resistance + confidence_resistance
+        total_resistance = (
+            stability_resistance
+            + consistency_resistance
+            + validation_resistance
+            + confidence_resistance
+        )
         return float(np.clip(total_resistance, 0.0, 0.9))
 
     def _calculate_update_strength(
@@ -248,7 +262,9 @@ class MultiDomainIdentity(MultiDomainIdentityInterface):
         if total_weight == 0:
             return float(np.mean(similarities))
 
-        weighted_coherence = sum(s * w for s, w in zip(similarities, weights)) / total_weight
+        weighted_coherence = (
+            sum(s * w for s, w in zip(similarities, weights)) / total_weight
+        )
         return float(weighted_coherence)
 
     def get_identity_stability(self) -> float:
@@ -289,7 +305,9 @@ class SocialValidationCollector:
         )
 
         for schema in social_schemas.values():
-            if hasattr(schema, "impression_valence") and hasattr(schema, "interaction_count"):
+            if hasattr(schema, "impression_valence") and hasattr(
+                schema, "interaction_count"
+            ):
                 valence = schema.impression_valence
                 interactions = schema.interaction_count
                 total_valence += valence
@@ -305,14 +323,20 @@ class SocialValidationCollector:
             feedback["negative_social_responses"] = negative_count / total_interactions
 
         if social_schemas:
-            feedback["social_approval_rating"] = np.clip((total_valence / len(social_schemas) + 1) / 2, 0, 1)
-            feedback["peer_recognition"] = min(recognition_score / len(social_schemas), 1.0)
+            feedback["social_approval_rating"] = np.clip(
+                (total_valence / len(social_schemas) + 1) / 2, 0, 1
+            )
+            feedback["peer_recognition"] = min(
+                recognition_score / len(social_schemas), 1.0
+            )
             feedback["interaction_frequency"] = min(len(social_schemas) / 5.0, 1.0)
 
         if entity_id not in self.validation_history:
             self.validation_history[entity_id] = []
         self.validation_history[entity_id].append({**feedback, "tick": current_tick})
         if len(self.validation_history[entity_id]) > 20:
-            self.validation_history[entity_id] = self.validation_history[entity_id][-20:]
+            self.validation_history[entity_id] = self.validation_history[entity_id][
+                -20:
+            ]
 
         return feedback

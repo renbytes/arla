@@ -1,7 +1,7 @@
 import argparse
 import importlib
+import sys
 import traceback
-import uuid
 from pathlib import Path
 
 from omegaconf import OmegaConf
@@ -15,11 +15,20 @@ def app():
     simulation configuration and entrypoint, and starts the simulation.
     It is designed for quick, direct runs without the Celery/MLflow stack.
     """
+    # This allows the script to find the top-level 'simulations' directory.
+    # The path is calculated relative to this file's location.
+    # .../agent-sim/src/agent_sim/main.py -> .../agent-sim/src/ -> .../agent-sim/ -> project root
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
     parser = argparse.ArgumentParser(
         description="ARLA Simulation Runner",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--scenario", type=str, required=True, help="Path to the scenario JSON file.")
+    parser.add_argument(
+        "--scenario", type=str, required=True, help="Path to the scenario JSON file."
+    )
     parser.add_argument(
         "--config",
         type=str,
@@ -32,7 +41,9 @@ def app():
         default="simulations.soul_sim",
         help="The Python package of the simulation to run (e.g., 'simulations.soul_sim').",
     )
-    parser.add_argument("--steps", type=int, default=100, help="Number of simulation steps to run.")
+    parser.add_argument(
+        "--steps", type=int, default=100, help="Number of simulation steps to run."
+    )
     args = parser.parse_args()
 
     print("--- ARLA Local Simulation Runner ---")
@@ -57,26 +68,32 @@ def app():
                 "simulation": {"steps": args.steps},
             }
         )
-        final_config = OmegaConf.to_container(OmegaConf.merge(base_config, overrides), resolve=True)
+        final_config = OmegaConf.to_container(
+            OmegaConf.merge(base_config, overrides), resolve=True
+        )
 
-        # --- UPDATED: Generate a valid UUID string for the run_id ---
-        run_id = str(uuid.uuid4())
-        task_id = "local_task"
-        experiment_id = "local_experiment"
+        # Generate a valid UUID string for the run_id
+        # run_id is set to None to signal MLflow to create a new run.
+        run_id = None
+        task_id = "local_run"
+        # We'll create a dedicated experiment for all local runs of this type.
+        experiment_name = f"{args.package}-local"
 
         sim_module = importlib.import_module(f"{args.package}.run")
 
         sim_module.start_simulation(
             run_id=run_id,
             task_id=task_id,
-            experiment_id=experiment_id,
+            experiment_name=experiment_name,
             config_overrides=final_config,
         )
 
         print("\n✅ Simulation completed successfully.")
 
     except ImportError:
-        print(f"Error: Module '{args.package}.run' not found. Please check the package path.")
+        print(
+            f"Error: Module '{args.package}.run' not found. Please check the package path."
+        )
         exit(1)
     except Exception as e:
         print(f"\n❌ An error occurred during the simulation: {e}")

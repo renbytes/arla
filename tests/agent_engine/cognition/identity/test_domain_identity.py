@@ -110,7 +110,9 @@ def test_update_domain_identity_successful_update(identity):
 
     # Set a known initial embedding to make the consistency score predictable.
     # We make it somewhat different from the new traits to ensure consistency isn't 1.0.
-    identity.domains[domain_to_update].embedding = np.array([0, 0, 1, 0], dtype=np.float32)
+    identity.domains[domain_to_update].embedding = np.array(
+        [0, 0, 1, 0], dtype=np.float32
+    )
 
     new_traits = np.array([0, 1, 0, 1], dtype=np.float32)
     context = {
@@ -155,11 +157,15 @@ def test_update_domain_identity_resisted_update(identity):
 
     # Set a known initial embedding.
     initial_embedding = np.array([1, 1, 1, 1], dtype=np.float32)
-    identity.domains[domain_to_update].embedding = initial_embedding / np.linalg.norm(initial_embedding)
+    identity.domains[domain_to_update].embedding = initial_embedding / np.linalg.norm(
+        initial_embedding
+    )
 
     # New traits are very different from existing identity
     new_traits = -identity.get_domain_embedding(domain_to_update)
-    context = {"social_feedback": {"negative_social_responses": 0.8}}  # Negative feedback
+    context = {
+        "social_feedback": {"negative_social_responses": 0.8}
+    }  # Negative feedback
     original_embedding = identity.get_domain_embedding(domain_to_update).copy()
 
     # Act
@@ -199,12 +205,16 @@ def test_collect_social_feedback_with_data(social_validator):
     }
 
     # Act
-    feedback = social_validator.collect_social_feedback("agent1", {}, social_schemas, 100)
+    feedback = social_validator.collect_social_feedback(
+        "agent1", {}, social_schemas, 100
+    )
 
     # Assert
     assert feedback["positive_social_responses"] == pytest.approx(5 / 7)
     assert feedback["negative_social_responses"] == pytest.approx(2 / 7)
-    assert feedback["social_approval_rating"] > 0.5  # (0.8 - 0.6)/2 -> positive avg valence
+    assert (
+        feedback["social_approval_rating"] > 0.5
+    )  # (0.8 - 0.6)/2 -> positive avg valence
     assert feedback["peer_recognition"] > 0
 
 

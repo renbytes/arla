@@ -22,7 +22,9 @@ def appraisal_processor():
     mock_config = SimpleNamespace(
         agent=SimpleNamespace(
             emotional_dynamics=SimpleNamespace(
-                appraisal_weights=SimpleNamespace(goal_relevance=0.7, agency=0.5, social_feedback=0.3)
+                appraisal_weights=SimpleNamespace(
+                    goal_relevance=0.7, agency=0.5, social_feedback=0.3
+                )
             )
         )
     )

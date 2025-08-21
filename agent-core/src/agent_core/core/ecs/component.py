@@ -56,7 +56,9 @@ class ComponentValidationError(Exception):
         self.component_type = component_type
         self.entity_id = entity_id
         self.errors = errors
-        super().__init__(f"{component_type} validation failed for {entity_id}: {', '.join(errors)}")
+        super().__init__(
+            f"{component_type} validation failed for {entity_id}: {', '.join(errors)}"
+        )
 
 
 class Component(CognitiveComponent):
@@ -116,7 +118,9 @@ class MemoryComponent(Component):
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         """Validates the new memory structures."""
-        if not isinstance(self.episodic_memory, list) or not isinstance(self.causal_data, list):
+        if not isinstance(self.episodic_memory, list) or not isinstance(
+            self.causal_data, list
+        ):
             return False, ["Memory structures have incorrect types."]
         return True, []
 
@@ -126,7 +130,9 @@ class IdentityComponent(Component):
 
     def __init__(self, multi_domain_identity: "MultiDomainIdentityInterface") -> None:
         self.multi_domain_identity = multi_domain_identity
-        self.embedding: np.ndarray = self.multi_domain_identity.get_global_identity_embedding()
+        self.embedding: np.ndarray = (
+            self.multi_domain_identity.get_global_identity_embedding()
+        )
         self.salient_traits_cache: Dict[str, float] = {}
         self.learned_concepts: Dict[str, np.ndarray] = {}
         self.identity_coherence_history: List[float] = []
@@ -185,8 +191,13 @@ class GoalComponent(Component):
         return {"current_symbolic_goal": self.current_symbolic_goal}
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        if self.current_symbolic_goal and self.current_symbolic_goal not in self.symbolic_goals_data:
-            return False, [f"Current goal '{self.current_symbolic_goal}' not in goal data."]
+        if (
+            self.current_symbolic_goal
+            and self.current_symbolic_goal not in self.symbolic_goals_data
+        ):
+            return False, [
+                f"Current goal '{self.current_symbolic_goal}' not in goal data."
+            ]
         return True, []
 
 
@@ -226,7 +237,9 @@ class AffectComponent(Component):
         self.prediction_delta_magnitude: float = 0.0
         self.predictive_delta_smooth: float = 0.5
         self.cognitive_dissonance: float = 0.0
-        self.affective_experience_buffer: deque[Any] = deque(maxlen=affective_buffer_maxlen)
+        self.affective_experience_buffer: deque[Any] = deque(
+            maxlen=affective_buffer_maxlen
+        )
         self.prev_reward: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -256,7 +269,9 @@ class CompetenceComponent(Component):
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         errors: List[str] = []
         if not isinstance(self.action_counts, defaultdict):
-            errors.append(f"action_counts is not a defaultdict but a {type(self.action_counts)}")
+            errors.append(
+                f"action_counts is not a defaultdict but a {type(self.action_counts)}"
+            )
         return len(errors) == 0, errors
 
     def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
@@ -357,27 +372,43 @@ class TimeBudgetComponent(Component):
     representing an agent's capacity to perform actions.
     """
 
-    def __init__(self, initial_time_budget: float, lifespan_std_dev_percent: float = 0.0) -> None:
+    def __init__(
+        self, initial_time_budget: float, lifespan_std_dev_percent: float = 0.0
+    ) -> None:
         self.initial_time_budget = initial_time_budget
         self.max_time_budget = initial_time_budget * 2  # Max capacity for time/energy
         self.current_time_budget: float = initial_time_budget
         self.is_active: bool = True  # Whether the agent is currently able to act
-        self.action_counts: Dict[str, int] = defaultdict(int)  # Tracks how many times each action was performed
+        self.action_counts: Dict[str, int] = defaultdict(
+            int
+        )  # Tracks how many times each action was performed
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         errors: List[str] = []
         if self.initial_time_budget <= 0:
-            errors.append(f"initial_time_budget must be > 0, got {self.initial_time_budget}")
+            errors.append(
+                f"initial_time_budget must be > 0, got {self.initial_time_budget}"
+            )
         if self.current_time_budget < 0:
-            errors.append(f"current_time_budget cannot be negative, got {self.current_time_budget}")
+            errors.append(
+                f"current_time_budget cannot be negative, got {self.current_time_budget}"
+            )
         if self.max_time_budget <= 0:
             errors.append(f"max_time_budget must be > 0, got {self.max_time_budget}")
         if self.is_active and self.current_time_budget <= 0:
-            errors.append(f"Entity marked active but has no time budget ({self.current_time_budget})")
+            errors.append(
+                f"Entity marked active but has no time budget ({self.current_time_budget})"
+            )
         if not self.is_active and self.current_time_budget > 0:
-            errors.append(f"Entity marked inactive but has time budget ({self.current_time_budget})")
-        if self.current_time_budget > self.max_time_budget * 1.1:  # Allow slight overshoot for float precision
-            errors.append(f"current_time_budget ({self.current_time_budget}) exceeds max ({self.max_time_budget})")
+            errors.append(
+                f"Entity marked inactive but has time budget ({self.current_time_budget})"
+            )
+        if (
+            self.current_time_budget > self.max_time_budget * 1.1
+        ):  # Allow slight overshoot for float precision
+            errors.append(
+                f"current_time_budget ({self.current_time_budget}) exceeds max ({self.max_time_budget})"
+            )
         return len(errors) == 0, errors
 
     def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:

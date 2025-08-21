@@ -20,7 +20,9 @@ class MockSystem:
         self.update = AsyncMock()
 
         if self.should_fail:
-            self.update.side_effect = RuntimeError(f"System '{self.name}' failed as designed.")
+            self.update.side_effect = RuntimeError(
+                f"System '{self.name}' failed as designed."
+            )
 
     def __repr__(self) -> str:
         return f"MockSystem(name='{self.name}')"
@@ -58,7 +60,9 @@ async def test_serial_runner_executes_all_systems(systems):
 
 
 @pytest.mark.asyncio
-async def test_serial_runner_handles_failure_and_continues(systems_with_failure, capsys):
+async def test_serial_runner_handles_failure_and_continues(
+    systems_with_failure, capsys
+):
     """
     Tests that the SerialSystemRunner continues to run subsequent systems
     even if one of them fails.

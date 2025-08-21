@@ -1,0 +1,49 @@
+simulation_package: "simulations.schelling_sim"
+
+simulation:
+  steps: 200 # Increased steps to better see the effect
+  log_directory: "data/logs/schelling_sim"
+  random_seed: 42
+  satisfaction_threshold: 0.9
+
+environment:
+  class: "simulations.schelling_sim.environment.SchellingGridEnvironment"
+  params:
+    width: 50
+    height: 50
+
+scenario_loader:
+  class: "simulations.schelling_sim.loader.SchellingScenarioLoader"
+
+action_generator:
+  class: "simulations.schelling_sim.run.SchellingActionGenerator"
+
+# Defines the class that selects an action for an agent to perform.
+decision_selector:
+  class: "simulations.schelling_sim.run.SchellingDecisionSelector"
+
+# Defines the factory for creating components when loading a saved state.
+component_factory:
+  class: "simulations.schelling_sim.run.SchellingComponentFactory"
+
+# A list of all system modules to be loaded and registered.
+systems:
+  - "simulations.schelling_sim.systems.SatisfactionSystem"
+  - "simulations.schelling_sim.systems.MovementSystem"
+
+# A list of all action modules to be loaded.
+actions:
+  - "simulations.schelling_sim.actions"
+
+# Updated logging to reflect the new component names
+logging:
+  components_to_log:
+    - "simulations.schelling_sim.components.PositionComponent"
+    - "simulations.schelling_sim.components.GroupComponent"
+    - "simulations.schelling_sim.components.SatisfactionComponent"
+
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/schelling_sim"
+  frames_per_second: 1
+  pixel_scale: 10

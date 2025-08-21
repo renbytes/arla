@@ -71,7 +71,9 @@ class CausalGraphSystem(System):
         action_plan = cast(ActionPlanComponent, event_data["action_plan"])
         action_outcome = cast(ActionOutcome, event_data["action_outcome"])
 
-        record = self._flatten_data_for_record(pre_action_state_tuple, action_plan, action_outcome)
+        record = self._flatten_data_for_record(
+            pre_action_state_tuple, action_plan, action_outcome
+        )
         if hasattr(mem_comp, "causal_data"):
             mem_comp.causal_data.append(record)
 
@@ -80,33 +82,49 @@ class CausalGraphSystem(System):
         Periodically rebuilds the causal model for each agent using the data
         collected in their MemoryComponent.
         """
-        target_entities = self.simulation_state.get_entities_with_components(self.REQUIRED_COMPONENTS)
+        target_entities = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
         for entity_id, components in target_entities.items():
-            self._pre_action_states[entity_id] = self.state_node_encoder.encode_state_for_causal_graph(
-                entity_id=entity_id,
-                components=components,
-                current_tick=current_tick,
-                config=self.config,
+            self._pre_action_states[entity_id] = (
+                self.state_node_encoder.encode_state_for_causal_graph(
+                    entity_id=entity_id,
+                    components=components,
+                    current_tick=current_tick,
+                    config=self.config,
+                )
             )
 
         if current_tick > 0 and current_tick % 50 == 0:
             for _entity_id, components in target_entities.items():
                 mem_comp = cast(MemoryComponent, components.get(MemoryComponent, None))
-                if mem_comp and hasattr(mem_comp, "causal_data") and len(mem_comp.causal_data) >= 20:
+                if (
+                    mem_comp
+                    and hasattr(mem_comp, "causal_data")
+                    and len(mem_comp.causal_data) >= 20
+                ):
                     self._build_causal_model(mem_comp)
 
-    def estimate_causal_effect(self, agent_id: str, treatment_value: str) -> Optional[float]:
+    def estimate_causal_effect(
+        self, agent_id: str, treatment_value: str
+    ) -> Optional[float]:
         """
         Estimates the causal effect of a specific action (treatment) on the outcome
         for a given agent using do-calculus.
         """
         mem_comp = self.simulation_state.get_component(agent_id, MemoryComponent)
-        if not mem_comp or not hasattr(mem_comp, "causal_model") or not mem_comp.causal_model:
+        if (
+            not mem_comp
+            or not hasattr(mem_comp, "causal_model")
+            or not mem_comp.causal_model
+        ):
             return None
 
         causal_model = mem_comp.causal_model
         try:
-            identified_estimand = causal_model.identify_effect(proceed_when_unidentifiable=True)
+            identified_estimand = causal_model.identify_effect(
+                proceed_when_unidentifiable=True
+            )
             estimate = causal_model.estimate_effect(
                 identified_estimand,
                 method_name="backdoor.linear_regression",

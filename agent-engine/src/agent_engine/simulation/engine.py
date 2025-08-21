@@ -67,13 +67,19 @@ class SimulationManager:
 
         self.event_bus = EventBus(self.config)
         self.simulation_state = SimulationState(self.config, self.device)
-        self.cognitive_scaffold = CognitiveScaffold(self.simulation_id, self.config, db_logger=self.db_logger)
-        self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
+        self.cognitive_scaffold = CognitiveScaffold(
+            self.simulation_id, self.config, db_logger=self.db_logger
+        )
+        self.system_manager = SystemManager(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
 
         self._initialize_state()
         self._generate_run_manifest()
 
-        print("Engine: Manager initialized. World will be populated by the scenario loader.")
+        print(
+            "Engine: Manager initialized. World will be populated by the scenario loader."
+        )
 
     def register_system(self, system_class: Type[Any], **kwargs: Any) -> None:
         """A convenience method to register a system with the SystemManager."""
@@ -91,7 +97,9 @@ class SimulationManager:
         if isinstance(self.config, BaseModel):
             config_dict = self.config.model_dump()
         else:
-            config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
+            config_dict = cast(
+                Dict[str, Any], OmegaConf.to_container(self.config, resolve=True)
+            )
 
         db_experiment_id = await self.db_logger.create_experiment(
             name=self.experiment_id or "local_experiment",
@@ -100,7 +108,11 @@ class SimulationManager:
             simulation_package=self.config.simulation_package,
             mlflow_experiment_id="local",
         )
-        scenario_name = Path(self.config.scenario_path).stem if self.config.scenario_path else "default"
+        scenario_name = (
+            Path(self.config.scenario_path).stem
+            if self.config.scenario_path
+            else "default"
+        )
         await self.db_logger.create_simulation_run(
             run_id=uuid.UUID(self.simulation_id),
             experiment_id=db_experiment_id,
@@ -153,7 +165,9 @@ class SimulationManager:
         await self._initialize_run_records()
 
         num_steps = end_step if end_step is not None else self.config.simulation.steps
-        print(f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}...")
+        print(
+            f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}..."
+        )
 
         for step in range(start_step, num_steps):
             should_continue = await self._execute_simulation_step(step)
@@ -185,20 +199,30 @@ class SimulationManager:
             event_bus=self.event_bus,
             db_logger=self.db_logger,
         )
-        print(f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1}")
+        print(
+            f"--- State successfully loaded. Resuming at tick {self.simulation_state.current_tick + 1}"
+        )
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
         """Handles the decision-making and action-dispatching for a single entity."""
         time_comp = self.simulation_state.get_component(entity_id, TimeBudgetComponent)
-        if not time_comp or not hasattr(time_comp, "is_active") or not time_comp.is_active:
+        if (
+            not time_comp
+            or not hasattr(time_comp, "is_active")
+            or not time_comp.is_active
+        ):
             return
 
-        possible_actions = self.action_generator.generate(self.simulation_state, entity_id, current_tick)
+        possible_actions = self.action_generator.generate(
+            self.simulation_state, entity_id, current_tick
+        )
         if not possible_actions:
             print(f"   - {entity_id} has no possible actions and passes the turn.")
             return
 
-        chosen_plan = self.decision_selector.select(self.simulation_state, entity_id, possible_actions)
+        chosen_plan = self.decision_selector.select(
+            self.simulation_state, entity_id, possible_actions
+        )
         if not chosen_plan:
             print(f"   - {entity_id} chose not to act.")
             return
@@ -215,7 +239,9 @@ class SimulationManager:
                 },
             )
 
-    def _setup_simulation_ids(self, run_id: Optional[str], task_id: str, experiment_id: Optional[str]) -> None:
+    def _setup_simulation_ids(
+        self, run_id: Optional[str], task_id: str, experiment_id: Optional[str]
+    ) -> None:
         """Sets up unique IDs for the simulation run."""
         if run_id:
             self.simulation_id = run_id
@@ -243,7 +269,9 @@ class SimulationManager:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(seed)
         else:
-            print("Warning: No random_seed provided. Simulation will not be reproducible.")
+            print(
+                "Warning: No random_seed provided. Simulation will not be reproducible."
+            )
             self.main_rng = np.random.default_rng()
 
     def _initialize_state(self) -> None:
@@ -265,7 +293,9 @@ class SimulationManager:
             config_dict = self.config.model_dump()
         else:
             # Assume it's an OmegaConf object and cast to satisfy mypy
-            config_dict = cast(Dict[str, Any], OmegaConf.to_container(self.config, resolve=True))
+            config_dict = cast(
+                Dict[str, Any], OmegaConf.to_container(self.config, resolve=True)
+            )
 
         # Create and save the manifest.json
         manifest_data = create_run_manifest(

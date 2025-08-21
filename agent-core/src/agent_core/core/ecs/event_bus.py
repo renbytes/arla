@@ -36,7 +36,8 @@ class EventBus:
         # Use direct attribute access on the validated config object
         self.debug_logging = (
             config.simulation.enable_debug_logging
-            if hasattr(config, "simulation") and hasattr(config.simulation, "enable_debug_logging")
+            if hasattr(config, "simulation")
+            and hasattr(config.simulation, "enable_debug_logging")
             else False
         )
 
@@ -60,5 +61,7 @@ class EventBus:
                     sync_handler = cast(Callable[[Dict[str, Any]], None], handler)
                     sync_handler(event_data)
             except Exception as e:
-                print(f"ERROR: Handler {getattr(handler, '__name__', 'unknown')} failed for event '{event_type}': {e}")
+                print(
+                    f"ERROR: Handler {getattr(handler, '__name__', 'unknown')} failed for event '{event_type}': {e}"
+                )
                 traceback.print_exc()

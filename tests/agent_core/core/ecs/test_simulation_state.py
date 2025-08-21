@@ -67,7 +67,9 @@ class TestSimulationState(unittest.TestCase):
         self.simulation_state.add_entity(entity_id)
         self.simulation_state.add_component(entity_id, component)
 
-        retrieved_component = self.simulation_state.get_component(entity_id, MockComponent)
+        retrieved_component = self.simulation_state.get_component(
+            entity_id, MockComponent
+        )
         self.assertIs(retrieved_component, component)
 
     def test_add_component_to_nonexistent_entity(self):
@@ -79,14 +81,18 @@ class TestSimulationState(unittest.TestCase):
 
     def test_get_component_from_nonexistent_entity(self):
         """Test that getting a component from a non-existent entity returns None."""
-        retrieved_component = self.simulation_state.get_component("nonexistent_agent", MockComponent)
+        retrieved_component = self.simulation_state.get_component(
+            "nonexistent_agent", MockComponent
+        )
         self.assertIsNone(retrieved_component)
 
     def test_get_nonexistent_component_from_entity(self):
         """Test that getting a non-existent component from an entity returns None."""
         entity_id = "agent_1"
         self.simulation_state.add_entity(entity_id)
-        retrieved_component = self.simulation_state.get_component(entity_id, MockComponent)
+        retrieved_component = self.simulation_state.get_component(
+            entity_id, MockComponent
+        )
         self.assertIsNone(retrieved_component)
 
     def test_get_entities_with_components(self):
@@ -119,9 +125,15 @@ class TestSimulationState(unittest.TestCase):
         self.simulation_state.add_component(entity_3, comp2)
 
         # Act
-        entities_with_mock = self.simulation_state.get_entities_with_components([MockComponent])
-        entities_with_both = self.simulation_state.get_entities_with_components([MockComponent, AnotherMockComponent])
-        entities_with_another = self.simulation_state.get_entities_with_components([AnotherMockComponent])
+        entities_with_mock = self.simulation_state.get_entities_with_components(
+            [MockComponent]
+        )
+        entities_with_both = self.simulation_state.get_entities_with_components(
+            [MockComponent, AnotherMockComponent]
+        )
+        entities_with_another = self.simulation_state.get_entities_with_components(
+            [AnotherMockComponent]
+        )
 
         # Assert
         self.assertIn(entity_1, entities_with_mock)

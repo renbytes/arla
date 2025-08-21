@@ -87,7 +87,9 @@ def test_publish_with_no_subscribers(event_bus: EventBus):
     try:
         event_bus.publish("unsubscribed_event", {})
     except Exception as e:
-        pytest.fail(f"Publishing to an event with no subscribers raised an exception: {e}")
+        pytest.fail(
+            f"Publishing to an event with no subscribers raised an exception: {e}"
+        )
 
 
 def test_handler_exception_does_not_stop_others(event_bus: EventBus, capsys):
@@ -117,7 +119,10 @@ def test_handler_exception_does_not_stop_others(event_bus: EventBus, capsys):
     captured = capsys.readouterr()
     full_output = captured.out + captured.err
 
-    assert "ERROR: Handler failing_handler failed for event 'resilient_event'" in full_output
+    assert (
+        "ERROR: Handler failing_handler failed for event 'resilient_event'"
+        in full_output
+    )
     assert "ValueError: This handler is designed to fail" in full_output
 
 

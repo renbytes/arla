@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # Build an absolute path to the .env file in the project's root directory.
 # This script is in .../src/agent_sim/infrastructure/tasks/, so the root is 4 levels up.
-project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
 env_path = project_root / ".env"
 
 if env_path.exists():
@@ -15,7 +15,9 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 else:
     # This warning helps in debugging if the .env file is ever misplaced.
-    print(f"WARNING: .env file not found at {env_path}. Using default environment variables.")
+    print(
+        f"WARNING: .env file not found at {env_path}. Using default environment variables."
+    )
 
 # Configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -24,8 +26,11 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 app = Celery("agent_sim", include=["agent_sim.infrastructure.tasks.simulation_tasks"])
 
 app.conf.worker_pool_restarts = True
-# Comment when running in cloud/production. Will throw error if running locally.
-app.conf.worker_pool = "solo"
+# The 'prefork' pool is the default and recommended for CPU-bound tasks.
+# It creates multiple worker processes, which is more robust for parallel execution.
+# The previous 'solo' setting is for single-threaded debugging and was likely
+# contributing to the event loop conflict.
+app.conf.worker_pool = "prefork"
 
 # Configure Celery
 app.conf.update(

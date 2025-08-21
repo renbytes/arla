@@ -83,11 +83,17 @@ def identity_system(
     mock_simulation_state.event_bus = mock_event_bus
 
     # We still need a patch for the external network call
-    with patch("agent_engine.systems.identity_system.get_embedding_with_cache") as mock_get_embedding:
+    with patch(
+        "agent_engine.systems.identity_system.get_embedding_with_cache"
+    ) as mock_get_embedding:
         mock_get_embedding.return_value = np.ones(4, dtype=np.float32)
         mock_config = SimpleNamespace(
             llm=SimpleNamespace(),
-            agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))),
+            agent=SimpleNamespace(
+                cognitive=SimpleNamespace(
+                    embeddings=SimpleNamespace(main_embedding_dim=4)
+                )
+            ),
         )
         system = IdentitySystem(
             simulation_state=mock_simulation_state,
@@ -122,7 +128,9 @@ def test_on_reflection_completed_updates_identity(
         "tick": 100,
     }
 
-    id_comp_instance: IdentityComponent = mock_simulation_state.entities["agent1"][IdentityComponent]
+    id_comp_instance: IdentityComponent = mock_simulation_state.entities["agent1"][
+        IdentityComponent
+    ]
 
     # ACT
     identity_system.on_reflection_completed(event_data)
@@ -130,7 +138,10 @@ def test_on_reflection_completed_updates_identity(
     # ASSERT
     # 1. The LLM was queried to infer traits from the synthesized reflection.
     mock_cognitive_scaffold.query.assert_called_once()
-    assert "cooperative and skilled builder" in mock_cognitive_scaffold.query.call_args[1]["prompt"]
+    assert (
+        "cooperative and skilled builder"
+        in mock_cognitive_scaffold.query.call_args[1]["prompt"]
+    )
 
     # 2. update_domain_identity was called for the domains found in the LLM response.
     calls = id_comp_instance.multi_domain_identity.update_domain_identity.call_args_list
@@ -152,7 +163,9 @@ def test_on_reflection_completed_updates_identity(
     assert "cooperative" in id_comp_instance.salient_traits_cache
 
 
-def test_on_reflection_completed_missing_component(identity_system: IdentitySystem, mock_simulation_state: MagicMock):
+def test_on_reflection_completed_missing_component(
+    identity_system: IdentitySystem, mock_simulation_state: MagicMock
+):
     """
     GIVEN an event for an entity without an IdentityComponent
     WHEN on_reflection_completed is called
@@ -194,7 +207,9 @@ def test_on_reflection_completed_missing_component(identity_system: IdentitySyst
         ),  # Clips scores to 1.0
     ],
 )
-def test_parse_structured_llm_traits(identity_system: IdentitySystem, llm_response: str, expected_domains: Dict):
+def test_parse_structured_llm_traits(
+    identity_system: IdentitySystem, llm_response: str, expected_domains: Dict
+):
     """
     Tests that the internal LLM response parser correctly handles various formats.
     """

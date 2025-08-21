@@ -84,7 +84,9 @@ class SimulationState(AbstractSimulationState):
                     )
                     sim_state.add_component(agent_id, component_instance)
                 except Exception as e:
-                    print(f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}")
+                    print(
+                        f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}"
+                    )
 
         return sim_state
 
@@ -102,13 +104,17 @@ class SimulationState(AbstractSimulationState):
                 )
                 component_snapshots.append(comp_snapshot)
 
-            agent_snapshots.append(AgentSnapshot(agent_id=agent_id, components=component_snapshots))
+            agent_snapshots.append(
+                AgentSnapshot(agent_id=agent_id, components=component_snapshots)
+            )
 
         return SimulationSnapshot(
             simulation_id=self.simulation_id,
             current_tick=self.current_tick,
             agents=agent_snapshots,
-            environment_state=(self.environment.to_dict() if self.environment else None),
+            environment_state=(
+                self.environment.to_dict() if self.environment else None
+            ),
         )
 
     def add_entity(self, entity_id: str) -> None:
@@ -118,10 +124,14 @@ class SimulationState(AbstractSimulationState):
 
     def add_component(self, entity_id: str, component: Component) -> None:
         if entity_id not in self.entities:
-            raise ValueError(f"Cannot add component. Entity with ID {entity_id} does not exist.")
+            raise ValueError(
+                f"Cannot add component. Entity with ID {entity_id} does not exist."
+            )
         self.entities[entity_id][type(component)] = component
 
-    def get_component(self, entity_id: str, component_type: Type[Component]) -> Optional[Component]:
+    def get_component(
+        self, entity_id: str, component_type: Type[Component]
+    ) -> Optional[Component]:
         return self.entities.get(entity_id, {}).get(component_type)
 
     def remove_entity(self, entity_id: str) -> None:

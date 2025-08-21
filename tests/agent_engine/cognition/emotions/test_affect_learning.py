@@ -42,7 +42,9 @@ def mock_action_registry(mocker):
         "action_a": mock_action_a_class,
         "action_b": mock_action_b_class,
     }[action_id]
-    return mocker.patch("agent_engine.cognition.emotions.affect_learning.action_registry", registry)
+    return mocker.patch(
+        "agent_engine.cognition.emotions.affect_learning.action_registry", registry
+    )
 
 
 @pytest.fixture
@@ -91,7 +93,9 @@ def mock_affect_component():
 @pytest.fixture
 def default_config():
     """CORRECTED: Provides a mock config object with the required nested structure."""
-    return SimpleNamespace(learning=SimpleNamespace(memory=SimpleNamespace(emotion_cluster_min_data=10)))
+    return SimpleNamespace(
+        learning=SimpleNamespace(memory=SimpleNamespace(emotion_cluster_min_data=10))
+    )
 
 
 # Test Cases
@@ -155,7 +159,9 @@ def test_discover_emotions_success(
     mock_kmeans.return_value.fit.return_value = mock_kmeans_instance
 
     # Act
-    discover_emotions(mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config)
+    discover_emotions(
+        mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config
+    )
 
     # Assert
     assert len(mock_affect_component.learned_emotion_clusters) == 2
@@ -164,7 +170,9 @@ def test_discover_emotions_success(
     mock_affect_component.affective_experience_buffer.clear.assert_called_once()
 
 
-def test_discover_emotions_insufficient_data(mock_affect_component, mock_cognitive_scaffold, default_config):
+def test_discover_emotions_insufficient_data(
+    mock_affect_component, mock_cognitive_scaffold, default_config
+):
     """
     Tests that the function returns early if there's not enough data.
     """
@@ -172,7 +180,9 @@ def test_discover_emotions_insufficient_data(mock_affect_component, mock_cogniti
     mock_affect_component.affective_experience_buffer.__len__.return_value = 5
 
     # Act
-    discover_emotions(mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config)
+    discover_emotions(
+        mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config
+    )
 
     # Assert
     assert not mock_affect_component.learned_emotion_clusters
@@ -190,7 +200,9 @@ def test_discover_emotions_clustering_fails(
     Tests that the function handles failures from the clustering step gracefully.
     """
     # Act
-    discover_emotions(mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config)
+    discover_emotions(
+        mock_affect_component, mock_cognitive_scaffold, "agent1", 100, default_config
+    )
 
     # Assert
     assert not mock_affect_component.learned_emotion_clusters

@@ -76,7 +76,9 @@ class TestEmotionComponent:
 
     def test_to_dict_serialization(self):
         """Test correct serialization."""
-        comp = EmotionComponent(valence=0.5, arousal=0.8, current_emotion_category="happy")
+        comp = EmotionComponent(
+            valence=0.5, arousal=0.8, current_emotion_category="happy"
+        )
         data = comp.to_dict()
         assert data["valence"] == 0.5
         assert data["arousal"] == 0.8

@@ -15,7 +15,7 @@ class MLflowExporter(ExporterInterface):
     without crashing or slowing down the simulation.
     """
 
-    def __init__(self, run_id: str, experiment_id: str):
+    def __init__(self):
         self.enabled = False
         tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
 
@@ -23,14 +23,24 @@ class MLflowExporter(ExporterInterface):
             print("WARNING: MLflow logging disabled (MLFLOW_TRACKING_URI not set).")
             return
 
+        # This component now assumes it is running within an existing MLflow run.
+        # The run should be started by the parent process (e.g., the Celery task).
+        if mlflow.active_run() is None:
+            print(
+                "WARNING: MLflowExporter initialized outside of an active MLflow run. Disabling."
+            )
+            return
+
         try:
             mlflow.set_tracking_uri(tracking_uri)
-            # This connects to an existing run created by the Celery/CLI orchestrator
-            mlflow.start_run(run_id=run_id, experiment_id=experiment_id)
             self.enabled = True
-            print(f"✅ MLflowExporter connected to tracking URI: {tracking_uri}")
+            print(
+                f"✅ MLflowExporter is active for run ID: {mlflow.active_run().info.run_id}"
+            )
         except Exception as e:
-            print(f"WARNING: MLflow connection failed: {e}. Disabling MLflow logging for this run.")
+            print(
+                f"WARNING: MLflow connection failed: {e}. Disabling MLflow logging for this run."
+            )
             self.enabled = False
 
     async def export_metrics(self, tick: int, metrics: Dict[str, Any]) -> None:
@@ -43,7 +53,9 @@ class MLflowExporter(ExporterInterface):
             if finite_metrics:
                 mlflow.log_metrics(finite_metrics, step=tick)
         except Exception as e:
-            print(f"WARNING: MLflow logging failed at tick {tick}: {e}. Disabling for remainder of run.")
+            print(
+                f"WARNING: MLflow logging failed at tick {tick}: {e}. Disabling for remainder of run."
+            )
             self.enabled = False  # Trip the circuit breaker
 
     async def log_learning_curve(self, tick: int, agent_id: str, q_loss: float) -> None:
@@ -54,13 +66,17 @@ class MLflowExporter(ExporterInterface):
             metric_name = f"q_loss_{agent_id}"
             mlflow.log_metric(key=metric_name, value=q_loss, step=tick)
         except Exception as e:
-            print(f"WARNING: MLflow Q-loss logging failed at tick {tick}: {e}. Disabling for remainder of run.")
+            print(
+                f"WARNING: MLflow Q-loss logging failed at tick {tick}: {e}. Disabling for remainder of run."
+            )
             self.enabled = False  # Trip the circuit breaker
 
     async def log_event(self, event_data: Dict[str, Any]) -> None:
         """MLflow is not typically used for high-frequency event logging."""
         pass
 
-    async def log_agent_state(self, tick: int, agent_id: str, components_data: Dict[str, Any]) -> None:
+    async def log_agent_state(
+        self, tick: int, agent_id: str, components_data: Dict[str, Any]
+    ) -> None:
         """MLflow is not typically used for high-frequency agent state logging."""
         pass

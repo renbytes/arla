@@ -25,7 +25,9 @@ from agent_persist.models import SimulationSnapshot
 def config():
     """Provides a mock config object using SimpleNamespace for clear attribute access."""
     return SimpleNamespace(
-        agent=SimpleNamespace(cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4)))
+        agent=SimpleNamespace(
+            cognitive=SimpleNamespace(embeddings=SimpleNamespace(main_embedding_dim=4))
+        )
     )
 
 
@@ -96,7 +98,9 @@ class TestECSOperations:
         sim_state.add_entity("agent3")
         sim_state.add_component("agent3", GoalComponent(embedding_dim=4))
 
-        entities_both = sim_state.get_entities_with_components([EmotionComponent, GoalComponent])
+        entities_both = sim_state.get_entities_with_components(
+            [EmotionComponent, GoalComponent]
+        )
         assert "agent1" in entities_both and len(entities_both) == 1
 
         entities_emotion = sim_state.get_entities_with_components([EmotionComponent])
@@ -162,7 +166,9 @@ class TestSnapshotting:
         }
         snapshot = SimulationSnapshot(**snapshot_data)
         mock_factory = MagicMock(spec=ComponentFactoryInterface)
-        mock_factory.create_component.return_value = EmotionComponent(valence=0.8, arousal=0.3)
+        mock_factory.create_component.return_value = EmotionComponent(
+            valence=0.8, arousal=0.3
+        )
         mock_env = MagicMock(spec=EnvironmentInterface)
 
         restored_state = SimulationState.from_snapshot(

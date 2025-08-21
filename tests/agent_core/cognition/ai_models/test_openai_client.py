@@ -56,7 +56,9 @@ def mock_openai(mocker):
 
     # Patch the 'OpenAI' class within the openai_client module's namespace.
     # This ensures that when get_client() is called, it uses our mock.
-    mocker.patch("agent_core.cognition.ai_models.openai_client.OpenAI", return_value=mock_client)
+    mocker.patch(
+        "agent_core.cognition.ai_models.openai_client.OpenAI", return_value=mock_client
+    )
 
     return mock_client
 
@@ -152,7 +154,10 @@ def test_get_embeddings_from_llm_batch_empty_list(mock_openai):
 def test_get_embeddings_from_llm_batch_api_error(mock_openai, capsys):
     mock_openai.embeddings.create.side_effect = Exception("Batch API Down")
     assert get_embeddings_from_llm_batch(["text1"]) is None
-    assert "Error getting batch embedding from OpenAI: Batch API Down" in capsys.readouterr().out
+    assert (
+        "Error getting batch embedding from OpenAI: Batch API Down"
+        in capsys.readouterr().out
+    )
 
 
 ## 6. query_llm() Tests

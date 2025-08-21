@@ -45,7 +45,9 @@ class AsyncDatabaseManager:
             pool_timeout=5,
             connect_args={"timeout": 10},
         )
-        self._session_factory = async_sessionmaker(bind=self.engine, expire_on_commit=False)
+        self._session_factory = async_sessionmaker(
+            bind=self.engine, expire_on_commit=False
+        )
         self._is_operational = True
 
     async def check_connection(self, retries: int = 5, delay: float = 2.0) -> bool:
@@ -62,7 +64,9 @@ class AsyncDatabaseManager:
                 if attempt < retries - 1:
                     await asyncio.sleep(delay * (attempt + 1))
                 else:
-                    print("❌ Could not establish database connection after multiple retries.")
+                    print(
+                        "❌ Could not establish database connection after multiple retries."
+                    )
                     self._is_operational = False
                     return False
         return False
@@ -148,7 +152,9 @@ class AsyncDatabaseManager:
         """Create a new experiment record asynchronously."""
         if not self._is_operational:
             # If DB is down, we can't create an experiment, so this must fail.
-            raise ConnectionError("Database is not operational, cannot create experiment.")
+            raise ConnectionError(
+                "Database is not operational, cannot create experiment."
+            )
         async with self.get_session() as session:
             experiment = Experiment(
                 mlflow_experiment_id=mlflow_experiment_id,
@@ -215,13 +221,17 @@ class AsyncDatabaseManager:
             print(f"Failed to log agent state: {e}")
             self._is_operational = False
 
-    async def log_metrics(self, simulation_id: uuid.UUID, tick: int, metrics_data: Dict[str, Any]) -> None:
+    async def log_metrics(
+        self, simulation_id: uuid.UUID, tick: int, metrics_data: Dict[str, Any]
+    ) -> None:
         """Log aggregated metrics for a specific tick asynchronously."""
         if not self._is_operational:
             return
         try:
             async with self.get_session() as session:
-                metric = Metric(simulation_id=simulation_id, tick=tick, **metrics_data)
+                metric = Metric(
+                    simulation_id=simulation_id, tick=tick, data=metrics_data
+                )
                 session.add(metric)
         except Exception as e:
             print(f"Failed to log metrics: {e}")
@@ -239,13 +249,20 @@ class AsyncDatabaseManager:
             print(f"Failed to log scaffold interaction: {e}")
             self._is_operational = False
 
-    async def log_learning_curve(self, simulation_id: uuid.UUID, tick: int, agent_id: str, q_loss: float) -> None:
+    async def log_learning_curve(
+        self, simulation_id: uuid.UUID, tick: int, agent_id: str, q_loss: float
+    ) -> None:
         """Log learning curve data"""
         if not self._is_operational:
             return
         try:
             async with self.get_session() as session:
-                learning_curve = LearningCurve(simulation_id=simulation_id, tick=tick, agent_id=agent_id, q_loss=q_loss)
+                learning_curve = LearningCurve(
+                    simulation_id=simulation_id,
+                    tick=tick,
+                    agent_id=agent_id,
+                    q_loss=q_loss,
+                )
                 session.add(learning_curve)
         except Exception as e:
             print(f"Failed to log learning curve: {e}")

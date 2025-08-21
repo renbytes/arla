@@ -21,7 +21,9 @@ class CausalModelValidator:
     def __init__(self, causal_model: CausalModel):
         self.model = causal_model
         self.estimand = self.model.identify_effect(proceed_when_unidentifiable=True)
-        self.estimate = self.model.estimate_effect(self.estimand, method_name="backdoor.linear_regression")
+        self.estimate = self.model.estimate_effect(
+            self.estimand, method_name="backdoor.linear_regression"
+        )
 
     def check_robustness(self) -> dict:
         """
@@ -44,11 +46,15 @@ class CausalModelValidator:
         Returns a confidence score from 0.0 to 1.0.
         """
         try:
-            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="add_unobserved_common_cause")
+            refute = self.model.refute_estimate(
+                self.estimand, self.estimate, method_name="add_unobserved_common_cause"
+            )
             # Confidence is high if the new estimate is close to the original
             original_value = self.estimate.value
             new_value = refute.new_effect
-            confidence = 1.0 - min(1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6))
+            confidence = 1.0 - min(
+                1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6)
+            )
             return confidence
         except Exception as e:
             print(f"Causal refutation (random common cause) failed: {e}")
@@ -61,7 +67,9 @@ class CausalModelValidator:
         Returns a confidence score from 0.0 to 1.0.
         """
         try:
-            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="placebo_treatment_refuter")
+            refute = self.model.refute_estimate(
+                self.estimand, self.estimate, method_name="placebo_treatment_refuter"
+            )
             # Confidence is high if the placebo effect is close to zero
             confidence = 1.0 - min(1.0, abs(refute.new_effect))
             return confidence
@@ -76,11 +84,15 @@ class CausalModelValidator:
         Returns a confidence score from 0.0 to 1.0.
         """
         try:
-            refute = self.model.refute_estimate(self.estimand, self.estimate, method_name="data_subset_refuter")
+            refute = self.model.refute_estimate(
+                self.estimand, self.estimate, method_name="data_subset_refuter"
+            )
             # Confidence is high if the new estimate is close to the original
             original_value = self.estimate.value
             new_value = refute.new_effect
-            confidence = 1.0 - min(1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6))
+            confidence = 1.0 - min(
+                1.0, abs(new_value - original_value) / (abs(original_value) + 1e-6)
+            )
             return confidence
         except Exception as e:
             print(f"Causal refutation (data subset) failed: {e}")
@@ -127,7 +139,9 @@ class RuleValidator:
         embedding_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
         llm_config = self.config.llm
 
-        reflection_embedding = get_embedding_with_cache(inference, embedding_dim, llm_config)
+        reflection_embedding = get_embedding_with_cache(
+            inference, embedding_dim, llm_config
+        )
 
         # Summarize the raw events to create a factual context
         llm_prompt = f"""Concisely summarize the key events and outcomes from the
@@ -147,7 +161,9 @@ class RuleValidator:
             print(f"Warning: Could not summarize events for validation. Error: {e}")
             return 0.0
 
-        context_embedding = get_embedding_with_cache(event_summary, embedding_dim, llm_config)
+        context_embedding = get_embedding_with_cache(
+            event_summary, embedding_dim, llm_config
+        )
 
         if reflection_embedding is None or context_embedding is None:
             print("Warning: Could not generate embeddings for validation.")
@@ -159,7 +175,9 @@ class RuleValidator:
         return alignment_score
 
 
-def calculate_confidence_score(coherence: bool, factual_alignment: float, token_uncertainty: float = 0.9) -> float:
+def calculate_confidence_score(
+    coherence: bool, factual_alignment: float, token_uncertainty: float = 0.9
+) -> float:
     """Combines validation checks into a single confidence score."""
     if not coherence:
         return 0.0

@@ -46,7 +46,9 @@ class SpatialIndex:
     def get_entities_at_position(self, position: Tuple[int, int]) -> Set[str]:
         return set()
 
-    def get_entities_in_radius(self, center: Tuple[int, int], radius: int) -> List[Tuple[str, Tuple[int, int]]]:
+    def get_entities_in_radius(
+        self, center: Tuple[int, int], radius: int
+    ) -> List[Tuple[str, Tuple[int, int]]]:
         return []
 
 
@@ -63,7 +65,9 @@ class EnvironmentInterface(ABC):
         pass
 
     @abstractmethod
-    def get_neighbors(self, position: Any) -> List[Any]:  # Position type can be abstract
+    def get_neighbors(
+        self, position: Any
+    ) -> List[Any]:  # Position type can be abstract
         """Get all valid neighboring positions for a given position."""
         pass
 
@@ -73,7 +77,9 @@ class EnvironmentInterface(ABC):
         pass
 
     @abstractmethod
-    def can_move(self, from_pos: Any, to_pos: Any) -> bool:  # Position type can be abstract
+    def can_move(
+        self, from_pos: Any, to_pos: Any
+    ) -> bool:  # Position type can be abstract
         """Check if movement between two positions is valid."""
         pass
 
@@ -83,7 +89,9 @@ class EnvironmentInterface(ABC):
         pass
 
     @abstractmethod
-    def get_entities_at_position(self, position: Any) -> Set[str]:  # Position type can be abstract
+    def get_entities_at_position(
+        self, position: Any
+    ) -> Set[str]:  # Position type can be abstract
         """Get all entities at a specific position."""
         pass
 

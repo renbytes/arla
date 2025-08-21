@@ -35,7 +35,9 @@ def mock_exporters():
 
 
 @pytest.mark.asyncio
-async def test_update_calculates_and_exports_metrics(mock_simulation_state, mock_calculators, mock_exporters):
+async def test_update_calculates_and_exports_metrics(
+    mock_simulation_state, mock_calculators, mock_exporters
+):
     """
     Tests that the update method correctly calls all calculators, combines
     their metrics, and passes the result to all exporters.
@@ -65,7 +67,9 @@ async def test_update_calculates_and_exports_metrics(mock_simulation_state, mock
 
 
 @pytest.mark.asyncio
-async def test_update_handles_calculator_failure_gracefully(mock_simulation_state, mock_exporters):
+async def test_update_handles_calculator_failure_gracefully(
+    mock_simulation_state, mock_exporters
+):
     """
     Tests that the system continues to function and exports metrics from
     successful calculators even if one calculator fails.
@@ -96,7 +100,9 @@ async def test_update_handles_calculator_failure_gracefully(mock_simulation_stat
 
 
 @pytest.mark.asyncio
-async def test_update_handles_exporter_failure_gracefully(mock_simulation_state, mock_calculators):
+async def test_update_handles_exporter_failure_gracefully(
+    mock_simulation_state, mock_calculators
+):
     """
     Tests that a failure in one exporter does not prevent other exporters
     from receiving the metrics.

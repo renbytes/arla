@@ -32,13 +32,19 @@ class TestSystemManager(unittest.TestCase):
         self.simulation_state = MagicMock(spec=SimulationState)
         self.config = {}
         self.cognitive_scaffold = MagicMock()
-        self.system_manager = SystemManager(self.simulation_state, self.config, self.cognitive_scaffold)
+        self.system_manager = SystemManager(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
 
     def test_register_system(self):
         """Verify that a system can be registered with the manager."""
-        mock_system_instance = MockSystem(self.simulation_state, self.config, self.cognitive_scaffold)
+        mock_system_instance = MockSystem(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
         # We replace the class with an instance for this test's purpose
-        self.system_manager.register_system(lambda *args, **kwargs: mock_system_instance)
+        self.system_manager.register_system(
+            lambda *args, **kwargs: mock_system_instance
+        )
 
         self.assertIn(mock_system_instance, self.system_manager._systems)
         self.assertEqual(len(self.system_manager._systems), 1)
@@ -49,8 +55,12 @@ class TestSystemManager(unittest.TestCase):
         registered systems concurrently.
         """
         # Arrange
-        system1 = MockSystem(self.simulation_state, self.config, self.cognitive_scaffold)
-        system2 = MockSystem(self.simulation_state, self.config, self.cognitive_scaffold)
+        system1 = MockSystem(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
+        system2 = MockSystem(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
 
         # To register the instances directly, we use a lambda
         self.system_manager.register_system(lambda *args, **kwargs: system1)
@@ -73,12 +83,16 @@ class TestSystemManager(unittest.TestCase):
         class SpecificSystem(MockSystem):
             pass
 
-        system_instance = SpecificSystem(self.simulation_state, self.config, self.cognitive_scaffold)
+        system_instance = SpecificSystem(
+            self.simulation_state, self.config, self.cognitive_scaffold
+        )
         self.system_manager.register_system(lambda *args, **kwargs: system_instance)
 
         # Act
         retrieved_system = self.system_manager.get_system(SpecificSystem)
-        nonexistent_system = self.system_manager.get_system(MockSystem)  # A different type
+        nonexistent_system = self.system_manager.get_system(
+            MockSystem
+        )  # A different type
 
         # Assert
         self.assertIs(retrieved_system, system_instance)

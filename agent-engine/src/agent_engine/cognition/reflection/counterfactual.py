@@ -33,9 +33,16 @@ def generate_counterfactual(
     scenario by querying the agent's CausalModel using a precise event_id.
     """
     # FIX: Cast the generic component to the specific MemoryComponent type
-    mem_comp = cast(MemoryComponent, simulation_state.get_component(agent_id, MemoryComponent))
+    mem_comp = cast(
+        MemoryComponent, simulation_state.get_component(agent_id, MemoryComponent)
+    )
 
-    if not episode.events or not mem_comp or not hasattr(mem_comp, "causal_model") or not mem_comp.causal_model:
+    if (
+        not episode.events
+        or not mem_comp
+        or not hasattr(mem_comp, "causal_model")
+        or not mem_comp.causal_model
+    ):
         return None
 
     key_event = max(episode.events, key=lambda e: abs(e.get("reward", 0.0)))
@@ -44,7 +51,11 @@ def generate_counterfactual(
         return None
 
     factual_instance = next(
-        (record for record in mem_comp.causal_data if record.get("event_id") == target_event_id),
+        (
+            record
+            for record in mem_comp.causal_data
+            if record.get("event_id") == target_event_id
+        ),
         None,
     )
 
@@ -57,7 +68,9 @@ def generate_counterfactual(
         )
 
         predicted_reward = counterfactual_estimate.value
-        predicted_outcome_str = f"The reward would have been approximately {predicted_reward:.2f}."
+        predicted_outcome_str = (
+            f"The reward would have been approximately {predicted_reward:.2f}."
+        )
 
         return CounterfactualEpisode(
             original_episode_theme=episode.theme,

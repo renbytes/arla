@@ -19,7 +19,9 @@ def mock_dependencies(mocker):
     )
 
     # Patch asyncio.create_task where it is used, and remove the unused async_runner mock
-    mock_create_task = mocker.patch("agent_core.cognition.scaffolding.asyncio.create_task")
+    mock_create_task = mocker.patch(
+        "agent_core.cognition.scaffolding.asyncio.create_task"
+    )
 
     # We now mock the db_logger on the scaffold directly in the scaffold fixture
     # This is a cleaner approach than mocking a global instance.
@@ -70,14 +72,18 @@ def test_scaffold_query_calls_llm_and_logs_correctly(scaffold, mock_dependencies
     current_tick = 50
 
     # Act
-    response = scaffold.query(agent_id=agent_id, purpose=purpose, prompt=prompt, current_tick=current_tick)
+    response = scaffold.query(
+        agent_id=agent_id, purpose=purpose, prompt=prompt, current_tick=current_tick
+    )
 
     # Assert
     # 1. Check that the response is the text part of the LLM output
     assert response == "LLM Response"
 
     # 2. Check that the underlying LLM function was called correctly
-    mock_dependencies["query_llm"].assert_called_once_with(prompt, llm_config={"temperature": 0.5})
+    mock_dependencies["query_llm"].assert_called_once_with(
+        prompt, llm_config={"temperature": 0.5}
+    )
 
     # 3. Check that the database logger was called with the correct parameters
     mock_dependencies["db_logger"].log_scaffold_interaction.assert_called_once_with(

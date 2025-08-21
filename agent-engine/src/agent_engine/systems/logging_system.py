@@ -35,7 +35,9 @@ class LoggingSystem(System):
         # Use direct attribute access for the 'logging' section,
         # which is a dictionary in our Pydantic model.
         self.component_paths_to_log = self.config.logging.get("components_to_log", [])
-        self.component_types_to_log: List[Type[Component]] = self._import_component_types()
+        self.component_types_to_log: List[Type[Component]] = (
+            self._import_component_types()
+        )
 
     def _import_component_types(self) -> List[Type[Component]]:
         """Dynamically imports component classes from the paths in the config."""
@@ -51,7 +53,9 @@ class LoggingSystem(System):
 
     async def update(self, current_tick: int) -> None:
         """Logs the state of all agents each tick to all exporters."""
-        target_entities = self.simulation_state.get_entities_with_components([TimeBudgetComponent])
+        target_entities = self.simulation_state.get_entities_with_components(
+            [TimeBudgetComponent]
+        )
 
         for agent_id, components in target_entities.items():
             state_data = self._collect_state_data(components)
@@ -65,7 +69,9 @@ class LoggingSystem(System):
                     components_data=state_data,
                 )
 
-    def _collect_state_data(self, components: Dict[Type[Component], Component]) -> Dict[str, Any]:
+    def _collect_state_data(
+        self, components: Dict[Type[Component], Component]
+    ) -> Dict[str, Any]:
         """Gathers data from components specified in the config."""
         data = {}
         for comp_type in self.component_types_to_log:

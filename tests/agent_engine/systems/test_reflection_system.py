@@ -33,21 +33,29 @@ def mock_simulation_state():
     # `_all_required_components_present` check passes reliably.
     state.entities = {
         "agent1": {
-            TimeBudgetComponent: TimeBudgetComponent(initial_time_budget=100.0, lifespan_std_dev_percent=0.0),
+            TimeBudgetComponent: TimeBudgetComponent(
+                initial_time_budget=100.0, lifespan_std_dev_percent=0.0
+            ),
             MemoryComponent: MemoryComponent(),
             EpisodeComponent: EpisodeComponent(),
             AffectComponent: AffectComponent(affective_buffer_maxlen=100),
-            IdentityComponent: IdentityComponent(multi_domain_identity=MultiDomainIdentity(embedding_dim=4)),
+            IdentityComponent: IdentityComponent(
+                multi_domain_identity=MultiDomainIdentity(embedding_dim=4)
+            ),
             GoalComponent: GoalComponent(embedding_dim=4),
             EmotionComponent: EmotionComponent(),
-            SocialMemoryComponent: SocialMemoryComponent(schema_embedding_dim=4, device="cpu"),
+            SocialMemoryComponent: SocialMemoryComponent(
+                schema_embedding_dim=4, device="cpu"
+            ),
             ValidationComponent: ValidationComponent(),
             ValueSystemComponent: ValueSystemComponent(),
         }
     }
 
     # Ensure get_entities_with_components returns our mock entity
-    state.get_entities_with_components.return_value = {"agent1": state.entities["agent1"]}
+    state.get_entities_with_components.return_value = {
+        "agent1": state.entities["agent1"]
+    }
     return state
 
 
@@ -136,7 +144,9 @@ class TestReflectionSystem:
         # Act
         # The component check is validated in a separate test, so we patch it here
         # to isolate the orchestration logic.
-        with patch.object(reflection_system, "_all_required_components_present", return_value=True):
+        with patch.object(
+            reflection_system, "_all_required_components_present", return_value=True
+        ):
             await reflection_system._run_reflection_cycle(
                 entity_id="agent1",
                 components=components,
@@ -170,10 +180,17 @@ class TestReflectionSystem:
         mock_event_bus.publish.assert_has_calls(expected_calls, any_order=True)
 
         # Check the content of the 'reflection_completed' event
-        completed_call = next(c for c in mock_event_bus.publish.call_args_list if c[0][0] == "reflection_completed")
+        completed_call = next(
+            c
+            for c in mock_event_bus.publish.call_args_list
+            if c[0][0] == "reflection_completed"
+        )
         completed_data = completed_call[0][1]
         assert completed_data["entity_id"] == "agent1"
-        assert completed_data["context"]["llm_final_account"] == "I have learned that I am a pensive agent."
+        assert (
+            completed_data["context"]["llm_final_account"]
+            == "I have learned that I am a pensive agent."
+        )
 
     def test_on_action_executed_for_chunking(self, reflection_system):
         """
@@ -227,7 +244,9 @@ class TestReflectionSystem:
         assert not reflection_system.event_buffer[entity_id]
 
     @pytest.mark.asyncio
-    async def test_reflection_cycle_skips_for_missing_components(self, reflection_system, mock_narrative_provider):
+    async def test_reflection_cycle_skips_for_missing_components(
+        self, reflection_system, mock_narrative_provider
+    ):
         """
         Tests that the reflection cycle gracefully exits if an agent is missing
         the required components for reflection, preventing errors.

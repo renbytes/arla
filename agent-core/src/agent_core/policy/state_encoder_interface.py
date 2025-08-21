@@ -42,7 +42,9 @@ class StateEncoderInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def encode_internal_state(self, components: Dict[Type["Component"], "Component"], config: Any) -> np.ndarray:
+    def encode_internal_state(
+        self, components: Dict[Type["Component"], "Component"], config: Any
+    ) -> np.ndarray:
         """
         Encodes an agent's internal, cognitive components into a fixed-size
         numerical feature vector.

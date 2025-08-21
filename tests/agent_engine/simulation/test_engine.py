@@ -52,11 +52,21 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
     dependencies fully mocked for controlled testing.
     """
     with (
-        patch("agent_engine.simulation.engine.SystemManager", autospec=True) as mock_system_manager,
-        patch("agent_engine.simulation.engine.SimulationState", autospec=True) as mock_sim_state,
-        patch("agent_engine.simulation.engine.CognitiveScaffold", autospec=True) as mock_scaffold,
-        patch("agent_engine.simulation.engine.EventBus", autospec=True) as mock_event_bus,
-        patch("agent_engine.simulation.engine.FileStateStore", autospec=True) as mock_file_store,
+        patch(
+            "agent_engine.simulation.engine.SystemManager", autospec=True
+        ) as mock_system_manager,
+        patch(
+            "agent_engine.simulation.engine.SimulationState", autospec=True
+        ) as mock_sim_state,
+        patch(
+            "agent_engine.simulation.engine.CognitiveScaffold", autospec=True
+        ) as mock_scaffold,
+        patch(
+            "agent_engine.simulation.engine.EventBus", autospec=True
+        ) as mock_event_bus,
+        patch(
+            "agent_engine.simulation.engine.FileStateStore", autospec=True
+        ) as mock_file_store,
     ):
         # Configure Mock Instances
         mock_sim_state_instance = mock_sim_state.return_value
@@ -68,23 +78,31 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
         # Configure SimulationState to represent one active entity
         active_entity_components = {TimeBudgetComponent: TimeBudgetComponent(100)}
         mock_sim_state_instance.entities = {"agent_01": active_entity_components}
-        mock_sim_state_instance.get_component.return_value = active_entity_components[TimeBudgetComponent]
+        mock_sim_state_instance.get_component.return_value = active_entity_components[
+            TimeBudgetComponent
+        ]
 
         # Mock the new to_snapshot() method on the SimulationState mock instance
-        mock_sim_state_instance.to_snapshot.return_value = MagicMock(spec=SimulationSnapshot)
+        mock_sim_state_instance.to_snapshot.return_value = MagicMock(
+            spec=SimulationSnapshot
+        )
 
         # Configure SystemManager to have an awaitable `update_all` method
         mock_system_manager_instance.update_all = AsyncMock()
 
         # Configure external dependencies provided to the fixture
-        mock_dependencies["decision_selector"].select.return_value = ActionPlanComponent()
+        mock_dependencies[
+            "decision_selector"
+        ].select.return_value = ActionPlanComponent()
         mock_dependencies["environment"].to_dict.return_value = {"world_data": "empty"}
 
         # Generate a valid UUID for the run_id to prevent the ValueError
         test_run_id = str(uuid.uuid4())
 
         # Instantiate the Manager
-        manager = SimulationManager(config=mock_config, run_id=test_run_id, **mock_dependencies)
+        manager = SimulationManager(
+            config=mock_config, run_id=test_run_id, **mock_dependencies
+        )
 
         # Attach Mocks to the Manager for Easy Access in Tests
         manager.mock_system_manager = mock_system_manager_instance
@@ -114,7 +132,9 @@ def test_initialization_and_scenario_loading(sim_manager_with_mocks, mock_depend
 
 
 @pytest.mark.asyncio
-async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, mock_dependencies):
+async def test_full_lifecycle_and_correct_call_order(
+    sim_manager_with_mocks, mock_dependencies
+):
     """
     This is the key integration test. It verifies:
     1. The main loop runs for the configured number of steps.
@@ -125,12 +145,16 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
     manager = sim_manager_with_mocks
     call_order_tracker = []
 
-    manager.system_manager.update_all.side_effect = lambda current_tick: call_order_tracker.append(
-        f"update_all_tick_{current_tick}"
+    manager.system_manager.update_all.side_effect = (
+        lambda current_tick: call_order_tracker.append(
+            f"update_all_tick_{current_tick}"
+        )
     )
     # Use a side effect on a method that is called during the entity turn processing
     manager._process_entity_turn = MagicMock(
-        side_effect=lambda entity_id, current_tick: call_order_tracker.append(f"process_turn_tick_{current_tick}")
+        side_effect=lambda entity_id, current_tick: call_order_tracker.append(
+            f"process_turn_tick_{current_tick}"
+        )
     )
 
     # Mock _get_active_entities to control the loop
@@ -159,11 +183,15 @@ async def test_full_lifecycle_and_correct_call_order(sim_manager_with_mocks, moc
 
     # 3. Verify the final state was saved
     manager.mock_sim_state.to_snapshot.assert_called_once()
-    manager.mock_file_store.save.assert_called_once_with(manager.mock_sim_state.to_snapshot.return_value)
+    manager.mock_file_store.save.assert_called_once_with(
+        manager.mock_sim_state.to_snapshot.return_value
+    )
 
 
 @pytest.mark.asyncio
-async def test_run_loop_stops_when_no_active_entities(sim_manager_with_mocks, mock_dependencies):
+async def test_run_loop_stops_when_no_active_entities(
+    sim_manager_with_mocks, mock_dependencies
+):
     """
     Tests the edge case where the simulation ends prematurely because all
     agents have become inactive.
@@ -196,7 +224,9 @@ def test_load_state_replaces_simulation_state(sim_manager_with_mocks):
     mock_snapshot = MagicMock(spec=SimulationSnapshot)
     manager.mock_file_store.load.return_value = mock_snapshot
 
-    with patch("agent_engine.simulation.engine.SimulationState.from_snapshot") as mock_from_snapshot:
+    with patch(
+        "agent_engine.simulation.engine.SimulationState.from_snapshot"
+    ) as mock_from_snapshot:
         new_mock_state = MagicMock(spec=SimulationState)
         new_mock_state.current_tick = 100
         mock_from_snapshot.return_value = new_mock_state

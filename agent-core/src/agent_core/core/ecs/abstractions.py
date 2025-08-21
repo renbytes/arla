@@ -21,7 +21,9 @@ class AbstractSimulationState(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_component(self, entity_id: str, component_type: Type["Component"]) -> Optional["Component"]:
+    def get_component(
+        self, entity_id: str, component_type: Type["Component"]
+    ) -> Optional["Component"]:
         """Retrieves a component of a specific type for a given entity."""
         raise NotImplementedError
 

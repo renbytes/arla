@@ -96,14 +96,18 @@ class FileStateStore(StateStore):
         try:
             json_text = self.file_path.read_text(encoding="utf-8")
 
-            snapshot = cast(SimulationSnapshot, SimulationSnapshot.model_validate_json(json_text))
+            snapshot = cast(
+                SimulationSnapshot, SimulationSnapshot.model_validate_json(json_text)
+            )
             print(f"Successfully loaded snapshot from {self.file_path}")
             return snapshot
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Error decoding JSON from {self.file_path}: {e}") from e
         except ValidationError as e:
-            raise ValueError(f"Data validation error when loading snapshot from {self.file_path}: {e}") from e
+            raise ValueError(
+                f"Data validation error when loading snapshot from {self.file_path}: {e}"
+            ) from e
         except IOError as e:
             print(f"Error: Could not read snapshot from {self.file_path}. Reason: {e}")
             # Explicitly re-raise the caught exception variable 'e'.

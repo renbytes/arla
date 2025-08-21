@@ -7,7 +7,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def safe_divide(numerator: float, denominator: float, default: float = 0.0, epsilon: float = 1e-12) -> float:
+def safe_divide(
+    numerator: float, denominator: float, default: float = 0.0, epsilon: float = 1e-12
+) -> float:
     """Safely divide with stricter zero detection."""
     if abs(denominator) < epsilon or not math.isfinite(denominator):
         return default
@@ -15,7 +17,9 @@ def safe_divide(numerator: float, denominator: float, default: float = 0.0, epsi
     return result if math.isfinite(result) else default
 
 
-def safe_cosine_similarity(vec1: NDArray[Any], vec2: NDArray[Any], epsilon: float = 1e-8) -> float:
+def safe_cosine_similarity(
+    vec1: NDArray[Any], vec2: NDArray[Any], epsilon: float = 1e-8
+) -> float:
     """Safely compute cosine similarity between two vectors."""
     norm1 = np.linalg.norm(vec1)
     norm2 = np.linalg.norm(vec2)

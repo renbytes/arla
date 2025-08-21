@@ -32,7 +32,9 @@ class GoalSystem(System):
     experiences and reflections. This system is world-agnostic.
     """
 
-    REQUIRED_COMPONENTS: List[Type[Component]] = []  # This system is purely event-driven
+    REQUIRED_COMPONENTS: List[
+        Type[Component]
+    ] = []  # This system is purely event-driven
 
     def __init__(
         self,
@@ -75,12 +77,16 @@ class GoalSystem(System):
         if best_goal and goal_comp:
             goal_comp.current_symbolic_goal = best_goal
 
-    def _invent_and_refine_goals(self, entity_id: str, components: Dict[Type[Component], Component], tick: int) -> None:
+    def _invent_and_refine_goals(
+        self, entity_id: str, components: Dict[Type[Component], Component], tick: int
+    ) -> None:
         """Invent new goals by clustering successful actions and refine existing ones."""
         mem_comp = cast(MemoryComponent, components.get(MemoryComponent))
         goal_comp = cast(GoalComponent, components.get(GoalComponent))
 
-        successful_actions = [m for m in mem_comp.episodic_memory if m.get("outcome", 0) > 0.1]
+        successful_actions = [
+            m for m in mem_comp.episodic_memory if m.get("outcome", 0) > 0.1
+        ]
 
         # TODO: 'goal_invention_min_successes' is not in the config schema. Using a hardcoded default.
         if len(successful_actions) < 5:
@@ -95,14 +101,20 @@ class GoalSystem(System):
         emb_dim = self.config.agent.cognitive.embeddings.main_embedding_dim
         llm_cfg = self.config.llm
         embeddings = np.array(
-            [e for s in summaries if (e := get_embedding_with_cache(s, emb_dim, llm_cfg)) is not None]
+            [
+                e
+                for s in summaries
+                if (e := get_embedding_with_cache(s, emb_dim, llm_cfg)) is not None
+            ]
         )
 
         if len(embeddings) < 3:
             return
 
         num_clusters = min(3, max(1, len(embeddings) // 5))
-        kmeans = KMeans(n_clusters=num_clusters, random_state=tick, n_init="auto").fit(embeddings)
+        kmeans = KMeans(n_clusters=num_clusters, random_state=tick, n_init="auto").fit(
+            embeddings
+        )
 
         for i in range(kmeans.n_clusters):
             # Use np.atleast_1d to prevent errors with scalar labels.
@@ -126,13 +138,17 @@ class GoalSystem(System):
 
             try:
                 goal_name = (
-                    self.cognitive_scaffold.query(entity_id, "goal_invention", prompt, tick)
+                    self.cognitive_scaffold.query(
+                        entity_id, "goal_invention", prompt, tick
+                    )
                     .strip()
                     .lower()
                     .replace(".", "")
                 )
                 if goal_name and len(goal_name) > 3:
-                    self._add_or_update_goal_in_component(goal_comp, entity_id, goal_name, len(cluster_indices), tick)
+                    self._add_or_update_goal_in_component(
+                        goal_comp, entity_id, goal_name, len(cluster_indices), tick
+                    )
             except Exception as e:
                 print(f"Error inventing goal for {entity_id}: {e}")
 
@@ -150,7 +166,9 @@ class GoalSystem(System):
         llm_cfg = self.config.llm
 
         if name in goal_comp.symbolic_goals_data:
-            goal_comp.symbolic_goals_data[name]["success_history"].extend([1.0] * success_count)
+            goal_comp.symbolic_goals_data[name]["success_history"].extend(
+                [1.0] * success_count
+            )
         else:
             embedding = get_embedding_with_cache(name, emb_dim, llm_cfg)
             if embedding is not None:
@@ -199,7 +217,9 @@ class GoalSystem(System):
 
         return best_goal
 
-    def _score_goal(self, data: Dict[str, Any], ctx_emb: np.ndarray, id_emb: np.ndarray) -> float:
+    def _score_goal(
+        self, data: Dict[str, Any], ctx_emb: np.ndarray, id_emb: np.ndarray
+    ) -> float:
         """Calculates a score for a single goal based on context and identity alignment."""
         goal_emb = data.get("embedding")
         if goal_emb is None:
