@@ -7,15 +7,12 @@ import uuid
 from typing import Any, Dict, NoReturn
 
 import mlflow
-from agent_sim.infrastructure.data.async_runner import async_runner
+from agent_sim.infrastructure.data.async_runner import get_async_runner
 from agent_sim.infrastructure.database.async_database_manager import (
     AsyncDatabaseManager,
 )
 from agent_sim.infrastructure.tasks.celery_app import app
 from celery import Task
-
-# PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-# sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def _handle_simulation_exception(
@@ -32,7 +29,8 @@ def _handle_simulation_exception(
         mlflow.log_param("error", error_msg)
 
     db_manager = AsyncDatabaseManager()
-    # Convert string ID to UUID object for the database call
+    # Get the runner instance to execute the async DB call
+    async_runner = get_async_runner()
     async_runner.run_async(
         db_manager.update_simulation_run_status(
             uuid.UUID(run_id_str), "failed", error_msg
@@ -54,7 +52,7 @@ def run_simulation_task(
     self: Task,
     config_overrides: Dict[str, Any],
     simulation_package: str,
-    run_id: str,  # This will now be received as a string
+    run_id: str,
     experiment_id: str,
     experiment_name: str,
 ) -> Dict[str, Any]:
@@ -65,15 +63,14 @@ def run_simulation_task(
     mlflow.set_tracking_uri(tracking_uri)
     task_id = self.request.id or "local-task"
     db_manager = AsyncDatabaseManager()
+    async_runner = get_async_runner()
 
     print(f"[{task_id}] Received job for run '{run_id}'")
 
-    # Convert string ID to UUID object for the database call
     async_runner.run_async(
         db_manager.update_simulation_run_status(uuid.UUID(run_id), "running")
     )
 
-    # This call now works because run_id is a string
     with mlflow.start_run(run_id=run_id):
         try:
             mlflow.set_tag("status", "running")
@@ -83,7 +80,6 @@ def run_simulation_task(
                 state="PROGRESS", meta={"status": "Running simulation", "progress": 10}
             )
 
-            # Pass the string run_id to the simulation
             sim_module = importlib.import_module(f"{simulation_package}.run")
             sim_module.start_simulation(
                 run_id, task_id, experiment_id, config_overrides
@@ -93,7 +89,6 @@ def run_simulation_task(
                 state="SUCCESS", meta={"status": "Completed", "progress": 100}
             )
             mlflow.set_tag("status", "completed")
-            # Convert string ID to UUID object for the database call
             async_runner.run_async(
                 db_manager.update_simulation_run_status(uuid.UUID(run_id), "completed")
             )
@@ -119,6 +114,7 @@ def run_experiment_task(
         raise ValueError("MLFLOW_TRACKING_URI environment variable must be set.")
     mlflow.set_tracking_uri(tracking_uri)
     db_manager = AsyncDatabaseManager()
+    async_runner = get_async_runner()
 
     try:
         mlflow_experiment = mlflow.get_experiment_by_name(experiment_name)
@@ -152,14 +148,12 @@ def run_experiment_task(
                 config_overrides["simulation"].get("random_seed", 1) + run_num
             )
 
-            # 1. Let MLflow create the run and give us its string UUID
             with mlflow.start_run(
                 experiment_id=mlflow_exp_id, run_name=run_name
             ) as run:
                 mlflow_run_id_str = run.info.run_id
                 mlflow.set_tag("status", "queued")
 
-            # 2. Submit the Celery task, passing the string ID
             job = (
                 run_simulation_task.s(
                     config_overrides,
@@ -172,7 +166,6 @@ def run_experiment_task(
                 .delay()
             )
 
-            # 3. Create our DB record, converting the string to a UUID object for the database
             async_runner.run_async(
                 db_manager.create_simulation_run(
                     run_id=uuid.UUID(mlflow_run_id_str),

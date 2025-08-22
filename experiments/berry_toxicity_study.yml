@@ -1,0 +1,19 @@
+# experiments/berry_toxicity_study.yml
+
+experiment_name: "Berry Toxicity Causal Study"
+base_config_path: "simulations/berry_sim/config/config.yml"
+simulation_package: "simulations.berry_sim"
+scenarios:
+  - "simulations/berry_sim/scenarios/default.json"
+runs_per_scenario: 5 # Reduced for a quicker test, plan specifies 50
+
+variations:
+  - name: "Condition A - Full Causal Model"
+    overrides:
+      simulation:
+        enable_causal_system: true
+
+  - name: "Condition B - Correlation Only"
+    overrides:
+      simulation:
+        enable_causal_system: false

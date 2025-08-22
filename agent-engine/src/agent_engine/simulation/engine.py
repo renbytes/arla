@@ -4,6 +4,7 @@ A world-agnostic simulation engine that orchestrates the main ECS loop.
 """
 
 import json
+import random  # Import the standard random library
 import time
 import uuid
 from datetime import datetime
@@ -33,8 +34,7 @@ from agent_engine.utils.manifest import create_run_manifest
 class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
-    decisions, and updating all registered systems.
-    It is decoupled from any
+    decisions, and updating all registered systems. It is decoupled from any
     specific world implementation or game rules.
     """
 
@@ -264,7 +264,13 @@ class SimulationManager:
         seed = self.config.simulation.random_seed
         if seed is not None:
             print(f"Seeding all RNGs with: {seed}")
+            # Seed the standard random library
+            random.seed(seed)
+            # Seed the numpy global random state
+            np.random.seed(seed)
+            # Seed a new numpy generator instance (best practice)
             self.main_rng = np.random.default_rng(seed)
+            # Seed torch
             torch.manual_seed(seed)
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(seed)

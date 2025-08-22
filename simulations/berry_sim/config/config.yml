@@ -1,0 +1,83 @@
+# simulations/berry_sim/config/config.yml
+
+simulation_package: "simulations.berry_sim"
+
+simulation:
+  steps: 1600
+  log_directory: "data/logs/berry_sim"
+  random_seed: 42
+  # Flag to enable/disable causal system for ablation study
+  enable_causal_system: true
+
+environment:
+  class: "simulations.berry_sim.environment.BerryWorldEnvironment"
+  params:
+    width: 50
+    height: 50
+  spawning:
+    red_rate: 0.20
+    blue_rate: 0.15
+    yellow_rate: 0.15
+
+agent:
+  vitals:
+    initial_health: 100.0
+  # Dummy values since these schemas are required by the base config
+  foundational:
+    num_agents: 100
+    lifespan_std_dev_percent: 0.1
+    vitals: { initial_time_budget: 2000, initial_health: 100.0, initial_resources: 0 }
+    attributes: { initial_attack_power: 5.0, initial_speed: 1 }
+  cognitive:
+    embeddings: { identity_dim: 128, main_embedding_dim: 128, schema_embedding_dim: 128 }
+    architecture_flags: { }
+  costs:
+    actions: { base: 1, communicate: 1, extract: 1, combat: 1, flee: 1, reflect: 1, nest: 1 }
+  dynamics:
+    decay: { time_budget_per_step: 1, health_per_step: 0, resources_per_step: 0 }
+    regeneration: { }
+    growth: { }
+  emotional_dynamics:
+    temporal: { }
+    appraisal_weights: { }
+  identity_dynamics: { }
+
+learning:
+  q_learning:
+    alpha: 0.1
+    gamma: 0.95
+  memory:
+    reflection_interval: 100 # How often agents reflect
+
+scenario_loader:
+  class: "simulations.berry_sim.loader.BerryScenarioLoader"
+
+action_generator:
+  class: "simulations.berry_sim.providers.BerryActionGenerator"
+
+decision_selector:
+  class: "simulations.berry_sim.providers.BerryDecisionSelector"
+
+component_factory:
+  class: "simulations.berry_sim.providers.BerryComponentFactory"
+
+systems:
+  - "simulations.berry_sim.systems.BerrySpawningSystem"
+  - "simulations.berry_sim.systems.ConsumptionSystem"
+  - "simulations.berry_sim.systems.MovementSystem"
+  - "simulations.berry_sim.systems.VitalsSystem"
+
+actions:
+  - "simulations.berry_sim.actions"
+
+logging:
+  components_to_log:
+    - "simulations.berry_sim.components.PositionComponent"
+    - "simulations.berry_sim.components.HealthComponent"
+    - "agent_core.core.ecs.component.TimeBudgetComponent"
+
+# Rendering for visualization
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/berry_sim"
+  pixel_scale: 8
