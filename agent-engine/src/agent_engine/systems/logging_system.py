@@ -1,6 +1,7 @@
 # FILE: agent-engine/src/agent_engine/systems/logging_system.py
 
 import importlib
+import asyncio
 from typing import Any, Dict, List, Type
 
 from agent_core.core.ecs.component import Component, TimeBudgetComponent
@@ -51,7 +52,7 @@ class LoggingSystem(System):
                 print(f"WARNING: LoggingSystem could not load component '{path}': {e}")
         return types
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """Logs the state of all agents each tick to all exporters."""
         target_entities = self.simulation_state.get_entities_with_components(
             [TimeBudgetComponent]
@@ -63,10 +64,12 @@ class LoggingSystem(System):
                 continue
 
             for exporter in self.exporters:
-                await exporter.log_agent_state(
-                    tick=current_tick,
-                    agent_id=agent_id,
-                    components_data=state_data,
+                asyncio.create_task(
+                    exporter.log_agent_state(
+                        tick=current_tick,
+                        agent_id=agent_id,
+                        components_data=state_data,
+                    )
                 )
 
     def _collect_state_data(
@@ -79,14 +82,16 @@ class LoggingSystem(System):
                 data[comp_type.__name__] = comp_instance.to_dict()
         return data
 
-    async def on_action_executed(self, event_data: Dict[str, Any]) -> None:
+    def on_action_executed(self, event_data: Dict[str, Any]) -> None:
         for exporter in self.exporters:
-            await exporter.log_event(event_data)
+            asyncio.create_task(exporter.log_event(event_data))
 
-    async def on_q_learning_update(self, event_data: Dict[str, Any]) -> None:
+    def on_q_learning_update(self, event_data: Dict[str, Any]) -> None:
         for exporter in self.exporters:
-            await exporter.log_learning_curve(
-                tick=event_data["current_tick"],
-                agent_id=event_data["entity_id"],
-                q_loss=event_data["q_loss"],
+            asyncio.create_task(
+                exporter.log_learning_curve(
+                    tick=event_data["current_tick"],
+                    agent_id=event_data["entity_id"],
+                    q_loss=event_data["q_loss"],
+                )
             )

@@ -33,8 +33,7 @@ from agent_engine.utils.manifest import create_run_manifest
 class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
-    decisions, and updating all registered systems.
-    It is decoupled from any
+    decisions, and updating all registered systems. It is decoupled from any
     specific world implementation or game rules.
     """
 
@@ -85,43 +84,6 @@ class SimulationManager:
         """A convenience method to register a system with the SystemManager."""
         self.system_manager.register_system(system_class, **kwargs)
 
-    async def _initialize_run_records(self) -> None:
-        """
-        Creates database records for the experiment and this specific run.
-        This is a critical step; if it fails, the simulation cannot proceed.
-        """
-        if not self.db_logger:
-            return
-
-        config_dict: Dict[str, Any]
-        if isinstance(self.config, BaseModel):
-            config_dict = self.config.model_dump()
-        else:
-            config_dict = cast(
-                Dict[str, Any], OmegaConf.to_container(self.config, resolve=True)
-            )
-
-        db_experiment_id = await self.db_logger.create_experiment(
-            name=self.experiment_id or "local_experiment",
-            config=config_dict,
-            total_runs=1,
-            simulation_package=self.config.simulation_package,
-            mlflow_experiment_id="local",
-        )
-        scenario_name = (
-            Path(self.config.scenario_path).stem
-            if self.config.scenario_path
-            else "default"
-        )
-        await self.db_logger.create_simulation_run(
-            run_id=uuid.UUID(self.simulation_id),
-            experiment_id=db_experiment_id,
-            scenario_name=scenario_name,
-            config=config_dict,
-            task_id=self.task_id,
-        )
-        print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
-
     def _get_active_entities(self) -> List[str]:
         """Returns a list of all active entities in the simulation state."""
         active_entities = []
@@ -131,7 +93,7 @@ class SimulationManager:
                 active_entities.append(eid)
         return active_entities
 
-    async def _execute_simulation_step(self, step: int) -> bool:
+    def _execute_simulation_step(self, step: int) -> bool:
         """
         Executes all the logic for a single simulation step.
         Returns False if the simulation should end, True otherwise.
@@ -145,7 +107,7 @@ class SimulationManager:
             return False
 
         print(f"--- Running {len(self.system_manager._systems)} systems...")
-        await self.system_manager.update_all(current_tick=step)
+        self.system_manager.update_all(current_tick=step)
         print("--- All systems updated.")
 
         if self.main_rng:
@@ -160,17 +122,15 @@ class SimulationManager:
 
         return True
 
-    async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
-        """Executes the main ECS simulation loop asynchronously."""
-        await self._initialize_run_records()
-
+    def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
+        """Executes the main ECS simulation loop."""
         num_steps = end_step if end_step is not None else self.config.simulation.steps
         print(
             f"\nStarting simulation {self.simulation_id} from step {start_step} to {num_steps}..."
         )
 
         for step in range(start_step, num_steps):
-            should_continue = await self._execute_simulation_step(step)
+            should_continue = self._execute_simulation_step(step)
             if not should_continue:
                 break
 
@@ -239,6 +199,7 @@ class SimulationManager:
                 },
             )
 
+    # ... (the rest of the methods remain unchanged)
     def _setup_simulation_ids(
         self, run_id: Optional[str], task_id: str, experiment_id: Optional[str]
     ) -> None:

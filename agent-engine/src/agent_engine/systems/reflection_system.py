@@ -91,7 +91,7 @@ class ReflectionSystem(System):
             )
         )
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """Periodically triggers the reflection process for active agents."""
         # Use direct attribute access on the validated Pydantic model
         reflection_interval = self.config.learning.memory.reflection_interval
@@ -104,8 +104,10 @@ class ReflectionSystem(System):
         for entity_id, components in target_entities.items():
             time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
             if time_comp and time_comp.is_active:
-                await self._run_reflection_cycle(
-                    entity_id, components, current_tick, is_final_reflection=False
+                asyncio.create_task(
+                    self._run_reflection_cycle(
+                        entity_id, components, current_tick, is_final_reflection=False
+                    )
                 )
 
     async def update_for_entity(

@@ -5,26 +5,16 @@
 # environment and running simulations.
 # ==============================================================================
 
-.PHONY: help setup up down logs init-db run run-local cli test lint make-gif
+.PHONY: help setup up down logs init-db build-rust run run-local cli test lint make-gif
 .DEFAULT_GOAL := help
 
 # --- Variable Definitions ---
-# These variables can be overridden from the command line.
-# Example: make run-local PACKAGE=simulations.new_sim ...
-
-# The Python package of the simulation to run.
 PACKAGE ?= simulations.schelling_sim
-# Path to the base YAML config file for the simulation.
 CONFIG ?= simulations/schelling_sim/config/config.yml
-# Path to the scenario JSON file or experiment YAML file.
 FILE ?= simulations/schelling_sim/scenarios/default.json
-# Number of simulation steps for local runs.
 STEPS ?= 200
-# Generic arguments for the CLI.
 ARGS ?=
-# Default directory for rendering output.
 RENDER_DIR ?= data/gif_renders
-# Default frames per second for rendering GIFs.
 FPS ?= 15
 
 
@@ -56,22 +46,27 @@ setup:
 	@cp .env.example .env
 	@echo "✅ Done. Please add your OPENAI_API_KEY to the .env file."
 
-
 # --- Simulation & Development Commands ---
+
+## build-rust: Ensures services are up, then compiles the Rust extension.
+build-rust: up
+	@echo "⚙️  Compiling Rust extension..."
+	@docker compose exec app poetry run maturin develop
+	@echo "✅ Rust extension compiled successfully."
 
 ## run: Run a full experiment, submitting jobs to the Celery queue.
 run:
 	@echo "▶️ Running experiment from: $(FILE)"
 	@docker compose exec app poetry run agentsim run-experiment $(FILE)
 
-## run-local: Run a single, local simulation for quick testing and debugging.
-run-local:
+## run-local: Run a single, local simulation, ensuring services are up and Rust is built.
+run-local: build-rust
 	@echo "▶️ Running Local Simulation"
 	@echo "   - Package:  $(PACKAGE)"
 	@echo "   - Config:   $(CONFIG)"
 	@echo "   - Scenario: $(FILE)"
 	@echo "   - Steps:    $(STEPS)"
-	@docker compose exec app poetry run python -m agent_sim.main \
+	@docker compose exec app poetry run python run_local.py \
 	  --package $(PACKAGE) \
 	  --config $(CONFIG) \
 	  --scenario $(FILE) \
@@ -80,11 +75,7 @@ run-local:
 ## run-example: Run the Schelling simulation with default parameters.
 run-example:
 	@echo "▶️ Running Schelling Simulation Example (150 steps)..."
-	@docker compose exec app poetry run python -m agent_sim.main \
-	  --package "simulations.schelling_sim" \
-	  --config "simulations/schelling_sim/config/config.yml" \
-	  --scenario "simulations/schelling_sim/scenarios/default.json" \
-	  --steps 150
+	@make run-local STEPS=150
 
 ## make-gif: Creates a GIF from the most recent simulation render.
 make-gif:
@@ -120,4 +111,3 @@ help:
 	@echo "Example Local Run:"
 	@echo "  make run-local FILE=path/to/your.json STEPS=100"
 	@echo ""
-

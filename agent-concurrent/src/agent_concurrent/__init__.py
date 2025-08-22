@@ -1,14 +1,33 @@
-# src/agent_concurrent/__init__.py
+# agent-concurrent/src/agent_concurrent/__init__.py
 """
-A library for concurrent and parallel execution of agent-based simulation systems.
+Initializes the agent_concurrent package.
 
-This package provides runner classes that can execute a list of systems
-serially or concurrently using Python's asyncio library.
+This file exposes the core components of the library, making them
+easily accessible for import. It prioritizes importing the compiled
+Rust extension for performance.
 """
 
-# Import the core runner classes to make them accessible at the package level.
-# e.g., from agent_concurrent import AsyncSystemRunner
-from .runners import AsyncSystemRunner, SerialSystemRunner
+try:
+    # This imports the ParallelSystemRunner class from the compiled
+    # `agent_concurrent_core.so` or `.pyd` file that our build script
+    # places in this directory.
+    from .agent_concurrent_core import ParallelSystemRunner
 
-# Define what is exposed when a user does 'from agent_concurrent import *'
-__all__ = ["AsyncSystemRunner", "SerialSystemRunner"]
+except ImportError:
+    # This block can be used as a fallback if the Rust extension has not been
+    # compiled. For now, we'll define a placeholder that raises an error.
+    class ParallelSystemRunner:
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "Failed to import the Rust-based ParallelSystemRunner. "
+                "Please compile the project first by running 'poetry install'."
+            )
+
+        def run(self, *args, **kwargs):
+            raise NotImplementedError
+
+
+# This tells Python what names to export when a user does `from agent_concurrent import *`
+__all__ = [
+    "ParallelSystemRunner",
+]

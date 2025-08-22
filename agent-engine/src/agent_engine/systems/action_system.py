@@ -103,7 +103,7 @@ class ActionSystem(System):
         print(
             f"""   Entity {entity_id}
               executed {action_plan.action_type.name}.
-              Final Reward: {final_reward:.3f}"""
+               Final Reward: {final_reward:.3f}"""
         )
 
     def _update_entity_components(
@@ -137,6 +137,6 @@ class ActionSystem(System):
                 action_cost = plan.action_type.get_base_cost(self.simulation_state)
                 time_comp.current_time_budget -= action_cost
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass

@@ -1,5 +1,6 @@
 # FILE: agent-engine/src/agent_engine/systems/metrics_system.py
 
+import asyncio
 from typing import Any, Dict, List
 
 from agent_engine.logging.exporter_interface import ExporterInterface
@@ -27,7 +28,7 @@ class MetricsSystem(System):
         self.calculators = calculators
         self.exporters = exporters
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """
         On each tick, run all metric calculators and dispatch the combined
         results to all registered exporters.
@@ -48,7 +49,9 @@ class MetricsSystem(System):
         if all_metrics:
             for exporter in self.exporters:
                 try:
-                    await exporter.export_metrics(current_tick, all_metrics)
+                    asyncio.create_task(
+                        exporter.export_metrics(current_tick, all_metrics)
+                    )
                 except Exception as e:
                     print(
                         f"Warning: Metrics exporter {exporter.__class__.__name__} failed: {e}"

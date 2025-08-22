@@ -146,7 +146,7 @@ class IdentitySystem(System):
             SOCIAL:
             - trait_name: score
             COMPETENCE:
-            - trait_name: score
+             - trait_name: score
             ...
             """
         try:
@@ -193,6 +193,6 @@ class IdentitySystem(System):
                     continue
         return domain_traits
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass

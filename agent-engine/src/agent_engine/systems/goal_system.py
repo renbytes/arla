@@ -88,7 +88,8 @@ class GoalSystem(System):
             m for m in mem_comp.episodic_memory if m.get("outcome", 0) > 0.1
         ]
 
-        # TODO: 'goal_invention_min_successes' is not in the config schema. Using a hardcoded default.
+        # TODO: 'goal_invention_min_successes' is not in the config schema.
+        # Using a hardcoded default.
         if len(successful_actions) < 5:
             return
 
@@ -131,7 +132,7 @@ class GoalSystem(System):
             )
             prompt = f"""
                 The following actions were successful:
-                {sample_summaries}. What is a concise, 2-3 word,
+                 {sample_summaries}. What is a concise, 2-3 word,
                 high-level goal that describes this pattern of success?
                 (e.g., 'Assert Dominance', 'Secure Territory', 'Forge Alliances').
             """
@@ -231,6 +232,6 @@ class GoalSystem(System):
 
         return float((ctx_sim * 2.0) + (success_rate * 1.5) + (id_sim * 1.0))
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """This system is purely event-driven and has no per-tick logic."""
         pass

@@ -77,7 +77,7 @@ class CausalGraphSystem(System):
         if hasattr(mem_comp, "causal_data"):
             mem_comp.causal_data.append(record)
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """
         Periodically rebuilds the causal model for each agent using the data
         collected in their MemoryComponent.

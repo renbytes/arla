@@ -61,7 +61,12 @@ class ThreadedAsyncRunner(AsyncRunner):
             time.sleep(0.01)
 
     def run_async(self, coro: Coroutine) -> Any:
-        if self._thread is None or not self._thread.is_alive() or self._loop is None or not self._loop.is_running():
+        if (
+            self._thread is None
+            or not self._thread.is_alive()
+            or self._loop is None
+            or not self._loop.is_running()
+        ):
             self._start_event_loop()
 
         if self._loop is None:

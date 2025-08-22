@@ -1,39 +1,32 @@
 # Use an official Python base image
 FROM python:3.11.9-slim
 
-# Configure environment variables for Python and Poetry
+# Configure environment variables for Python, Poetry, and Rust
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_HOME="/opt/poetry"
 ENV POETRY_NO_INTERACTION=1
 ENV POETRY_VIRTUALENVS_CREATE=false
-
-# Add Poetry's bin directory to the system PATH.
-ENV PATH="$POETRY_HOME/bin:$PATH"
+ENV CARGO_HOME="/opt/cargo"
+ENV RUSTUP_HOME="/opt/rustup"
+ENV PATH="$CARGO_HOME/bin:$POETRY_HOME/bin:$PATH"
 
 # Set the working directory
 WORKDIR /app
 
-# Install system dependencies and Poetry itself
+# Install all system dependencies, including the Rust toolchain and build tools
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl build-essential cmake git graphviz libgraphviz-dev \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y \
     && curl -sSL https://install.python-poetry.org | python - \
-    && apt-get remove -y curl \
-    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy ALL project files before installing dependencies.
-# This ensures Poetry can find the local path dependencies (agent-core, etc.).
+# Copy the entire project context
 COPY . .
 
-# Install build dependencies, install Python packages, then remove build dependencies.
-# This ensures packages that need compilation (like ecos, osqp) can be built,
-# while keeping the final image size smaller.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cmake git graphviz libgraphviz-dev \
-    && poetry install --without dev \
-    && apt-get purge -y --auto-remove build-essential cmake git graphviz libgraphviz-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install all Python dependencies, INCLUDING dev dependencies
+# The --without dev flag has been removed to ensure maturin is installed.
+RUN poetry install
 
 # The default command to run when the container starts
 CMD ["tail", "-f", "/dev/null"]

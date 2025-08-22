@@ -21,6 +21,8 @@ SEARCH_PREFIXES = [
     "agent-persist",
     "docs",
     "simulations",
+    "arla_core_rs",
+    "arla",
 ]
 
 # 2. CONFIGURE WHICH ROOT-LEVEL FILES TO INCLUDE
@@ -36,7 +38,7 @@ INCLUDE_ROOT_FILES = [
 
 # 3. CONFIGURE WHICH FILE TYPES TO INCLUDE (within SEARCH_PREFIXES directories)
 #    e.g., [".py", ".yaml", ".md"]. An empty list includes all file types.
-INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", ".md", ".txt"]
+INCLUDE_EXTS = [".py", ".yaml", ".yml", ".json", ".md", ".txt", ".rs"]
 
 # 4. CONFIGURE DIRS/FILES TO EXCLUDE
 #    Any path containing these names will be skipped.

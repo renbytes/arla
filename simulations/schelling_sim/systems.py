@@ -23,7 +23,7 @@ class SatisfactionSystem(System):
         SatisfactionComponent,
     ]
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """
         Iterates through all Schelling agents and updates their `is_satisfied`
         status based on the types of their neighbors.
@@ -129,7 +129,7 @@ class MovementSystem(System):
         if self.event_bus:
             self.event_bus.publish("action_outcome_ready", event_data)
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass
 
@@ -160,6 +160,6 @@ class RenderingSystem(System):
             f"🎨 RenderingSystem initialized. Frames will be saved to '{output_dir}'."
         )
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """On each tick, render a new frame."""
         self.renderer.render_frame(self.simulation_state, current_tick)

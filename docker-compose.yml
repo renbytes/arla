@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      PYTHONPATH: /app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations
+      PYTHONPATH: /app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +32,7 @@ services:
       - .:/app
       - poetry_venv:/app/.venv
     environment:
-      PYTHONPATH: /app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations
+      PYTHONPATH: /app:/app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src
     depends_on:
       db:
         condition: service_healthy

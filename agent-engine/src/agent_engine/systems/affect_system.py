@@ -210,7 +210,7 @@ class AffectSystem(System):
         """Pure helper to construct the social context for appraisal."""
         return {}
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """Applies passive decay to cognitive dissonance for all relevant entities."""
         target_entities = self.simulation_state.get_entities_with_components(
             self.REQUIRED_COMPONENTS

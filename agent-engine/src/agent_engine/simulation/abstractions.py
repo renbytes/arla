@@ -37,7 +37,7 @@ class CognitiveSystem(ABC):
         self.event_bus: Optional["EventBus"] = simulation_state.event_bus
 
     @abstractmethod
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """
         The main logic loop for the system, called once per simulation tick.
         """

@@ -60,7 +60,7 @@ class QLearningSystem(System):
 
         self.previous_states: Dict[str, np.ndarray] = {}
 
-    async def update(self, current_tick: int) -> None:
+    def update(self, current_tick: int) -> None:
         """
         Caches the current state features for each ACTIVE learning agent.
         """
