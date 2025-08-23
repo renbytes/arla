@@ -112,6 +112,8 @@ make-gif:
 	fi
 	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)/$(RUN_ID)..."
 	@docker compose exec app poetry run python scripts/create_gif.py $(RENDER_DIR)/$(RUN_ID) simulation-$(RUN_ID).gif --fps $(FPS)
+	@echo "🔁 Ensuring GIF loops indefinitely..."
+	@docker compose exec app gifsicle --loopcount=0 --batch simulation-$(RUN_ID).gif
 
 ## cli: Run any 'agentsim' command inside the container.
 cli:
