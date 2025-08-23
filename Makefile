@@ -102,10 +102,17 @@ run-example:
 	  --scenario "simulations/schelling_sim/scenarios/default.json" \
 	  --steps 150
 
-## make-gif: Creates a GIF from the most recent simulation render.
+## make-gif: Creates a GIF from a specific simulation run's render.
 make-gif:
-	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)..."
-	@poetry run python scripts/create_gif.py $(RENDER_DIR) simulation.gif --fps $(FPS)
+	# CORRECTED: This now requires a RUN_ID to be passed
+	@if [ -z "$(RUN_ID)" ]; then \
+		echo "❌ Error: RUN_ID variable is not set."; \
+		echo "   Please specify the ID of the simulation run to render."; \
+		echo "   Example: make make-gif RUN_ID=71bcad3e64a346618715e3b8be195e16 ..."; \
+		exit 1; \
+	fi
+	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)/$(RUN_ID)..."
+	@poetry run python scripts/create_gif.py $(RENDER_DIR)/$(RUN_ID) simulation-$(RUN_ID).gif --fps $(FPS)
 
 ## cli: Run any 'agentsim' command inside the container.
 cli:

@@ -100,6 +100,8 @@ build-backend = "poetry.core.masonry.api"
 # Tell mypy to treat directories with __init__.py as the root of a package
 explicit_package_bases = true
 namespace_packages = true
+exclude = "repositories\\.arla\\..*"
+disallow_untyped_defs = true
 # Define the specific paths mypy should check
 files = [
     "agent-core/src",
@@ -113,4 +115,3 @@ files = [
 # Standard quality-of-life settings
 ignore_missing_imports = true
 follow_imports = "silent"
-disallow_untyped_defs = true

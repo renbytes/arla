@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install system dependencies and Poetry itself
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl gifsicle \
     && curl -sSL https://install.python-poetry.org | python - \
     && apt-get remove -y curl \
     && apt-get autoremove -y \

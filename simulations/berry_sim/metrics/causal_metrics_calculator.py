@@ -1,4 +1,4 @@
-# simulations/berry_sim/metrics/causal_metrics_calculator.py
+# FILE: simulations/berry_sim/metrics/causal_metrics_calculator.py
 
 from collections import defaultdict
 from typing import Any, Dict
@@ -7,7 +7,7 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.logging.metrics_calculator_interface import MetricsCalculatorInterface
 
-from simulations.berry_sim.actions import EatBerryAction
+from ..actions import EatBerryAction
 from ..components import HealthComponent, PositionComponent
 from ..environment import BerryWorldEnvironment
 

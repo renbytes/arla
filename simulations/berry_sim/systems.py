@@ -1,5 +1,6 @@
 # simulations/berry_sim/systems.py
 
+import os
 import random
 from typing import Any, Dict, List, Type
 
@@ -243,18 +244,25 @@ class RenderingSystem(System):
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
 
-        # Initialize the renderer with parameters from the config
         env_params = config.environment.get("params", {})
         width = env_params.get("width", 50)
         height = env_params.get("height", 50)
 
         render_config = config.get("rendering", {})
-        output_dir = render_config.get("output_directory", "data/renders/default_berry")
+        base_output_dir = render_config.get(
+            "output_directory", "data/renders/default_berry"
+        )
         pixel_scale = render_config.get("pixel_scale", 1)
 
-        self.renderer = BerryRenderer(width, height, output_dir, pixel_scale)
+        # Create a unique subdirectory for this specific simulation run
+        run_id = self.simulation_state.simulation_id
+        self.unique_output_dir = os.path.join(base_output_dir, run_id)
+
+        self.renderer = BerryRenderer(
+            width, height, self.unique_output_dir, pixel_scale
+        )
         print(
-            f"🎨 RenderingSystem initialized. Frames will be saved to '{output_dir}'."
+            f"🎨 RenderingSystem initialized. Frames will be saved to '{self.unique_output_dir}'."
         )
 
     async def update(self, current_tick: int) -> None:
