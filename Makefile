@@ -9,23 +9,19 @@
 .DEFAULT_GOAL := help
 
 # --- Variable Definitions ---
-# These variables can be overridden from the command line.
-# Example: make run-local PACKAGE=simulations.new_sim ...
+# These variables MUST be provided from the command line.
+# Example: make run-local PACKAGE=simulations.berry_sim ...
+PACKAGE :=
+CONFIG :=
+FILE :=
 
-# The Python package of the simulation to run.
-PACKAGE ?= simulations.schelling_sim
-# Path to the base YAML config file for the simulation.
-CONFIG ?= simulations/schelling_sim/config/config.yml
-# Path to the scenario JSON file or experiment YAML file.
-FILE ?= simulations/schelling_sim/scenarios/default.json
-# Number of simulation steps for local runs.
+# --- Optional Variable Definitions ---
+# These have sensible defaults but can be overridden.
 STEPS ?= 200
-# Generic arguments for the CLI.
 ARGS ?=
-# Default directory for rendering output.
 RENDER_DIR ?= data/gif_renders
-# Default frames per second for rendering GIFs.
 FPS ?= 15
+WORKERS ?= 4
 
 
 # --- Core Docker Commands ---
@@ -56,16 +52,36 @@ setup:
 	@cp .env.example .env
 	@echo "✅ Done. Please add your OPENAI_API_KEY to the .env file."
 
-
 # --- Simulation & Development Commands ---
 
-## run: Run a full experiment, submitting jobs to the Celery queue.
+## run: Start Celery workers and run a full experiment.
 run:
+	@echo "👷 Starting $(WORKERS) Celery workers in the background..."
+	@docker compose up -d worker --scale worker=$(WORKERS)
 	@echo "▶️ Running experiment from: $(FILE)"
 	@docker compose exec app poetry run agentsim run-experiment $(FILE)
 
 ## run-local: Run a single, local simulation for quick testing and debugging.
 run-local:
+	# These checks ensure that required variables are defined.
+	@if [ -z "$(PACKAGE)" ]; then \
+		echo "❌ Error: PACKAGE variable is not set."; \
+		echo "   Please specify the simulation package to run."; \
+		echo "   Example: make run-local PACKAGE=simulations.berry_sim ..."; \
+		exit 1; \
+	fi
+	@if [ -z "$(CONFIG)" ]; then \
+		echo "❌ Error: CONFIG variable is not set."; \
+		echo "   Please specify the path to the configuration file."; \
+		echo "   Example: make run-local CONFIG=simulations/berry_sim/config/config.yml ..."; \
+		exit 1; \
+	fi
+	@if [ -z "$(FILE)" ]; then \
+		echo "❌ Error: FILE variable is not set."; \
+		echo "   Please specify the path to the scenario file."; \
+		echo "   Example: make run-local FILE=simulations/berry_sim/scenarios/default.json ..."; \
+		exit 1; \
+	fi
 	@echo "▶️ Running Local Simulation"
 	@echo "   - Package:  $(PACKAGE)"
 	@echo "   - Config:   $(CONFIG)"
@@ -86,10 +102,16 @@ run-example:
 	  --scenario "simulations/schelling_sim/scenarios/default.json" \
 	  --steps 150
 
-## make-gif: Creates a GIF from the most recent simulation render.
+## make-gif: Creates a GIF from a specific simulation run's render.
 make-gif:
-	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)..."
-	@poetry run python scripts/create_gif.py $(RENDER_DIR) simulation.gif --fps $(FPS)
+	@if [ -z "$(RUN_ID)" ]; then \
+		echo "❌ Error: RUN_ID variable is not set."; \
+		echo "   Please specify the ID of the simulation run to render."; \
+		echo "   Example: make make-gif RUN_ID=71bcad3e64a346618715e3b8be195e16 ..."; \
+		exit 1; \
+	fi
+	@echo "🎬 Creating GIF from frames in $(RENDER_DIR)/$(RUN_ID)..."
+	@docker compose exec app poetry run python scripts/create_gif.py $(RENDER_DIR)/$(RUN_ID) simulation-$(RUN_ID).gif --fps $(FPS)
 
 ## cli: Run any 'agentsim' command inside the container.
 cli:
@@ -99,12 +121,12 @@ cli:
 ## test: Run the full pytest suite inside the container.
 test:
 	@echo "🧪 Running pytest test suite..."
-	@docker compose exec app pytest
+	@poetry run pytest
 
 ## lint: Run the Ruff linter to check for code style issues.
 lint:
 	@echo "🎨 Linting with Ruff..."
-	@docker compose exec app ruff check .
+	@poetry run ruff check .
 
 ## help: Display this help message.
 help:
@@ -118,6 +140,5 @@ help:
 	awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Example Local Run:"
-	@echo "  make run-local FILE=path/to/your.json STEPS=100"
+	@echo "  make run-local PACKAGE=simulations.berry_sim CONFIG=simulations/berry_sim/config/config.yml FILE=simulations/berry_sim/scenarios/default.json"
 	@echo ""
-

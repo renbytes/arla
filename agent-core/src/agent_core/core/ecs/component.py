@@ -365,6 +365,39 @@ class ValueSystemComponent(Component):
 # -----------------------------------------------------------------------
 
 
+class PerceptionComponent(Component):
+    """
+    A generic container for an agent's sensory input.
+
+    This component is world-agnostic and stores a dictionary of entities
+    that the agent can currently perceive, along with their observed features.
+    It is populated by a world-specific PerceptionProvider.
+    """
+
+    def __init__(self, vision_range: int) -> None:
+        """
+        Initializes the PerceptionComponent.
+
+        Args:
+            vision_range: The maximum distance the agent can perceive.
+        """
+        self.vision_range = vision_range
+        self.visible_entities: Dict[str, Dict[str, Any]] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data."""
+        return {
+            "vision_range": self.vision_range,
+            "visible_entities_count": len(self.visible_entities),
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the component's data."""
+        if self.vision_range < 0:
+            return False, ["Vision range cannot be negative."]
+        return True, []
+
+
 class TimeBudgetComponent(Component):
     """
     Manages an agent's time budget (or lifespan/energy) within the simulation.

@@ -1,0 +1,7 @@
+{
+    "name": "Default Berry Toxicity Scenario",
+    "description": "A 50x50 grid with 100 agents, 10 water sources, and 20 rock formations.",
+    "num_agents": 100,
+    "num_water_sources": 10,
+    "num_rock_formations": 20
+}

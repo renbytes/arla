@@ -1,9 +1,10 @@
-# src/agent_engine/simulation/engine.py
+# FILE: agent-engine/src/agent_engine/simulation/engine.py
 """
 A world-agnostic simulation engine that orchestrates the main ECS loop.
 """
 
 import json
+import random
 import time
 import uuid
 from datetime import datetime
@@ -24,7 +25,6 @@ from agent_persist.store import FileStateStore
 from omegaconf import OmegaConf
 from pydantic import BaseModel
 
-# Imports from agent-engine
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import SystemManager
 from agent_engine.utils.manifest import create_run_manifest
@@ -34,8 +34,6 @@ class SimulationManager:
     """
     This manager is responsible for stepping through time, processing entity
     decisions, and updating all registered systems.
-    It is decoupled from any
-    specific world implementation or game rules.
     """
 
     def __init__(
@@ -85,43 +83,6 @@ class SimulationManager:
         """A convenience method to register a system with the SystemManager."""
         self.system_manager.register_system(system_class, **kwargs)
 
-    async def _initialize_run_records(self) -> None:
-        """
-        Creates database records for the experiment and this specific run.
-        This is a critical step; if it fails, the simulation cannot proceed.
-        """
-        if not self.db_logger:
-            return
-
-        config_dict: Dict[str, Any]
-        if isinstance(self.config, BaseModel):
-            config_dict = self.config.model_dump()
-        else:
-            config_dict = cast(
-                Dict[str, Any], OmegaConf.to_container(self.config, resolve=True)
-            )
-
-        db_experiment_id = await self.db_logger.create_experiment(
-            name=self.experiment_id or "local_experiment",
-            config=config_dict,
-            total_runs=1,
-            simulation_package=self.config.simulation_package,
-            mlflow_experiment_id="local",
-        )
-        scenario_name = (
-            Path(self.config.scenario_path).stem
-            if self.config.scenario_path
-            else "default"
-        )
-        await self.db_logger.create_simulation_run(
-            run_id=uuid.UUID(self.simulation_id),
-            experiment_id=db_experiment_id,
-            scenario_name=scenario_name,
-            config=config_dict,
-            task_id=self.task_id,
-        )
-        print(f"[{self.task_id}] Created database records for run {self.simulation_id}")
-
     def _get_active_entities(self) -> List[str]:
         """Returns a list of all active entities in the simulation state."""
         active_entities = []
@@ -162,7 +123,8 @@ class SimulationManager:
 
     async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
         """Executes the main ECS simulation loop asynchronously."""
-        await self._initialize_run_records()
+        # CORRECTED: The call to _initialize_run_records has been removed.
+        # The orchestrator task is now solely responsible for this.
 
         num_steps = end_step if end_step is not None else self.config.simulation.steps
         print(
@@ -178,7 +140,7 @@ class SimulationManager:
         self.save_state(num_steps)
 
     def save_state(self, tick: int) -> None:
-        """Saves the current simulation state to a file in the run directory."""
+        """Saves the current simulation state to a file."""
         print(f"--- Saving state at tick {tick}")
         snapshot = self.simulation_state.to_snapshot()
         filepath = self.run_directory / "snapshots" / f"snapshot_tick_{tick}.json"
@@ -204,7 +166,7 @@ class SimulationManager:
         )
 
     def _process_entity_turn(self, entity_id: str, current_tick: int) -> None:
-        """Handles the decision-making and action-dispatching for a single entity."""
+        """Handles decision-making and action-dispatching for a single entity."""
         time_comp = self.simulation_state.get_component(entity_id, TimeBudgetComponent)
         if (
             not time_comp
@@ -252,7 +214,7 @@ class SimulationManager:
         self.experiment_id = experiment_id
 
     def _setup_run_directory(self) -> None:
-        """Creates a unique, timestamped directory for the run's outputs."""
+        """Creates a unique directory for the run's outputs."""
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         run_dir_name = f"{timestamp}_{self.simulation_id}"
         self.run_directory = Path(self.config.simulation.log_directory) / run_dir_name
@@ -260,10 +222,12 @@ class SimulationManager:
         print(f"Created run output directory: {self.run_directory}")
 
     def _setup_rng(self) -> None:
-        """Initializes all relevant random number generators with a central seed."""
+        """Initializes random number generators with a central seed."""
         seed = self.config.simulation.random_seed
         if seed is not None:
             print(f"Seeding all RNGs with: {seed}")
+            random.seed(seed)
+            np.random.seed(seed)
             self.main_rng = np.random.default_rng(seed)
             torch.manual_seed(seed)
             if torch.cuda.is_available():
@@ -288,16 +252,13 @@ class SimulationManager:
         """Generates and saves the manifest and resolved config for the run."""
         config_dict: Dict[str, Any]
 
-        # Check if the config is a Pydantic model or an OmegaConf object
         if isinstance(self.config, BaseModel):
             config_dict = self.config.model_dump()
         else:
-            # Assume it's an OmegaConf object and cast to satisfy mypy
             config_dict = cast(
                 Dict[str, Any], OmegaConf.to_container(self.config, resolve=True)
             )
 
-        # Create and save the manifest.json
         manifest_data = create_run_manifest(
             run_id=self.simulation_id,
             experiment_id=self.experiment_id,
@@ -308,12 +269,9 @@ class SimulationManager:
         with open(manifest_path, "w") as f:
             json.dump(manifest_data, f, indent=2)
 
-        # Save the fully resolved resolved_config.yml
         config_path = self.run_directory / "resolved_config.yml"
-        # Also handle the case where we have a Pydantic model for saving
         if isinstance(self.config, BaseModel):
             with open(config_path, "w") as f:
-                # A simple way to save as YAML-like format; for true YAML, a library like PyYAML would be needed
                 json.dump(config_dict, f, indent=2)
         else:
             OmegaConf.save(config=self.config, f=config_path)

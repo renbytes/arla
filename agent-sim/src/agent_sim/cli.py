@@ -1,3 +1,5 @@
+# FILE: agent-sim/src/agent_sim/cli.py
+
 import subprocess
 import sys
 from pathlib import Path
@@ -11,14 +13,13 @@ from rich.console import Console
 from rich.table import Table
 
 # ------------------------------------------------------------------------
-# Global constants that are **objects**, not *calls* in the function default
-# positions – this satisfies flake8‑bugbear B008.
+# Global constants
 # ------------------------------------------------------------------------
 
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
 
 EXPERIMENT_FILE_ARGUMENT = typer.Argument(
-    ...,  # required
+    ...,
     exists=True,
     file_okay=True,
     dir_okay=False,
@@ -49,18 +50,16 @@ EXPERIMENTS_DIR_OPTION = typer.Option(
     file_okay=False,
 )
 
-# CLI App Initialization----------------------------------------------
-# Create a Typer app for a clean command‑line interface.
 app = typer.Typer(
     name="agentsim",
-    help="A unified CLI for managing Agent‑based Simulations.",
+    help="A unified CLI for managing Agent-based Simulations.",
     add_completion=False,
 )
 console = Console()
 
 
 # ------------------------------------------------------------------------
-# Command: run‑experiment
+# Command: run-experiment
 # ------------------------------------------------------------------------
 @app.command(name="run-experiment")
 def run_experiment(
@@ -72,7 +71,6 @@ def run_experiment(
     console.rule(f"[bold green]🚀 Launching Experiment: {experiment_file.name}")
 
     try:
-        # Load the raw config, which could be a DictConfig or ListConfig
         exp_def = OmegaConf.load(experiment_file)
     except Exception as e:
         print(
@@ -80,14 +78,12 @@ def run_experiment(
         )
         raise typer.Exit(code=1) from e
 
-    # Ensure the loaded experiment definition is a dictionary-like object
     if not isinstance(exp_def, DictConfig):
         print(
             f"[bold red]Error: Experiment file {experiment_file} must have a dictionary (mapping) at its root.[/bold red]"
         )
         raise typer.Exit(code=1)
 
-    # Now that mypy knows exp_def is a DictConfig, we can safely use .get()
     base_config_path = PROJECT_ROOT / exp_def.get("base_config_path", "")
     if not base_config_path.exists():
         print(
@@ -97,11 +93,11 @@ def run_experiment(
 
     base_config = OmegaConf.load(base_config_path)
     variations = exp_def.get("variations", [{"name": "default", "overrides": {}}])
-
     total_jobs = 0
 
+    experiment_name = exp_def.get("experiment_name", "UnnamedExp")
+
     for variation in variations:
-        # We also need to ensure each 'variation' is a dictionary
         if not isinstance(variation, (dict, DictConfig)):
             print(
                 f"[yellow]Warning: Skipping invalid variation item in {experiment_file}.[/yellow]"
@@ -109,13 +105,12 @@ def run_experiment(
             continue
 
         variation_name = variation.get("name", "unnamed_variation")
+        variation_overrides = OmegaConf.to_container(variation.get("overrides", {}))
+
         print(f"\n[cyan]Submitting tasks for variation: [bold]{variation_name}[/bold]")
 
         final_config = OmegaConf.merge(base_config, variation.get("overrides", {}))
         config_dict = OmegaConf.to_container(final_config, resolve=True)
-        experiment_name = (
-            f"{exp_def.get('experiment_name', 'UnnamedExp')} - {variation_name}"
-        )
 
         run_experiment_task.delay(
             scenario_paths=list(exp_def.get("scenarios", [])),
@@ -123,6 +118,8 @@ def run_experiment(
             base_config=config_dict,
             simulation_package=exp_def.get("simulation_package"),
             experiment_name=experiment_name,
+            variation_name=variation_name,
+            variation_overrides=variation_overrides,
         )
         jobs_in_variation = len(exp_def.get("scenarios", [])) * exp_def.get(
             "runs_per_scenario", 1
@@ -140,16 +137,14 @@ def run_experiment(
 
 
 # ------------------------------------------------------------------------
-# Command: start‑worker
+# Command: start-worker
 # ------------------------------------------------------------------------
 @app.command(name="start-worker")
 def start_worker(
-    # B008 – the Option objects are defined at module level.
     queue: str = QUEUE_OPTION,
     concurrency: int = CONCURRENCY_OPTION,
 ):
-    """Start a Celery worker with a simplified command that hides the verbose
-    `celery -A ... worker` incantation."""
+    """Start a Celery worker with a simplified command."""
 
     console.rule(f"[bold blue]👷 Starting Celery Worker for Queue: {queue}")
 
@@ -166,7 +161,7 @@ def start_worker(
         queue,
         "-c",
         str(concurrency),
-        "--pool=prefork",  # a more robust pool for CPU‑bound tasks
+        "--pool=prefork",
     ]
 
     print(f"Running command: [dim]{' '.join(command)}[/dim]")
@@ -177,12 +172,11 @@ def start_worker(
         print(
             "Please ensure Celery is installed in your environment and Redis is running."
         )
-        # B904 – chain the caught exception.
         raise typer.Exit(code=1) from e
 
 
 # ------------------------------------------------------------------------
-# Command: list‑experiments
+# Command: list-experiments
 # ------------------------------------------------------------------------
 @app.command(name="list-experiments")
 def list_experiments(
@@ -214,7 +208,7 @@ def list_experiments(
 
 
 # ------------------------------------------------------------------------
-# Command: health‑check
+# Command: health-check
 # ------------------------------------------------------------------------
 @app.command(name="health-check")
 def health_check():
@@ -236,15 +230,11 @@ def health_check():
         for worker, reply in active_workers.items():
             print(f"  - [cyan]{worker}[/cyan]: {reply}")
 
-    except Exception as e:  # noqa: BLE001 – broad except here is pragmatic
+    except Exception as e:
         print(f"[bold red]Error connecting to Celery broker: {e}[/bold red]")
         print("Please ensure Redis (or your broker) is running and accessible.")
-        # B904 – chain the caught exception so we keep its traceback.
         raise typer.Exit(code=1) from e
 
 
-# ------------------------------------------------------------------------
-# Script entry‑point
-# ------------------------------------------------------------------------
 if __name__ == "__main__":
     app()

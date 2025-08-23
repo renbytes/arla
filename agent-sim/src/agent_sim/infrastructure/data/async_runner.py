@@ -5,7 +5,7 @@ import os
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Coroutine
+from typing import Any, Coroutine, Optional
 
 
 class AsyncRunner(ABC):
@@ -61,7 +61,12 @@ class ThreadedAsyncRunner(AsyncRunner):
             time.sleep(0.01)
 
     def run_async(self, coro: Coroutine) -> Any:
-        if self._thread is None or not self._thread.is_alive() or self._loop is None or not self._loop.is_running():
+        if (
+            self._thread is None
+            or not self._thread.is_alive()
+            or self._loop is None
+            or not self._loop.is_running()
+        ):
             self._start_event_loop()
 
         if self._loop is None:
@@ -74,6 +79,26 @@ class ThreadedAsyncRunner(AsyncRunner):
             self._loop.call_soon_threadsafe(self._loop.stop)
         if self._thread:
             self._thread.join(timeout=1)
+
+
+_runner_instance: Optional[AsyncRunner] = None
+_runner_lock = threading.Lock()
+
+
+def get_async_runner() -> AsyncRunner:
+    """Gets the singleton instance of the async runner, creating it if necessary."""
+    global _runner_instance
+    if _runner_instance is None:
+        with _runner_lock:
+            if _runner_instance is None:
+                runner_mode = os.getenv("ASYNC_RUNNER_MODE", "threaded").lower()
+                if runner_mode == "threaded":
+                    print("INFO: Creating multi-threaded AsyncRunner.")
+                    _runner_instance = ThreadedAsyncRunner()
+                else:
+                    print("INFO: Creating simple, single-threaded AsyncRunner.")
+                    _runner_instance = SimpleAsyncRunner()
+    return _runner_instance
 
 
 # Use an environment variable to select the runner mode.
