@@ -9,6 +9,8 @@ categories:
 
 # Can AI Tell "Why?": Probing Causal Reasoning in ARLA
 
+![Berry Simulation](../assets/berry_sim.gif)
+
 Welcome back to the ARLA Development Blog! [In our last post](https://renbytes.github.io/arla/blog/2025/08/21/from-schelling-to-psyche-a-technical-look-at-validating-arla/), we used the classic Schelling Model as a "smoke test" to validate our engine's core mechanics. With that foundation in place, we can now ask deeper questions. Can we build agents that move beyond simple pattern matching to understand true cause and effect?
 
 To find out, we designed the Berry Toxicity Experiment. The intuition is simple. Imagine you're playing a video game and you learn that blue potions give you health. You'd drink every one you see. But what if the game suddenly changes the rules halfway through? Now, blue potions are poisonous, but only when you're standing near water. A simple bot might keep drinking them and fail, but a truly intelligent player would notice the new pattern and figure out the new, more complex rule. That's exactly what we're testing here: can our AI agents be the smart player?
