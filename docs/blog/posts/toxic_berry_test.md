@@ -40,6 +40,8 @@ As expected, this simple agent performs well until the rules change. The MLflow 
 
 At step 1000, the `average_agent_health` plummets, leading to a sharp drop in `active_agents`. The `causal_understanding_score` flatlines near zero, proving the agent failed to learn the new rule.
 
+![Baseline Agents](../assets/berry_sim_baseline.png)
+
 ## Phase 2: The Causal Agent - Learning to See
 
 Our experimental group is the Causal-QLearning-Agent. It uses a sophisticated Q-learning model to make decisions. Crucially, we gave this agent "senses" by equipping it with a `PerceptionComponent` and a more advanced state encoder.
@@ -71,11 +73,11 @@ class BerryStateEncoder(StateEncoderInterface):
         return np.array(agent_state_vector + perception_vector)
 ```
 
-## The A/B Test: A Clear Winner
-
-![Baseline Agents](../assets/berry_sim_baseline.png)
+At step 1000, the `average_agent_health` falls then recovers and is not enough to kill off as many agents `active_agents`. The `causal_understanding_score` spikes then remains higher-roughly 2X higher than our baseline agents-proving the agent failed to learn the new rule.
 
 ![Causal Agents](../assets/berry_sim_causal.png)
+
+## The A/B Test: A Clear Winner
 
 The results are conclusive.
 
