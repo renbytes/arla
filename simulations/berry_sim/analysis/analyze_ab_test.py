@@ -53,7 +53,7 @@ def fetch_experiment_data(engine, experiment_name: str) -> pd.DataFrame:
     Returns:
         A pandas DataFrame containing the agent type and final health for each run.
     """
-    # CORRECTED: This query now selects data from the two most recent experiments
+    # This query selects data from the two most recent experiments
     # matching the name to correctly capture both halves of the A/B test.
     query = text(
         """

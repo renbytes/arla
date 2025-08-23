@@ -122,12 +122,12 @@ cli:
 ## test: Run the full pytest suite inside the container.
 test:
 	@echo "🧪 Running pytest test suite..."
-	@docker compose exec app pytest
+	@poetry run pytest
 
 ## lint: Run the Ruff linter to check for code style issues.
 lint:
 	@echo "🎨 Linting with Ruff..."
-	@docker compose exec app ruff check .
+	@poetry run ruff check .
 
 ## help: Display this help message.
 help:

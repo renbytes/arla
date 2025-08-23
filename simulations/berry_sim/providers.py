@@ -45,7 +45,7 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
 
     def update_perception(
         self,
-        _entity_id: str,  # CORRECTED: Marked as unused
+        _entity_id: str,
         components: Dict[Type[Component], Component],
         sim_state: Any,
         _current_tick: int,
@@ -58,7 +58,9 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
         perc_comp = components.get(PerceptionComponent)
         env = sim_state.environment
 
-        if not all([pos_comp, perc_comp, isinstance(env, BerryWorldEnvironment)]):
+        # CORRECTED: Use explicit checks to satisfy mypy that these components
+        # are not None in the code block that follows.
+        if not pos_comp or not perc_comp or not isinstance(env, BerryWorldEnvironment):
             return
 
         perc_comp.visible_entities.clear()
@@ -189,8 +191,12 @@ class QLearningDecisionSelector(DecisionSelectorInterface):
                 0
             )
 
+            entity_components = sim_state.entities.get(entity_id)
+            if not entity_components:
+                return random.choice(possible_actions)
+
             internal_state = self.state_encoder.encode_internal_state(
-                sim_state.entities[entity_id], self.config
+                entity_components, self.config
             )
             internal_tensor = torch.tensor(
                 internal_state, dtype=torch.float32
@@ -272,7 +278,6 @@ class BerryStateNodeEncoder(StateNodeEncoderInterface):
 class BerryStateEncoder(StateEncoderInterface):
     """
     Encodes the simulation state into a feature vector for the Q-Learning model.
-    This version now includes sensory information about nearby berries.
     """
 
     def __init__(self, simulation_state: Any):
@@ -286,7 +291,7 @@ class BerryStateEncoder(StateEncoderInterface):
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """
-        Creates a feature vector including agent vitals and sensory data.
+        Creates a feature vector including agent health and sensory data.
         """
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         health_comp = sim_state.get_component(entity_id, HealthComponent)
@@ -303,17 +308,24 @@ class BerryStateEncoder(StateEncoderInterface):
             if health_comp
             else 0.5
         )
-
         agent_state_vector = [agent_x, agent_y, health]
 
-        nearest_berries = {"red": None, "blue": None, "yellow": None}
-        if perc_comp:
+        nearest_berries: Dict[str, Optional[Dict[str, Any]]] = {
+            "red": None,
+            "blue": None,
+            "yellow": None,
+        }
+        if perc_comp and perc_comp.visible_entities:
             for entity_data in perc_comp.visible_entities.values():
                 if entity_data.get("type") == "berry":
                     b_type = entity_data["berry_type"]
+
+                    # CORRECTED: This more explicit check is safer and satisfies mypy.
+                    # It checks for None before attempting to access the 'distance' key.
+                    current_nearest = nearest_berries.get(b_type)
                     if (
-                        nearest_berries.get(b_type) is None
-                        or entity_data["distance"] < nearest_berries[b_type]["distance"]
+                        current_nearest is None
+                        or entity_data["distance"] < current_nearest["distance"]
                     ):
                         nearest_berries[b_type] = entity_data
 
@@ -322,11 +334,9 @@ class BerryStateEncoder(StateEncoderInterface):
             berry_data = nearest_berries[berry_type]
             if berry_data and pos_comp and perc_comp:
                 dist = berry_data["distance"] / perc_comp.vision_range
-
                 dx = berry_data["position"][0] - pos_comp.x
                 dy = berry_data["position"][1] - pos_comp.y
                 angle = math.atan2(dy, dx) / math.pi
-
                 perception_vector.extend([dist, angle])
             else:
                 perception_vector.extend([1.0, 0.0])

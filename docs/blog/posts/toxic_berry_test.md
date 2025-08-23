@@ -1,5 +1,5 @@
 ---
-date: 2025-08-22
+date: 2025-08-23
 authors:
   - bordumb
 categories:
@@ -110,7 +110,7 @@ The full implementation is available in the simulations/berry_sim/ directory. We
 
 ```bash
 # Run the full A/B test yourself!
-make run FILE=simulations/berry_sim/experiments/causal_ab_test.yml
+make run FILE=simulations/berry_sim/experiments/causal_ab_test.yml WORKERS=8
 ```
 
 You can check the ongoing metrics at [http://localhost:5001/](http://localhost:5001/)
