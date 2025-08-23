@@ -1,0 +1,3156 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="ARLA is a framework for building complex, multi-agent simulations with a focus on emergent behavior and artificial intelligence.">
+      
+      
+        <meta name="author" content="Bordumb / Renbytes">
+      
+      
+        <link rel="canonical" href="https://renbytes.github.io/arla/api/agent-engine/">
+      
+      
+        <link rel="prev" href="../agent-core/">
+      
+      
+        <link rel="next" href="../../blog/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>agent-engine - Affective Reinforcement Learning Agents (ARLA)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference-agent-engine" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Affective Reinforcement Learning Agents (ARLA)" class="md-header__button md-logo" aria-label="Affective Reinforcement Learning Agents (ARLA)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Affective Reinforcement Learning Agents (ARLA)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              agent-engine
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/renbytes/arla" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    arla
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tutorials/first-simulation/" class="md-tabs__link">
+          
+  
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/installation/" class="md-tabs__link">
+          
+  
+  
+  User Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+  Developer Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../contributing/setup/" class="md-tabs__link">
+          
+  
+  
+  Contributor's Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../agent-core/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../blog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  ARLA Development Blog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Affective Reinforcement Learning Agents (ARLA)" class="md-nav__button md-logo" aria-label="Affective Reinforcement Learning Agents (ARLA)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Affective Reinforcement Learning Agents (ARLA)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/renbytes/arla" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    arla
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Tutorials
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/first-simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Building Your First Simulation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation & Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/running-simulations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running Simulations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/understanding-output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Understanding the Output
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Developer Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Developer Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/creating-actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating a New Action
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/creating-systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating a New System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/event-bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The Event Bus
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Contributor's Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Contributor's Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Development Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/style-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Coding Standards & Style
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running Tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    agent-core
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    agent-engine
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    agent-engine
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-simulation-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Simulation Engine
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Simulation Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simulationmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SimulationManager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SimulationManager
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SimulationManager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.load_state" class="md-nav__link">
+    <span class="md-ellipsis">
+      load_state
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.register_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      register_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.save_state" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_state
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#systemmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SystemManager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SystemManager
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SystemManager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.get_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.register_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      register_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.update_all" class="md-nav__link">
+    <span class="md-ellipsis">
+      update_all
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cognitive-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cognitive Systems
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cognitive Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reflectionsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReflectionSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReflectionSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ReflectionSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.on_action_executed_for_chunking" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_action_executed_for_chunking
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.on_reflection_requested" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_reflection_requested
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.update_for_entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      update_for_entity
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qlearningsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      QLearningSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      QLearningSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QLearningSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem.on_action_executed" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_action_executed
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identitysystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      IdentitySystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      IdentitySystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IdentitySystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem.on_reflection_completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_reflection_completed
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goalsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      GoalSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      GoalSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GoalSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem.on_update_goals_event" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_update_goals_event
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-cognitive-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Cognitive Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Cognitive Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#emotional-dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Emotional Dynamics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#causal-reasoning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Causal Reasoning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Architecture
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-integration-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Integration Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Integration Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#event-driven-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event-Driven Communication
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-and-scalability" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance and Scalability
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance and Scalability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#concurrent-system-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Concurrent System Execution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-and-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory and State Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-integration-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Integration Optimization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-and-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing and Debugging
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing and Debugging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cognitive-system-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cognitive System Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-integration-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Integration Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ARLA Development Blog
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core-simulation-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Simulation Engine
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Simulation Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simulationmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SimulationManager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SimulationManager
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SimulationManager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.load_state" class="md-nav__link">
+    <span class="md-ellipsis">
+      load_state
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.register_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      register_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.engine.SimulationManager.save_state" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_state
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#systemmanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SystemManager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager" class="md-nav__link">
+    <span class="md-ellipsis">
+      SystemManager
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SystemManager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.get_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.register_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      register_system
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.simulation.system.SystemManager.update_all" class="md-nav__link">
+    <span class="md-ellipsis">
+      update_all
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cognitive-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cognitive Systems
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cognitive Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reflectionsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReflectionSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReflectionSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ReflectionSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.on_action_executed_for_chunking" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_action_executed_for_chunking
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.on_reflection_requested" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_reflection_requested
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.reflection_system.ReflectionSystem.update_for_entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      update_for_entity
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#qlearningsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      QLearningSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      QLearningSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="QLearningSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem.on_action_executed" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_action_executed
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.q_learning_system.QLearningSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identitysystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      IdentitySystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      IdentitySystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IdentitySystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem.on_reflection_completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_reflection_completed
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.identity_system.IdentitySystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goalsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      GoalSystem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      GoalSystem
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GoalSystem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem.on_update_goals_event" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_update_goals_event
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent_engine.systems.goal_system.GoalSystem.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      update
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-cognitive-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Cognitive Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Cognitive Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#emotional-dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Emotional Dynamics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#causal-reasoning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Causal Reasoning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Architecture
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-integration-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Integration Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Integration Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#event-driven-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event-Driven Communication
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Integration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-and-scalability" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance and Scalability
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance and Scalability">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#concurrent-system-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Concurrent System Execution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-and-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory and State Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-integration-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Integration Optimization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-and-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing and Debugging
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing and Debugging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cognitive-system-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cognitive System Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-integration-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Integration Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference-agent-engine">API Reference: agent-engine</h1>
+<p>The <code>agent-engine</code> library contains the core cognitive systems and simulation orchestration components that bring ARLA agents to life. These classes implement sophisticated behavioral models while remaining world-agnostic through the provider interface system.</p>
+<div class="admonition info">
+<p class="admonition-title">Cognitive Architecture</p>
+<p>The agent-engine implements a modular cognitive architecture inspired by theories from psychology and cognitive science, including memory consolidation, emotional appraisal, identity formation, and causal reasoning.</p>
+</div>
+<h2 id="core-simulation-engine">Core Simulation Engine</h2>
+<p>The simulation engine orchestrates the entire agent lifecycle, from initialization to shutdown, managing concurrent system execution and state persistence.</p>
+<h3 id="simulationmanager">SimulationManager</h3>
+<p>The primary orchestrator that coordinates all simulation systems and manages the simulation lifecycle.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.simulation.engine.SimulationManager" class="doc doc-heading">
+            <code>agent_engine.simulation.engine.SimulationManager</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>This manager is responsible for stepping through time, processing entity
+decisions, and updating all registered systems.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.engine.SimulationManager.load_state" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">load_state</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Loads the entire simulation state from a checkpoint file.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.engine.SimulationManager.register_system" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">register_system</span><span class="p">(</span><span class="n">system_class</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A convenience method to register a system with the SystemManager.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.engine.SimulationManager.run" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">start_step</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">end_step</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Executes the main ECS simulation loop asynchronously.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.engine.SimulationManager.save_state" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">save_state</span><span class="p">(</span><span class="n">tick</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Saves the current simulation state to a file.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Key Responsibilities:</strong></p>
+<ul>
+<li><strong>System Registration</strong>: Register and initialize all cognitive and world systems</li>
+<li><strong>Lifecycle Management</strong>: Handle simulation startup, execution, and shutdown</li>
+<li><strong>State Coordination</strong>: Manage state persistence and checkpoint creation</li>
+<li><strong>Error Recovery</strong>: Handle system failures gracefully with rollback capabilities</li>
+</ul>
+<h3 id="systemmanager">SystemManager</h3>
+<p>Manages the concurrent execution of multiple systems with dependency resolution and performance monitoring.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.simulation.system.SystemManager" class="doc doc-heading">
+            <code>agent_engine.simulation.system.SystemManager</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+
+
+        <p>Manages the registration, initialization, and execution of all systems
+using a specified runner (e.g., AsyncSystemRunner).</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.system.SystemManager.get_system" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_system</span><span class="p">(</span><span class="n">system_type</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Retrieves a system instance of the given type.
+NOTE: This should be used sparingly, primarily for debugging or post-simulation
+analysis. Prefer using the EventBus for inter-system communication.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.system.SystemManager.register_system" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">register_system</span><span class="p">(</span><span class="n">system_class</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Instantiates and registers a system, passing extra keyword arguments
+to its constructor. This is crucial for dependency injection.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.simulation.system.SystemManager.update_all" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update_all</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Executes the update method for all registered systems using the runner.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Execution Strategies:</strong></p>
+<ul>
+<li><strong>Asynchronous</strong>: Concurrent system execution for maximum performance</li>
+<li><strong>Serial</strong>: Deterministic execution for debugging and reproducibility</li>
+<li><strong>Hybrid</strong>: Mixed execution with critical systems running synchronously</li>
+</ul>
+<hr />
+<h2 id="cognitive-systems">Cognitive Systems</h2>
+<p>These systems implement the core intelligence of ARLA agents, from basic decision-making to complex social reasoning.</p>
+<h3 id="reflectionsystem">ReflectionSystem</h3>
+<p>Implements metacognitive capabilities, enabling agents to analyze their experiences and form narrative memories.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.systems.reflection_system.ReflectionSystem" class="doc doc-heading">
+            <code>agent_engine.systems.reflection_system.ReflectionSystem</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="agent_engine.simulation.system.System" href="../agent-core/#agent_engine.simulation.system.System">System</a></code></p>
+
+
+        <p>Relies on an injected NarrativeContextProviderInterface for world-specific
+narrative generation, improving decoupling.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.reflection_system.ReflectionSystem.on_action_executed_for_chunking" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_action_executed_for_chunking</span><span class="p">(</span><span class="n">event_data</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Buffers events for each agent to be chunked into episodes later.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.reflection_system.ReflectionSystem.on_reflection_requested" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_reflection_requested</span><span class="p">(</span><span class="n">event_data</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Handles an explicit request for reflection from another system.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.reflection_system.ReflectionSystem.update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Periodically triggers the reflection process for active agents.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.reflection_system.ReflectionSystem.update_for_entity" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update_for_entity</span><span class="p">(</span><span class="n">entity_id</span><span class="p">,</span> <span class="n">current_tick</span><span class="p">,</span> <span class="n">is_final_reflection</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Allows forcing a reflection cycle for a specific entity.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Reflection Process:</strong></p>
+<pre class="mermaid"><code>graph TD
+    A[Experience Buffer] --&gt; B[Pattern Recognition]
+    B --&gt; C[LLM Analysis]
+    C --&gt; D[Memory Consolidation]
+    D --&gt; E[Insight Generation]
+    E --&gt; F[Goal Updates]</code></pre>
+<p><strong>Core Functions:</strong></p>
+<ul>
+<li><strong>Experience Analysis</strong>: Process recent actions and outcomes for patterns</li>
+<li><strong>Memory Consolidation</strong>: Convert experiences into lasting narrative memories</li>
+<li><strong>Insight Generation</strong>: Extract learnings and update agent beliefs</li>
+<li><strong>Goal Adaptation</strong>: Modify agent objectives based on reflection insights</li>
+</ul>
+<h3 id="qlearningsystem">QLearningSystem</h3>
+<p>Implements utility-based decision-making with neural network function approximation and experience replay.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.systems.q_learning_system.QLearningSystem" class="doc doc-heading">
+            <code>agent_engine.systems.q_learning_system.QLearningSystem</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="agent_engine.simulation.system.System" href="../agent-core/#agent_engine.simulation.system.System">System</a></code></p>
+
+
+        <p>Manages the Q-learning process for all agents, now enhanced with causal inference.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.q_learning_system.QLearningSystem.on_action_executed" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_action_executed</span><span class="p">(</span><span class="n">event_data</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Event handler that triggers the Q-learning update step.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.q_learning_system.QLearningSystem.update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Caches the current state features for each active learning agent.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Learning Architecture:</strong></p>
+<ul>
+<li><strong>State Encoding</strong>: Convert world state to feature vectors via providers</li>
+<li><strong>Action Valuation</strong>: Estimate expected utility for all available actions</li>
+<li><strong>Policy Updates</strong>: Update neural network weights based on prediction errors</li>
+<li><strong>Exploration Strategy</strong>: Balance exploitation with exploration using ε-greedy</li>
+</ul>
+<p><strong>Integration Features:</strong></p>
+<ul>
+<li><strong>Causal Rewards</strong>: Incorporates causally-adjusted rewards from CausalGraphSystem</li>
+<li><strong>Emotional Modulation</strong>: Learning rates affected by emotional state</li>
+<li><strong>Value Alignment</strong>: Rewards shaped by agent's personal value system</li>
+</ul>
+<h3 id="identitysystem">IdentitySystem</h3>
+<p>Manages multi-dimensional agent identity across social, competence, moral, relational, and agency domains.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.systems.identity_system.IdentitySystem" class="doc doc-heading">
+            <code>agent_engine.systems.identity_system.IdentitySystem</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="agent_engine.simulation.system.System" href="../agent-core/#agent_engine.simulation.system.System">System</a></code></p>
+
+
+        <p>Updates an agent's multi-domain identity based on narrative reflections.
+This system is event-driven, world-agnostic, and implements the identity update model.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.identity_system.IdentitySystem.on_reflection_completed" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_reflection_completed</span><span class="p">(</span><span class="n">event_data</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Event handler that orchestrates the full identity update cycle upon
+receiving a completed reflection. It receives a generic context object
+and passes it down the chain.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.identity_system.IdentitySystem.update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>This system is purely event-driven.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Identity Domains:</strong></p>
+<div class="grid cards">
+<ul>
+<li>
+<p><strong>Social Identity</strong></p>
+<hr />
+<p>Group membership, reputation, and social standing within the community.</p>
+</li>
+<li>
+<p><strong>Competence Identity</strong></p>
+<hr />
+<p>Skills, abilities, and perceived effectiveness in various tasks.</p>
+</li>
+<li>
+<p><strong>Moral Identity</strong></p>
+<hr />
+<p>Ethical principles, values, and moral standing.</p>
+</li>
+<li>
+<p><strong>Relational Identity</strong></p>
+<hr />
+<p>Relationships with other agents and social connections.</p>
+</li>
+<li>
+<p><strong>Agency Identity</strong></p>
+<hr />
+<p>Sense of autonomy, control, and self-efficacy.</p>
+</li>
+</ul>
+</div>
+<p><strong>Identity Dynamics:</strong></p>
+<ul>
+<li><strong>Experience Integration</strong>: Update identity based on action outcomes</li>
+<li><strong>Social Feedback</strong>: Incorporate reactions from other agents</li>
+<li><strong>Consistency Maintenance</strong>: Resolve conflicts between identity domains</li>
+<li><strong>Adaptive Flexibility</strong>: Balance stability with growth and change</li>
+</ul>
+<h3 id="goalsystem">GoalSystem</h3>
+<p>Implements dynamic goal generation, prioritization, and achievement tracking.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="agent_engine.systems.goal_system.GoalSystem" class="doc doc-heading">
+            <code>agent_engine.systems.goal_system.GoalSystem</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="agent_engine.simulation.system.System" href="../agent-core/#agent_engine.simulation.system.System">System</a></code></p>
+
+
+        <p>Manages an agent's goal creation, selection, and refinement based on its
+experiences and reflections. This system is world-agnostic.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.goal_system.GoalSystem.on_update_goals_event" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_update_goals_event</span><span class="p">(</span><span class="n">event_data</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Triggered after a reflection, this orchestrates the goal update cycle.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="agent_engine.systems.goal_system.GoalSystem.update" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>This system is purely event-driven and has no per-tick logic.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><strong>Goal Lifecycle:</strong></p>
+<pre class="mermaid"><code>graph LR
+    A[Goal Generation] --&gt; B[Prioritization]
+    B --&gt; C[Plan Formation]
+    C --&gt; D[Execution]
+    D --&gt; E[Progress Tracking]
+    E --&gt; F[Achievement/Adaptation]</code></pre>
+<p><strong>Goal Types:</strong></p>
+<ul>
+<li><strong>Survival Goals</strong>: Basic needs like health, energy, and safety</li>
+<li><strong>Social Goals</strong>: Relationship building, reputation, and cooperation</li>
+<li><strong>Achievement Goals</strong>: Skill development, resource accumulation, and mastery</li>
+<li><strong>Exploratory Goals</strong>: Curiosity-driven exploration and learning</li>
+</ul>
+<hr />
+<h2 id="advanced-cognitive-features">Advanced Cognitive Features</h2>
+<h3 id="emotional-dynamics">Emotional Dynamics</h3>
+<p>The AffectSystem implements sophisticated emotional modeling based on appraisal theory:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Example of emotional appraisal calculation</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">calculate_emotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">agent_goals</span><span class="p">,</span> <span class="n">agent_values</span><span class="p">):</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="sd">    Emotion emerges from the intersection of:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="sd">    - Goal relevance (does this matter to me?)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="sd">    - Outcome controllability (can I influence this?)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="sd">    - Value alignment (does this match my values?)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="sd">    - Social context (how do others see this?)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">appraisal_scores</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="s1">&#39;goal_relevance&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assess_goal_relevance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">agent_goals</span><span class="p">),</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="s1">&#39;controllability&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assess_controllability</span><span class="p">(</span><span class="n">event</span><span class="p">),</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="s1">&#39;value_alignment&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assess_value_alignment</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">agent_values</span><span class="p">),</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="s1">&#39;social_approval&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assess_social_context</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="p">}</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="c1"># Emotions emerge from specific appraisal patterns</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="k">if</span> <span class="n">appraisal_scores</span><span class="p">[</span><span class="s1">&#39;goal_relevance&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.7</span> <span class="ow">and</span> <span class="n">appraisal_scores</span><span class="p">[</span><span class="s1">&#39;controllability&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.3</span><span class="p">:</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="k">return</span> <span class="s1">&#39;frustration&#39;</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="k">elif</span> <span class="n">appraisal_scores</span><span class="p">[</span><span class="s1">&#39;value_alignment&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.8</span> <span class="ow">and</span> <span class="n">appraisal_scores</span><span class="p">[</span><span class="s1">&#39;social_approval&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.6</span><span class="p">:</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="k">return</span> <span class="s1">&#39;pride&#39;</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="c1"># ... additional emotion patterns</span>
+</code></pre></div>
+<h3 id="causal-reasoning">Causal Reasoning</h3>
+<p>The CausalGraphSystem builds formal causal models using the DoWhy library:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Example of causal effect estimation</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">estimate_action_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="sd">    Estimate the causal effect of an action using do-calculus.</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="sd">    This answers: &quot;What would happen if the agent were forced</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="sd">    to take this action, controlling for confounding factors?&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">causal_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_agent_causal_model</span><span class="p">(</span><span class="n">agent_id</span><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">causal_model</span><span class="p">:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="k">return</span> <span class="mf">0.0</span>  <span class="c1"># Fall back to observational data</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="c1"># Perform causal intervention</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">causal_effect</span> <span class="o">=</span> <span class="n">causal_model</span><span class="o">.</span><span class="n">estimate_effect</span><span class="p">(</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        <span class="n">treatment_value</span><span class="o">=</span><span class="n">action</span><span class="p">,</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        <span class="n">outcome</span><span class="o">=</span><span class="s1">&#39;reward&#39;</span><span class="p">,</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="n">method</span><span class="o">=</span><span class="s1">&#39;iv&#39;</span>  <span class="c1"># Instrumental variables</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="p">)</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="k">return</span> <span class="n">causal_effect</span><span class="o">.</span><span class="n">value</span>
+</code></pre></div>
+<h3 id="memory-architecture">Memory Architecture</h3>
+<p>Agents maintain multiple memory systems with different retention and access patterns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MemoryComponent</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Multi-layered memory architecture.&quot;&quot;&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="c1"># Working memory for immediate context</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">working_memory</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Experience</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="c1"># Episodic memory for specific experiences</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">episodic_memory</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Episode</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="c1"># Semantic memory for general knowledge</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">semantic_memory</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ConceptNode</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="c1"># Emotional memories with stronger retention</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">emotional_memories</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">EmotionalEpisode</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="c1"># Social memories about other agents</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">social_memory</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AgentSchema</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</code></pre></div>
+<hr />
+<h2 id="system-integration-patterns">System Integration Patterns</h2>
+<h3 id="event-driven-communication">Event-Driven Communication</h3>
+<p>Systems communicate exclusively through the event bus, enabling loose coupling:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CognitivePipeline</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Example of how cognitive systems coordinate.&quot;&quot;&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_bus</span><span class="p">):</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span> <span class="o">=</span> <span class="n">event_bus</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="c1"># Systems subscribe to relevant events</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;action_executed&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">affect_system</span><span class="o">.</span><span class="n">process_outcome</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;action_executed&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_learning_system</span><span class="o">.</span><span class="n">update_policy</span><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;reflection_completed&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">goal_system</span><span class="o">.</span><span class="n">update_goals</span><span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;identity_changed&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">social_system</span><span class="o">.</span><span class="n">update_reputation</span><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_agent_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tick</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Coordinate cognitive processing for one agent.&quot;&quot;&quot;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>        <span class="c1"># 1. Decision making</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;decision_requested&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>            <span class="s2">&quot;agent_id&quot;</span><span class="p">:</span> <span class="n">agent_id</span><span class="p">,</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>            <span class="s2">&quot;tick&quot;</span><span class="p">:</span> <span class="n">tick</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        <span class="p">})</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>        <span class="c1"># 2. Action execution happens in world systems</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="c1"># 3. Outcome processing happens automatically via subscriptions</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="c1"># 4. Reflection triggered periodically</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>        <span class="k">if</span> <span class="n">tick</span> <span class="o">%</span> <span class="mi">50</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Reflect every 50 ticks</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">event_bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;reflection_triggered&quot;</span><span class="p">,</span> <span class="p">{</span>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>                <span class="s2">&quot;agent_id&quot;</span><span class="p">:</span> <span class="n">agent_id</span><span class="p">,</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>                <span class="s2">&quot;tick&quot;</span><span class="p">:</span> <span class="n">tick</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>            <span class="p">})</span>
+</code></pre></div>
+<h3 id="provider-integration">Provider Integration</h3>
+<p>Cognitive systems access world data through provider interfaces:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ReflectionSystem</span><span class="p">(</span><span class="n">System</span><span class="p">):</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Example of provider usage in cognitive systems.&quot;&quot;&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_state</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">cognitive_scaffold</span><span class="p">):</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">simulation_state</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">cognitive_scaffold</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="c1"># Providers injected at runtime</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vitality_provider</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">narrative_provider</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_providers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">providers</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Dependency injection of world-specific providers.&quot;&quot;&quot;</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">vitality_provider</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vitality&#39;</span><span class="p">)</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">narrative_provider</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;narrative&#39;</span><span class="p">)</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;state_encoder&#39;</span><span class="p">)</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">generate_reflection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate reflection using injected providers.&quot;&quot;&quot;</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="c1"># Get agent components</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">get_entity_components</span><span class="p">(</span><span class="n">agent_id</span><span class="p">)</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>        <span class="c1"># Use providers to extract world-specific context</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>        <span class="n">vitality</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vitality_provider</span><span class="o">.</span><span class="n">get_normalized_vitality_metrics</span><span class="p">(</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>            <span class="n">agent_id</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>        <span class="p">)</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>        <span class="n">narrative_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">narrative_provider</span><span class="o">.</span><span class="n">get_narrative_context</span><span class="p">(</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>            <span class="n">agent_id</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>        <span class="p">)</span>
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>        <span class="c1"># Generate reflection prompt with LLM</span>
+<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>        <span class="n">reflection</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">cognitive_scaffold</span><span class="o">.</span><span class="n">generate_reflection</span><span class="p">(</span>
+<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>            <span class="n">vitality_metrics</span><span class="o">=</span><span class="n">vitality</span><span class="p">,</span>
+<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>            <span class="n">narrative_context</span><span class="o">=</span><span class="n">narrative_context</span><span class="p">,</span>
+<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>            <span class="n">recent_experiences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_recent_experiences</span><span class="p">(</span><span class="n">agent_id</span><span class="p">)</span>
+<a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>        <span class="p">)</span>
+<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>
+<a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a>        <span class="k">return</span> <span class="n">reflection</span>
+</code></pre></div>
+<hr />
+<h2 id="performance-and-scalability">Performance and Scalability</h2>
+<h3 id="concurrent-system-execution">Concurrent System Execution</h3>
+<p>The agent-engine supports multiple execution strategies optimized for different scenarios:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># High-performance async execution</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">AsyncSystemRunner</span><span class="p">(</span><span class="n">systems</span><span class="p">,</span> <span class="n">event_bus</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">await</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_tick</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Deterministic serial execution for debugging</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">SerialSystemRunner</span><span class="p">(</span><span class="n">systems</span><span class="p">,</span> <span class="n">event_bus</span><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">await</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_tick</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1"># Hybrid execution with system priorities</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">runner</span> <span class="o">=</span> <span class="n">HybridSystemRunner</span><span class="p">(</span><span class="n">systems</span><span class="p">,</span> <span class="n">event_bus</span><span class="p">,</span> <span class="n">priorities</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="s1">&#39;ActionSystem&#39;</span><span class="p">:</span> <span class="s1">&#39;sync&#39;</span><span class="p">,</span>      <span class="c1"># Critical path</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="s1">&#39;ReflectionSystem&#39;</span><span class="p">:</span> <span class="s1">&#39;async&#39;</span><span class="p">,</span> <span class="c1"># Can run concurrently</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="s1">&#39;LoggingSystem&#39;</span><span class="p">:</span> <span class="s1">&#39;background&#39;</span> <span class="c1"># Low priority</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="p">})</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="k">await</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_tick</span><span class="p">(</span><span class="n">current_tick</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="memory-and-state-management">Memory and State Management</h3>
+<ul>
+<li><strong>Component Pooling</strong>: Reuse component instances to reduce allocation overhead</li>
+<li><strong>Lazy Loading</strong>: Load memories and complex state only when needed</li>
+<li><strong>State Compression</strong>: Compress historical data using efficient encoding</li>
+<li><strong>Garbage Collection</strong>: Automatically clean up old memories and unused state</li>
+</ul>
+<h3 id="llm-integration-optimization">LLM Integration Optimization</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CognitiveScaffold</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Optimized LLM integration with caching and batching.&quot;&quot;&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">prompt_cache</span> <span class="o">=</span> <span class="n">LRUCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">batch_queue</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">response_futures</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">generate_reflection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate reflection with caching and batching.&quot;&quot;&quot;</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="c1"># Check cache first</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>        <span class="n">cache_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hash_context</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>        <span class="k">if</span> <span class="n">cache_key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_cache</span><span class="p">:</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_cache</span><span class="p">[</span><span class="n">cache_key</span><span class="p">]</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="c1"># Add to batch queue</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="n">request_id</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">batch_queue</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">request_id</span><span class="p">,</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;reflection&#39;</span><span class="p">,</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>            <span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="n">context</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        <span class="p">})</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>        <span class="c1"># Process batch when full or after timeout</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_queue</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">10</span><span class="p">:</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_batch</span><span class="p">()</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>        <span class="c1"># Return future for async completion</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>        <span class="n">future</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Future</span><span class="p">()</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">response_futures</span><span class="p">[</span><span class="n">request_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">future</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">future</span>
+</code></pre></div>
+<hr />
+<h2 id="testing-and-debugging">Testing and Debugging</h2>
+<h3 id="cognitive-system-testing">Cognitive System Testing</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mock</span><span class="p">,</span> <span class="n">AsyncMock</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestReflectionSystem</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Example test patterns for cognitive systems.&quot;&quot;&quot;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">reflection_system</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="n">mock_state</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="n">mock_config</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="n">mock_scaffold</span> <span class="o">=</span> <span class="n">AsyncMock</span><span class="p">()</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="n">system</span> <span class="o">=</span> <span class="n">ReflectionSystem</span><span class="p">(</span><span class="n">mock_state</span><span class="p">,</span> <span class="n">mock_config</span><span class="p">,</span> <span class="n">mock_scaffold</span><span class="p">)</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        <span class="c1"># Inject mock providers</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        <span class="n">system</span><span class="o">.</span><span class="n">set_providers</span><span class="p">({</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>            <span class="s1">&#39;vitality&#39;</span><span class="p">:</span> <span class="n">Mock</span><span class="p">(),</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>            <span class="s1">&#39;narrative&#39;</span><span class="p">:</span> <span class="n">Mock</span><span class="p">(),</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>            <span class="s1">&#39;state_encoder&#39;</span><span class="p">:</span> <span class="n">Mock</span><span class="p">()</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>        <span class="p">})</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>        <span class="k">return</span> <span class="n">system</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_reflection_generation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reflection_system</span><span class="p">):</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Test reflection generation with mocked dependencies.&quot;&quot;&quot;</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>        <span class="c1"># Setup mock responses</span>
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>        <span class="n">reflection_system</span><span class="o">.</span><span class="n">vitality_provider</span><span class="o">.</span><span class="n">get_normalized_vitality_metrics</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>            <span class="s1">&#39;health_norm&#39;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>            <span class="s1">&#39;energy_norm&#39;</span><span class="p">:</span> <span class="mf">0.6</span>
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>        <span class="p">}</span>
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>        <span class="n">reflection_system</span><span class="o">.</span><span class="n">narrative_provider</span><span class="o">.</span><span class="n">get_narrative_context</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>            <span class="s1">&#39;recent_events&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Won a battle&#39;</span><span class="p">,</span> <span class="s1">&#39;Found treasure&#39;</span><span class="p">],</span>
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>            <span class="s1">&#39;social_context&#39;</span><span class="p">:</span> <span class="s1">&#39;Respected by peers&#39;</span>
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>        <span class="p">}</span>
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>        <span class="c1"># Test reflection generation</span>
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>        <span class="n">reflection</span> <span class="o">=</span> <span class="k">await</span> <span class="n">reflection_system</span><span class="o">.</span><span class="n">generate_reflection</span><span class="p">(</span><span class="s2">&quot;test_agent&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a>
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>        <span class="k">assert</span> <span class="n">reflection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reflection</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="system-integration-testing">System Integration Testing</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_cognitive_pipeline_integration</span><span class="p">():</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test full cognitive pipeline with multiple systems.&quot;&quot;&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="c1"># Setup simulation environment</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">manager</span> <span class="o">=</span> <span class="n">SimulationManager</span><span class="p">(</span><span class="n">test_config</span><span class="p">)</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">register_system</span><span class="p">(</span><span class="n">ActionSystem</span><span class="p">)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">register_system</span><span class="p">(</span><span class="n">ReflectionSystem</span><span class="p">)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">register_system</span><span class="p">(</span><span class="n">GoalSystem</span><span class="p">)</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">register_system</span><span class="p">(</span><span class="n">QLearningSystem</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="c1"># Create test agent with required components</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">agent_id</span> <span class="o">=</span> <span class="s2">&quot;test_agent&quot;</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">MemoryComponent</span><span class="p">())</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">IdentityComponent</span><span class="p">())</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">manager</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">GoalComponent</span><span class="p">())</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    <span class="c1"># Run simulation for several ticks</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>    <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">run_tick</span><span class="p">(</span><span class="n">tick</span><span class="p">)</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="c1"># Verify cognitive state updates</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>    <span class="n">memory_comp</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">get_component</span><span class="p">(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">MemoryComponent</span><span class="p">)</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">memory_comp</span><span class="o">.</span><span class="n">episodic_memory</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="n">goal_comp</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">simulation_state</span><span class="o">.</span><span class="n">get_component</span><span class="p">(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">GoalComponent</span><span class="p">)</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">goal_comp</span><span class="o">.</span><span class="n">active_goals</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</code></pre></div>
+<p>The agent-engine provides a sophisticated yet modular cognitive architecture that can be adapted for a wide range of simulation scenarios while maintaining high performance and extensibility.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025 Bordumb / Renbytes
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/renbytes" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/arla/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.instant", "navigation.top", "search.suggest", "search.highlight", "content.tabs.link", "content.code.annotation", "content.code.copy"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+    
+  </body>
+</html>
