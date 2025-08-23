@@ -6,8 +6,8 @@ simulation:
   steps: 1600
   log_directory: "data/logs/berry_sim"
   random_seed: 42
-  # Flag to enable/disable causal system for ablation study
-  enable_causal_system: true
+  # Default to disabled; the experiment file will enable it for the causal agent.
+  enable_causal_system: false
 
 environment:
   class: "simulations.berry_sim.environment.BerryWorldEnvironment"
@@ -15,9 +15,9 @@ environment:
     width: 50
     height: 50
   spawning:
-    red_rate: 0.20
-    blue_rate: 0.15
-    yellow_rate: 0.15
+    red_rate: 1.0
+    blue_rate: 0.75
+    yellow_rate: 0.75
 
 agent:
   vitals:
@@ -32,7 +32,9 @@ agent:
     embeddings: { identity_dim: 128, main_embedding_dim: 128, schema_embedding_dim: 128 }
     architecture_flags: { }
   costs:
-    actions: { base: 1, communicate: 1, extract: 1, combat: 1, flee: 1, reflect: 1, nest: 1 }
+    actions:
+      move: 1.0
+      eat_berry: 1.0
   dynamics:
     decay: { time_budget_per_step: 1, health_per_step: 0, resources_per_step: 0 }
     regeneration: { }
@@ -46,16 +48,19 @@ learning:
   q_learning:
     alpha: 0.1
     gamma: 0.95
+    initial_epsilon: 0.1
   memory:
-    reflection_interval: 100 # How often agents reflect
+    reflection_interval: 100
 
 scenario_loader:
+  # CORRECTED: Was pointing to the Schelling loader
   class: "simulations.berry_sim.loader.BerryScenarioLoader"
 
 action_generator:
   class: "simulations.berry_sim.providers.BerryActionGenerator"
 
 decision_selector:
+  # Default to the simple heuristic selector for the baseline.
   class: "simulations.berry_sim.providers.BerryDecisionSelector"
 
 component_factory:
@@ -66,6 +71,7 @@ systems:
   - "simulations.berry_sim.systems.ConsumptionSystem"
   - "simulations.berry_sim.systems.MovementSystem"
   - "simulations.berry_sim.systems.VitalsSystem"
+  - "simulations.berry_sim.systems.RenderingSystem"
 
 actions:
   - "simulations.berry_sim.actions"
@@ -76,8 +82,8 @@ logging:
     - "simulations.berry_sim.components.HealthComponent"
     - "agent_core.core.ecs.component.TimeBudgetComponent"
 
-# Rendering for visualization
 rendering:
   enabled: true
   output_directory: "data/gif_renders/berry_sim"
-  pixel_scale: 8
+  frames_per_second: 1
+  pixel_scale: 10

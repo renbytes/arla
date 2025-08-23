@@ -30,9 +30,9 @@ include = "agent_concurrent"
 from = "agent-concurrent/src"
 
 [tool.poetry.scripts]
-# Provide BOTH names so your Makefile (agentsim) and any previous docs (arla) work
-agentsim = "agent_sim.main:app"
-arla = "agent_sim.main:app"
+# CORRECTED: Point to the Typer application in cli.py instead of main.py
+agentsim = "agent_sim.cli:app"
+arla = "agent_sim.cli:app"
 
 [tool.poetry.dependencies]
 python = "==3.11.9"
@@ -95,3 +95,22 @@ mkdocstrings = {extras = ["python"], version = ">=0.24.0"}
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+# Tell mypy to treat directories with __init__.py as the root of a package
+explicit_package_bases = true
+namespace_packages = true
+# Define the specific paths mypy should check
+files = [
+    "agent-core/src",
+    "agent-engine/src",
+    "agent-sim/src",
+    "agent-concurrent/src",
+    "agent-persist/src",
+    "simulations",
+    "scripts"
+]
+# Standard quality-of-life settings
+ignore_missing_imports = true
+follow_imports = "silent"
+disallow_untyped_defs = true

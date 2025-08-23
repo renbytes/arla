@@ -1,0 +1,32 @@
+# simulations/berry_sim/experiments/causal_ab_test.yml
+
+experiment_name: "Berry Sim - Causal Agent A/B Test"
+
+base_config_path: "simulations/berry_sim/config/config.yml"
+
+simulation_package: "simulations.berry_sim"
+
+scenarios:
+  - "simulations/berry_sim/scenarios/default.json"
+
+# Run each variation 3 times for statistical significance
+runs_per_scenario: 3
+
+variations:
+  - name: "Baseline-Heuristic-Agent"
+    overrides:
+      simulation:
+        # Explicitly disable the causal system for the baseline
+        enable_causal_system: false
+      decision_selector:
+        # Use the simple, hard-coded heuristic policy
+        class: "simulations.berry_sim.providers.BerryDecisionSelector"
+
+  - name: "Causal-QLearning-Agent"
+    overrides:
+      simulation:
+        # Enable the causal system for the advanced agent
+        enable_causal_system: true
+      decision_selector:
+        # Use the new, intelligent policy that queries the neural network
+        class: "simulations.berry_sim.providers.QLearningDecisionSelector"

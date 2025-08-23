@@ -1,4 +1,4 @@
-# src/agent_engine/systems/q_learning_system.py
+# FILE: agent-engine/src/agent_engine/systems/q_learning_system.py
 """
 Manages the Q-learning process for all agents, updating the utility network.
 This version is enhanced to use causal estimates for a more robust learning signal.
@@ -49,7 +49,7 @@ class QLearningSystem(System):
         config: Any,
         cognitive_scaffold: Any,
         state_encoder: StateEncoderInterface,
-        causal_graph_system: CausalGraphSystem,
+        causal_graph_system: Optional[CausalGraphSystem],
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
         self.state_encoder = state_encoder
@@ -61,9 +61,7 @@ class QLearningSystem(System):
         self.previous_states: Dict[str, np.ndarray] = {}
 
     async def update(self, current_tick: int) -> None:
-        """
-        Caches the current state features for each ACTIVE learning agent.
-        """
+        """Caches the current state features for each active learning agent."""
         target_entities = self.simulation_state.get_entities_with_components(
             self.REQUIRED_COMPONENTS
         )
@@ -92,15 +90,17 @@ class QLearningSystem(System):
         if old_state_features is None:
             return
 
-        causal_reward_estimate = self.causal_graph_system.estimate_causal_effect(
-            agent_id=entity_id, treatment_value=action_plan.action_type.action_id
-        )
-
         final_learning_reward = action_outcome.reward
-        if causal_reward_estimate is not None:
-            final_learning_reward = (
-                0.5 * action_outcome.reward + 0.5 * causal_reward_estimate
+
+        # CORRECTED: Check that the causal system exists before using it.
+        if self.causal_graph_system:
+            causal_reward_estimate = self.causal_graph_system.estimate_causal_effect(
+                agent_id=entity_id, treatment_value=action_plan.action_type.action_id
             )
+            if causal_reward_estimate is not None:
+                final_learning_reward = (
+                    0.5 * action_outcome.reward + 0.5 * causal_reward_estimate
+                )
 
         target_id = action_plan.params.get("target_agent_id")
         new_state_features = self.state_encoder.encode_state(

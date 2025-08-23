@@ -7,7 +7,7 @@ from agent_core.agents.actions.base_action import ActionOutcome
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.logging.metrics_calculator_interface import MetricsCalculatorInterface
 
-from ..actions import EatBerryAction
+from simulations.berry_sim.actions import EatBerryAction
 from ..components import HealthComponent, PositionComponent
 from ..environment import BerryWorldEnvironment
 
@@ -16,11 +16,8 @@ class CausalMetricsCalculator(MetricsCalculatorInterface):
     """Calculates and stores the CUS and CCI for the Berry Toxicity experiment."""
 
     def __init__(self):
-        # State stored across ticks
         self.novel_context_decisions = defaultdict(lambda: {"correct": 0, "total": 0})
         self.yellow_berry_eats = defaultdict(lambda: {"correct": 0, "total": 0})
-
-        # Metrics to be reported
         self.causal_understanding_score = 0.0
         self.correlation_confusion_index = 1.0
         self.average_agent_health = 100.0
@@ -41,24 +38,18 @@ class CausalMetricsCalculator(MetricsCalculatorInterface):
         if not isinstance(env, BerryWorldEnvironment) or not pos_comp:
             return
 
-        # --- CUS LOGIC (Phase 2: Novel Context for blue berries) ---
+        # CUS LOGIC
         if 1000 <= tick < 1100 and berry_type == "blue" and outcome.success:
             self.novel_context_decisions[agent_id]["total"] += 1
             is_near_water = env.is_near_feature(
                 pos_comp.position, env.water_locations, 2
             )
-
-            # Correct decision is to eat only when NOT near water.
-            # A positive reward means it was a correct decision.
             if outcome.reward > 0 and not is_near_water:
                 self.novel_context_decisions[agent_id]["correct"] += 1
-            # A negative reward means it was an incorrect decision.
             elif outcome.reward < 0 and is_near_water:
-                # This isn't a "correct" eat, but it confirms their model.
-                # The metric is "understanding", so we are measuring if they eat safe berries.
                 pass
 
-        # --- CCI LOGIC (all phases, yellow berries) ---
+        # CCI LOGIC
         if berry_type == "yellow" and outcome.success:
             self.yellow_berry_eats[agent_id]["total"] += 1
             if outcome.reward > 0:
@@ -66,7 +57,6 @@ class CausalMetricsCalculator(MetricsCalculatorInterface):
 
     def calculate_metrics(self, simulation_state: Any) -> Dict[str, Any]:
         """Calculate and return the final metrics based on stored state."""
-        # CUS: Percentage of correct decisions in the novel context.
         total_correct_novel = sum(
             d["correct"] for d in self.novel_context_decisions.values()
         )
@@ -79,7 +69,6 @@ class CausalMetricsCalculator(MetricsCalculatorInterface):
             else 0.0
         )
 
-        # CCI: 1.0 is max confusion (50% correct), 0.0 is perfect knowledge. Measures deviation from random guessing on yellow berries.
         total_yellow_eats = sum(d["total"] for d in self.yellow_berry_eats.values())
         total_yellow_correct = sum(
             d["correct"] for d in self.yellow_berry_eats.values()
@@ -90,7 +79,6 @@ class CausalMetricsCalculator(MetricsCalculatorInterface):
         else:
             self.correlation_confusion_index = 1.0
 
-        # General Health & Agent Count
         all_agents = simulation_state.get_entities_with_components(
             [HealthComponent, TimeBudgetComponent]
         )

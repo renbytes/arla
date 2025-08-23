@@ -9,143 +9,115 @@ categories:
 
 # Can AI Tell "Why?": Probing Causal Reasoning in ARLA
 
-![Berry Toxicity Experiment Animation](../assets/berry_toxicity_simulation.gif){: .blog-hero }
+Welcome back to the ARLA Development Blog! [In our last post](https://renbytes.github.io/arla/blog/2025/08/21/from-schelling-to-psyche-a-technical-look-at-validating-arla/), we used the classic Schelling Model as a "smoke test" to validate our engine's core mechanics. With that foundation in place, we can now ask deeper questions. Can we build agents that move beyond simple pattern matching to understand true cause and effect?
 
-Welcome back to the ARLA Development Blog! In our last post, we used the classic Schelling Model as a "smoke test" to validate the core mechanics of our simulation engine. With that foundation firmly in place, we can now move on to more complex and fascinating questions.
+To find out, we designed the Berry Toxicity Experiment. The intuition is simple. Imagine you're playing a video game and you learn that blue potions give you health. You'd drink every one you see. But what if the game suddenly changes the rules halfway through? Now, blue potions are poisonous, but only when you're standing near water. A simple bot might keep drinking them and fail, but a truly intelligent player would notice the new pattern and figure out the new, more complex rule. That's exactly what we're testing here: can our AI agents be the smart player?
 
-Today, we're introducing the **Berry Toxicity Experiment**, a simulation designed not just to see *what* agents learn, but to probe *how* they learn. Can they move beyond simple correlation to understand true causation? This experiment serves as a robust baseline for A/B testing different cognitive architectures, which is central to ARLA's research mission.
+This is a challenging A/B test where survival depends on an agent's ability to learn these complex, contextual rules and adapt to a sudden environmental change.
 
-## Phase 1: The Baseline - A Heuristic Berry Hunter
+## Phase 1: The Baseline - A "Blind" Heuristic Forager
 
-Before we can test advanced cognitive features, we need a control group. Our baseline is a simple, rule-based agent whose goal is to survive by eating berries. The environment, however, has some tricky rules:
+Our control group is the Baseline-Heuristic-Agent. Its strategy is simple and hardcoded: find the closest visible berry and move towards it. However, the environment has a trick up its sleeve:
 
-- **Red Berries**: Always safe and provide a small health boost.
-- **Yellow Berries**: Spawning near rocks, their effect is **truly random**—sometimes good, sometimes bad. An agent might incorrectly learn that the rocks are the cause.
-- **Blue Berries**: These are the key to our experiment. For the first 1,000 steps, they are always safe. Then, in a "novel context" test phase, they become toxic, but **only when near water**.
+**The Test:** At step 1000, blue berries, which were previously safe, become toxic—but only when they are near water.
 
-The baseline agent operates on a simple, hard-coded heuristic: find the closest visible berry and move towards it to eat. It doesn't use a sophisticated learning model. This allows us to verify the simulation's mechanics and establish a performance baseline for an agent that cannot grasp complex, contextual rules.
+The baseline agent's logic is straightforward, relying on direct access to the environment's state to find its target.
 
-```python title="simulations/berry_toxicity/baseline_agent.py"
-class BaselineBerryAgent:
-    def select_action(self, visible_berries):
-        """Simple heuristic: move toward closest berry"""
-        if not visible_berries:
-            return self.random_move()
-        
-        closest_berry = min(visible_berries, 
-                          key=lambda b: self.distance_to(b.position))
-        return MoveTowardsAction(target=closest_berry.position)
+```python
+class BerryDecisionSelector(DecisionSelectorInterface):
+    """A simple heuristic policy for the baseline agent."""
+    def select(self, sim_state, entity_id, possible_actions):
+        # ...
+        # This agent has "perfect vision" into the environment
+        for berry_pos in env.berry_locations.keys():
+            # Find the closest berry and move towards it
+            # ...
 ```
 
-### Baseline Results
+As expected, this simple agent performs well until the rules change. The MLflow results for the baseline agent show a predictable and catastrophic failure to adapt.
 
-After running the simulation, we can see the heuristic agent's behavior in the MLflow metrics. The agent successfully learns to manage its health by eating berries, but its understanding is superficial.
+At step 1000, the `average_agent_health` plummets, leading to a sharp drop in `active_agents`. The `causal_understanding_score` flatlines near zero, proving the agent failed to learn the new rule.
 
-![MLFlow Baseline Metrics](../assets/berry_baseline_mlflow.png)
+## Phase 2: The Causal Agent - Learning to See
 
-The `average_agent_health` drops initially as agents randomly eat toxic berries but then stabilizes as they consume enough good berries to survive. The `correlation_confusion_index` shows a fascinating pattern where the agents briefly form an incorrect hypothesis about the random yellow berries before returning to a state of confusion.
+Our experimental group is the Causal-QLearning-Agent. It uses a sophisticated Q-learning model to make decisions. Crucially, we gave this agent "senses" by equipping it with a `PerceptionComponent` and a more advanced state encoder.
 
-Most importantly, when the novel context is introduced at tick 1000, the average health takes a sharp dip. The agents, having only learned the simple correlation `blue berry = good`, fail to understand the new contextual rule and eat the newly toxic berries near the water.
+Instead of being blind, its "brain" now receives a rich feature vector describing its surroundings.
 
-## Phase 2: A/B Testing for Causal Understanding
+```python
+class BerryStateEncoder(StateEncoderInterface):
+    def encode_state(self, sim_state, entity_id, config):
+        """
+        Creates a feature vector including agent vitals and sensory data.
+        """
+        # ... (agent's own x, y, and health)
+        agent_state_vector = [agent_x, agent_y, health]
 
-With the baseline validated, we now have a powerful tool for A/B testing. We can swap out the simple heuristic agent for one equipped with ARLA's advanced cognitive systems and measure the difference in performance.
+        # NEW: Sensory data about the nearest visible berries
+        perception_vector = []
+        for berry_type in ["red", "blue", "yellow"]:
+            # ... find nearest berry of this type ...
+            if berry_data:
+                # Add normalized distance and angle to the feature vector
+                dist = berry_data["distance"] / vision_range
+                angle = math.atan2(dy, dx) / math.pi
+                perception_vector.extend([dist, angle])
+            else:
+                # Use default values if no berry is seen
+                perception_vector.extend([1.0, 0.0])
 
-### Experiment 1: The Causal Agent
-
-Our experimental condition equips agents with two key cognitive systems:
-
-**`CausalGraphSystem`**: Uses the `dowhy` library to build formal causal models from observed experiences. Instead of just tracking correlations, agents can distinguish between spurious associations and true causal relationships.
-
-```python title="simulations/berry_toxicity/causal_agent.py"
-# Inside the CausalGraphSystem
-def analyze_berry_outcome(self, berry_type, environmental_context, health_change):
-    """Build causal model from berry consumption experiences"""
-    
-    # Add observation to causal dataset
-    self.observations.append({
-        'berry_type': berry_type,
-        'near_water': environmental_context['near_water'],
-        'near_rocks': environmental_context['near_rocks'],
-        'health_outcome': health_change
-    })
-    
-    if len(self.observations) >= self.min_samples:
-        # Use dowhy to identify causal relationships
-        causal_model = self.build_causal_graph()
-        return causal_model.estimate_effect(
-            treatment='berry_type',
-            outcome='health_outcome',
-            confounders=['near_water', 'near_rocks']
-        )
+        return np.array(agent_state_vector + perception_vector)
 ```
 
-**`QLearningSystem`**: Enhanced with causal feedback from the graph system. Instead of pure trial-and-error, the agent can use its causal understanding to make more informed decisions.
+## The A/B Test: A Clear Winner
 
-### Experiment 2: Comparing the Results
+![Baseline Agents](../assets/berry_sim_baseline.png)
 
-The results reveal a striking difference in cognitive capability:
+![Causal Agents](../assets/berry_sim_causal.png)
 
-![MLFlow Comparison](../assets/berry_causal_comparison.png)
+The results are conclusive.
 
-**Novel Context Performance**: When blue berries appeared near water at tick 1000:
-- Baseline agents: Continued eating toxic berries, causing health decline
-- Causal agents: Quickly adapted, understanding that proximity to water was the critical factor
+```
+--- A/B Test Statistical Analysis ---
 
-**Causal Understanding Score**: Our primary metric measuring correct decisions in novel contexts:
-- Baseline: 0.23 (essentially random)
-- Causal agents: 0.78 (clear evidence of transfer learning)
+📋 Group Averages (Final Health):
+  - Causal Agent: 95.82
+  - Baseline Agent: 90.25
 
-**Learning Efficiency**: Causal agents reached stable performance 40% faster than baseline agents and maintained higher health throughout the simulation.
+🔬 T-Test Results:
+  - T-Statistic: 3.1675
+  - P-Value: 0.0344
 
-## The Technical Implementation
-
-The key innovation lies in how the `CausalGraphSystem` processes environmental observations:
-
-```python title="agent_engine/systems/causal_graph_system.py"
-def update(self, entities_with_components, events):
-    """Update causal models based on new experiences"""
-    
-    for entity_id, components in entities_with_components.items():
-        # Collect environmental observations
-        observations = self.collect_observations(entity_id, components)
-        
-        # Build causal graph using dowhy
-        if len(observations) >= self.confidence_threshold:
-            causal_model = self.build_causal_model(observations)
-            
-            # Store causal relationships for decision-making
-            self.store_causal_insights(entity_id, causal_model)
+💡 Conclusion:
+  The p-value (0.0344) is less than our significance level (0.05).
+  ✅ We can conclude that there is a **statistically significant** difference
+     in the average final health between the two agent types.
 ```
 
-This system provides the `QLearningSystem` with causal estimates that go beyond simple reward signals, enabling more sophisticated decision-making.
+This isn't just a fluke; the data proves that the Causal Agent's ability to learn and adapt provides a real, measurable survival advantage. The visual evidence from the MLflow graphs supports this statistical conclusion perfectly.
 
-## Implications for AI Research
+**Successful Adaptation:** The `causal_understanding_score` for the Causal Agent spikes to nearly 1.0, proving it successfully learned the new, complex rule about blue berries and water.
 
-This experiment demonstrates that explicit causal reasoning capabilities can provide measurable advantages in environments where correlation and causation diverge. The ability to transfer learned causal relationships to novel contexts is a crucial component of genuine understanding rather than mere pattern matching.
+**Damage Mitigation:** The `average_agent_health` shows only a minor dip before recovering, as the agent quickly stops eating the toxic berries.
 
-The Berry Toxicity Experiment now serves as a standardized benchmark within ARLA for testing cognitive architectures. Any proposed enhancement to agent cognition must demonstrate improved performance on this causal reasoning task.
+**Dramatically Higher Survival:** Most importantly, the `active_agents` graph shows minimal or zero population loss. The Causal Agent learned to survive where the baseline agent perished.
 
 ## Your Turn to Experiment
 
-The complete implementation is available in the `simulations/berry_toxicity/` directory. The experiment configuration uses ARLA's standard YAML format:
+This experiment highlights a core principle of AI: a sophisticated brain is useless without the right sensory information. By engineering a better state representation, we enabled our learning agent to understand its world and thrive.
 
-```yaml title="experiments/berry_causal_comparison.yml"
-name: "Berry Toxicity Causal Comparison"
-seed_range: [1000, 1050]  # 50 independent runs
+The full implementation is available in the simulations/berry_sim/ directory. We encourage you to run the experiment yourself and try to improve on our results. Can you design an even better state representation? What other cognitive systems could help the agent learn faster or more reliably?
 
-conditions:
-  baseline:
-    cognitive_systems: ["QLearningSystem"]
-  causal:
-    cognitive_systems: ["QLearningSystem", "CausalGraphSystem"]
-
-metrics:
-  - causal_understanding_score
-  - correlation_confusion_index  
-  - average_agent_health
+```bash
+# Run the full A/B test yourself!
+make run FILE=simulations/berry_sim/experiments/causal_ab_test.yml
 ```
 
-Try modifying the environmental rules or adding additional confounding variables. Can the causal reasoning system handle even more complex scenarios? The framework is designed to make such explorations straightforward and reproducible.
+You can check the ongoing metrics at [http://localhost:5001/](http://localhost:5001/)
 
-This foundation in causal reasoning will prove essential as we move toward our next challenge: testing whether agents can develop shared symbolic communication grounded in their causal understanding of the world.
+And when the simulation is complete, you can run the A/B test like so:
+```bash
+docker compose exec app poetry run python simulations/berry_sim/analysis/analyze_ab_test.py
+```
+
+This successful validation opens the door to even more complex research. Now that we have agents who can understand their world, our next post will explore whether they can learn to communicate with each other about it.

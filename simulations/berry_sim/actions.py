@@ -1,4 +1,4 @@
-# simulations/berry_sim/actions.py
+# FILE: simulations/berry_sim/actions.py
 
 from typing import Any, Dict, List
 from agent_core.agents.actions.action_interface import ActionInterface
@@ -52,7 +52,9 @@ class MoveAction(ActionInterface):
     def get_feature_vector(
         self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
     ) -> List[float]:
-        return [1.0, 0.0, 0.0]  # [is_move, is_eat_red, is_eat_blue, ...]
+        # Padded the vector to have a length of 4 to match EatBerryAction.
+        # The schema is now [is_move, is_eat_red, is_eat_blue, is_eat_yellow]
+        return [1.0, 0.0, 0.0, 0.0]
 
 
 @action_registry.register
@@ -99,6 +101,7 @@ class EatBerryAction(ActionInterface):
         self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
     ) -> List[float]:
         berry_type = params.get("berry_type", "")
+        # The schema is [is_move, is_eat_red, is_eat_blue, is_eat_yellow]
         return [
             0.0,
             1.0 if berry_type == "red" else 0.0,

@@ -9,7 +9,7 @@
 .DEFAULT_GOAL := help
 
 # --- Variable Definitions ---
-# These variables MUST be provided from the command line for run-local.
+# These variables MUST be provided from the command line.
 # Example: make run-local PACKAGE=simulations.berry_sim ...
 PACKAGE :=
 CONFIG :=
@@ -21,6 +21,7 @@ STEPS ?= 200
 ARGS ?=
 RENDER_DIR ?= data/gif_renders
 FPS ?= 15
+WORKERS ?= 4
 
 
 # --- Core Docker Commands ---
@@ -53,15 +54,16 @@ setup:
 
 # --- Simulation & Development Commands ---
 
-## run: Run a full experiment, submitting jobs to the Celery queue.
+## run: Start Celery workers and run a full experiment.
 run:
+	@echo "👷 Starting $(WORKERS) Celery workers in the background..."
+	@docker compose up -d worker --scale worker=$(WORKERS)
 	@echo "▶️ Running experiment from: $(FILE)"
 	@docker compose exec app poetry run agentsim run-experiment $(FILE)
 
 ## run-local: Run a single, local simulation for quick testing and debugging.
 run-local:
 	# These checks ensure that required variables are defined.
-	# If a variable is missing, 'make' will stop and print the error message.
 	@if [ -z "$(PACKAGE)" ]; then \
 		echo "❌ Error: PACKAGE variable is not set."; \
 		echo "   Please specify the simulation package to run."; \
