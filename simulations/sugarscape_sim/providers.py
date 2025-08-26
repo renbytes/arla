@@ -1,3 +1,4 @@
+# FILE: simulations/sugarscape_sim/providers.py
 """
 Defines the Provider classes for the Sugarscape simulation.
 Providers are the bridge between the world-agnostic agent-engine and the
@@ -56,12 +57,13 @@ class SugarscapePerceptionProvider(PerceptionProviderInterface):
         current_tick: int,
     ) -> None:
         """Finds all visible agents and sugar patches within vision range."""
-        if not isinstance(sim_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
             return
 
-        pos_comp = sim_state.get_component(entity_id, PositionComponent)
-        metabolism_comp = sim_state.get_component(entity_id, MetabolismComponent)
-        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        pos_comp = components.get(PositionComponent)
+        metabolism_comp = components.get(MetabolismComponent)
+        perc_comp = components.get(PerceptionComponent)
         env = sim_state.environment
 
         if not all(
@@ -77,9 +79,7 @@ class SugarscapePerceptionProvider(PerceptionProviderInterface):
         pos_comp = cast(PositionComponent, pos_comp)
         metabolism_comp = cast(MetabolismComponent, metabolism_comp)
         perc_comp = cast(PerceptionComponent, perc_comp)
-        env = cast(
-            SugarscapeEnvironment, env
-        )  # Add explicit cast after isinstance check
+        env = cast(SugarscapeEnvironment, env)
 
         perc_comp.visible_entities.clear()
         vision_range = metabolism_comp.vision_range
@@ -144,7 +144,7 @@ class HeuristicDecisionSelector(DecisionSelectorInterface):
         possible_actions: List[ActionPlanComponent],
     ) -> Optional[ActionPlanComponent]:
         """Selects an action based on a simple survival heuristic."""
-        if not possible_actions or not isinstance(sim_state, SimulationState):
+        if not possible_actions or not hasattr(sim_state, "environment"):
             return None
 
         harvest_actions = [
@@ -185,7 +185,7 @@ class HeuristicDecisionSelector(DecisionSelectorInterface):
                 )
                 return best_move
 
-        return random.choice(possible_actions)
+        return random.choice(possible_actions) if possible_actions else None
 
 
 class SugarscapeStateEncoder(StateEncoderInterface):
@@ -199,8 +199,9 @@ class SugarscapeStateEncoder(StateEncoderInterface):
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """Encodes agent vitals and perception into a feature vector."""
-        if not isinstance(sim_state, SimulationState):
-            return np.zeros(10, dtype=np.float32)
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
+            return np.zeros(9, dtype=np.float32)
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         energy_comp = sim_state.get_component(entity_id, EnergyComponent)
@@ -217,15 +218,13 @@ class SugarscapeStateEncoder(StateEncoderInterface):
                 isinstance(env, SugarscapeEnvironment),
             ]
         ):
-            return np.zeros(10, dtype=np.float32)
+            return np.zeros(9, dtype=np.float32)
 
         pos_comp = cast(PositionComponent, pos_comp)
         energy_comp = cast(EnergyComponent, energy_comp)
         perc_comp = cast(PerceptionComponent, perc_comp)
         metabolism_comp = cast(MetabolismComponent, metabolism_comp)
-        env = cast(
-            SugarscapeEnvironment, env
-        )  # Add explicit cast after isinstance check
+        env = cast(SugarscapeEnvironment, env)
 
         agent_state = [
             pos_comp.x / env.width,
@@ -362,9 +361,7 @@ class SugarscapeStateNodeEncoder(StateNodeEncoderInterface):
         local_sugar_status = "barren"
         if pos_comp and isinstance(env, SugarscapeEnvironment):
             pos_comp = cast(PositionComponent, pos_comp)
-            env = cast(
-                SugarscapeEnvironment, env
-            )  # Add explicit cast after isinstance check
+            env = cast(SugarscapeEnvironment, env)
             sugar_level = env.get_sugar_at(pos_comp.position)
             if sugar_level > env.max_sugar_per_cell / 2:
                 local_sugar_status = "abundant"

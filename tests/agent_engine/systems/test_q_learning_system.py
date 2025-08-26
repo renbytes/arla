@@ -23,7 +23,6 @@ def system_setup():
     # The mock state must have an 'entities' attribute, as the system
     # accesses it directly via `simulation_state.entities.get(...)`.
     mock_state.entities = MagicMock()
-    # FIX: The state encoder needs access to the environment.
     mock_state.environment = MagicMock()
 
     mock_bus = MagicMock()
@@ -51,13 +50,22 @@ def system_setup():
     return system, mock_state, mock_bus, mock_encoder, mock_causal_system, agent_id
 
 
+# FIX: Patch the action_registry to prevent the system from discovering
+# simulation-specific actions (like the Schelling action) during the test.
+@patch("agent_engine.systems.q_learning_system.action_registry")
 @patch("agent_engine.systems.q_learning_system.QLearningSystem._perform_learning_step")
-def test_on_action_executed_uses_causal_reward(mock_learning_step, system_setup):
+def test_on_action_executed_uses_causal_reward(
+    mock_learning_step, mock_registry, system_setup
+):
     """
     Tests that the event handler correctly blends the observed reward with the
     causal estimate before calling the learning step.
     """
     system, mock_state, _, mock_encoder, mock_causal_system, agent_id = system_setup
+
+    # By returning an empty list, we ensure the system doesn't try to call
+    # .generate_possible_params() on any real, simulation-specific actions.
+    mock_registry.get_all_actions.return_value = []
 
     # Mock the agent's components being retrieved for the internal state encoding
     mock_state.entities.get.return_value = {"some_component": MagicMock()}

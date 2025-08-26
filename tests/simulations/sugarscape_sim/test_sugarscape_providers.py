@@ -31,7 +31,6 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
 
     def test_update_perception(self):
         """Verify that the provider correctly identifies visible entities."""
-        # FIX: The provider instance was never created.
         provider = SugarscapePerceptionProvider()
         mock_sim_state = MagicMock()
         mock_env = MagicMock(spec=SugarscapeEnvironment)
@@ -57,7 +56,7 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
         )
         mock_sim_state.environment = mock_env
 
-        # Create a dictionary of components to be returned by the mock
+        # FIX: The test must pass the agent's components to the provider.
         components = {
             PositionComponent: mock_pos,
             MetabolismComponent: mock_metabolism,
@@ -86,7 +85,6 @@ class TestHeuristicDecisionSelector(unittest.TestCase):
 
         # Mock actions
         harvest_action = MagicMock()
-        # FIX: The mock needs the action_id attribute for the selector's logic.
         harvest_action.action_type.action_id = "harvest"
         move_to_sugar_action = MagicMock()
         move_to_sugar_action.action_type.action_id = "move"
