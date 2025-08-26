@@ -31,15 +31,29 @@ class BerryWorldEnvironment(EnvironmentInterface):
         )
 
     def get_random_empty_cell(self) -> Optional[Tuple[int, int]]:
-        """Finds a random unoccupied cell."""
-        for _ in range(self.width * self.height):
-            pos = (
-                random.randint(0, self.width - 1),
-                random.randint(0, self.height - 1),
-            )
-            if not self.is_occupied(pos) and pos not in self.berry_locations:
-                return pos
-        return None
+        """
+        Finds a random unoccupied cell.
+
+        This implementation is deterministic in finding all empty cells and will
+        not fail if only one empty cell remains.
+        """
+        # Changed from a probabilistic search to a deterministic one.
+        # This guarantees finding an empty cell if one exists.
+        occupied_cells = (
+            self.water_locations
+            | self.rock_locations
+            | self.crystal_locations
+            | set(self.berry_locations.keys())
+            | set(self.agent_positions.values())
+        )
+
+        all_cells = set((x, y) for x in range(self.width) for y in range(self.height))
+        empty_cells = list(all_cells - occupied_cells)
+
+        if not empty_cells:
+            return None
+
+        return random.choice(empty_cells)
 
     def get_berry_toxicity(
         self, berry_type: str, position: Tuple[int, int], tick: int
