@@ -22,7 +22,19 @@ else:
     )
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-app = Celery("agent_sim", include=["agent_sim.infrastructure.tasks.simulation_tasks"])
+
+# --- MODIFIED: Explicitly list all modules containing tasks ---
+app = Celery(
+    "agent_sim",
+    include=[
+        "agent_sim.infrastructure.tasks.simulation_tasks",
+        # This ensures Celery is aware of the simulation's run module,
+        # which helps resolve import paths when the task is executed.
+        "simulations.berry_sim.run",
+        "simulations.schelling_sim.run",
+    ],
+)
+# --- END MODIFICATION ---
 
 app.conf.worker_pool_restarts = True
 app.conf.worker_pool = "prefork"

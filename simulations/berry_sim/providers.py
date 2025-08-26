@@ -33,7 +33,9 @@ from .actions import EatBerryAction, MoveAction
 from .components import (
     BerryComponent,
     HealthComponent,
+    MetabolicBoostComponent,
     PositionComponent,
+    PurifierCrystalComponent,
     RockComponent,
     WaterComponent,
 )
@@ -50,21 +52,17 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
         sim_state: Any,
         _current_tick: int,
     ) -> None:
-        """
-        Finds all berries within an agent's vision range and updates its
-        PerceptionComponent.
-        """
+        """Finds all berries and crystals within vision range."""
         pos_comp = components.get(PositionComponent)
         perc_comp = components.get(PerceptionComponent)
         env = sim_state.environment
 
-        # CORRECTED: Use explicit checks to satisfy mypy that these components
-        # are not None in the code block that follows.
         if not pos_comp or not perc_comp or not isinstance(env, BerryWorldEnvironment):
             return
 
         perc_comp.visible_entities.clear()
 
+        # Perceive berries
         for berry_pos, berry_type in env.berry_locations.items():
             dist = env.distance(pos_comp.position, berry_pos)
             if dist <= perc_comp.vision_range:
@@ -73,6 +71,16 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
                     "type": "berry",
                     "berry_type": berry_type,
                     "position": berry_pos,
+                    "distance": dist,
+                }
+        # Perceive crystals
+        for crystal_pos in env.crystal_locations:
+            dist = env.distance(pos_comp.position, crystal_pos)
+            if dist <= perc_comp.vision_range:
+                crystal_id = f"crystal_{crystal_pos[0]}_{crystal_pos[1]}"
+                perc_comp.visible_entities[crystal_id] = {
+                    "type": "crystal",
+                    "position": crystal_pos,
                     "distance": dist,
                 }
 
@@ -97,12 +105,11 @@ class BerryActionGenerator(ActionGeneratorInterface):
         actions.extend(
             [ActionPlanComponent(action_type=eat_action, params=p) for p in eat_params]
         )
-
         return actions
 
 
-class BerryDecisionSelector(DecisionSelectorInterface):
-    """A simple heuristic policy for the baseline agent."""
+class HeuristicDecisionSelector(DecisionSelectorInterface):
+    """Group A: Simple heuristic policy with direct environment access."""
 
     def __init__(self, simulation_state: Any, config: Any):
         pass
@@ -116,52 +123,62 @@ class BerryDecisionSelector(DecisionSelectorInterface):
         eat_actions = [
             a for a in possible_actions if isinstance(a.action_type, EatBerryAction)
         ]
+        if eat_actions:
+            return eat_actions[0]
+
         move_actions = [
             a for a in possible_actions if isinstance(a.action_type, MoveAction)
         ]
-
-        if eat_actions and random.random() < 0.9:
-            return eat_actions[0]
-
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         env = sim_state.environment
         if pos_comp and isinstance(env, BerryWorldEnvironment) and move_actions:
-            vision_range = 7
             closest_berry_pos = None
             min_dist = float("inf")
 
             for berry_pos in env.berry_locations.keys():
                 dist = env.distance(pos_comp.position, berry_pos)
-                if dist < min_dist and dist <= vision_range:
+                if dist < min_dist:
                     min_dist = dist
                     closest_berry_pos = berry_pos
 
             if closest_berry_pos:
-                best_move = None
-                min_dist_to_target = float("inf")
-                for move in move_actions:
-                    dist_to_target = env.distance(
-                        move.params["target_pos"], closest_berry_pos
-                    )
-                    if dist_to_target < min_dist_to_target:
-                        min_dist_to_target = dist_to_target
-                        best_move = move
-                if best_move:
-                    return best_move
+                best_move = min(
+                    move_actions,
+                    key=lambda m: env.distance(
+                        m.params["target_pos"], closest_berry_pos
+                    ),
+                )
+                return best_move
 
-        if move_actions:
-            return random.choice(move_actions)
+        return random.choice(move_actions) if move_actions else None
 
-        return None
+
+class ExplorationHeuristicDecisionSelector(HeuristicDecisionSelector):
+    """Group D: Heuristic policy with added exploration."""
+
+    def __init__(self, simulation_state: Any, config: Any):
+        super().__init__(simulation_state, config)
+        self.epsilon = config.learning.q_learning.get("initial_epsilon", 0.1)
+
+    def select(
+        self, sim_state, entity_id, possible_actions: List[ActionPlanComponent]
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions:
+            return None
+
+        if random.random() < self.epsilon:
+            return random.choice(possible_actions)
+
+        return super().select(sim_state, entity_id, possible_actions)
 
 
 class QLearningDecisionSelector(DecisionSelectorInterface):
-    """A decision selector that uses the agent's Q-learning network."""
+    """Groups B & C: A decision selector that uses the agent's Q-learning network."""
 
     def __init__(self, simulation_state: Any, config: Any):
         self.simulation_state = simulation_state
         self.config = config
-        self.state_encoder = BerryStateEncoder(simulation_state)
+        self.state_encoder = BerryStateEncoder()
 
     def select(
         self,
@@ -176,10 +193,12 @@ class QLearningDecisionSelector(DecisionSelectorInterface):
         if not q_comp:
             return random.choice(possible_actions)
 
+        # Epsilon-greedy exploration
         epsilon = self.config.learning.q_learning.get("initial_epsilon", 0.1)
         if random.random() < epsilon:
             return random.choice(possible_actions)
 
+        # Exploitation
         with torch.no_grad():
             best_action = None
             max_q_value = -float("inf")
@@ -224,9 +243,119 @@ class QLearningDecisionSelector(DecisionSelectorInterface):
             return best_action
 
 
-class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
-    """Provides normalized health for the AffectSystem."""
+class BerryStateEncoder(StateEncoderInterface):
+    """Encodes the simulation state into a feature vector for the Q-Learning model."""
 
+    def encode_state(
+        self,
+        sim_state: Any,
+        entity_id: str,
+        config: Any,
+        target_entity_id: Optional[str] = None,
+    ) -> np.ndarray:
+        """Creates a feature vector including vitals, perception, and internal state."""
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        health_comp = sim_state.get_component(entity_id, HealthComponent)
+        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        boost_comp = sim_state.get_component(entity_id, MetabolicBoostComponent)
+
+        env_params = config.environment.params
+        width = env_params.width
+        height = env_params.height
+
+        # 1. Agent's own state vector
+        agent_x = pos_comp.x / width if pos_comp else 0.5
+        agent_y = pos_comp.y / height if pos_comp else 0.5
+        health = (
+            health_comp.current_health / health_comp.initial_health
+            if health_comp
+            else 0.5
+        )
+        is_boosted = 1.0 if boost_comp and boost_comp.active else 0.0
+        agent_state_vector = [agent_x, agent_y, health, is_boosted]
+
+        # 2. Agent's perception vector
+        visible_items = perc_comp.visible_entities if perc_comp else {}
+        nearest: Dict[str, Optional[Dict[str, Any]]] = {
+            "red": None,
+            "blue": None,
+            "yellow": None,
+            "orange": None,
+            "crystal": None,
+        }
+
+        for item_data in visible_items.values():
+            item_type = item_data.get("berry_type") or item_data.get("type")
+            if item_type in nearest:
+                current_nearest = nearest[item_type]
+                if (
+                    current_nearest is None
+                    or item_data["distance"] < current_nearest["distance"]
+                ):
+                    nearest[item_type] = item_data
+
+        perception_vector = []
+        vision_range = config.agent.vision_range
+        for item_type in ["red", "blue", "yellow", "orange", "crystal"]:
+            item_data = nearest[item_type]
+            if item_data and pos_comp:
+                dist = item_data["distance"] / vision_range
+                dx = item_data["position"][0] - pos_comp.x
+                dy = item_data["position"][1] - pos_comp.y
+                angle = math.atan2(dy, dx) / math.pi
+                perception_vector.extend([dist, angle])
+            else:
+                perception_vector.extend([1.0, 0.0])  # Default if not seen
+
+        return np.array(agent_state_vector + perception_vector, dtype=np.float32)
+
+    def encode_internal_state(
+        self, components: Dict[Type[Component], Component], config: Any
+    ) -> np.ndarray:
+        # This simulation doesn't use complex internal state for decisions
+        return np.array([0.0], dtype=np.float32)
+
+
+class BerryRewardCalculator(RewardCalculatorInterface):
+    def calculate_final_reward(
+        self, base_reward: float, **kwargs
+    ) -> Tuple[float, Dict[str, Any]]:
+        return base_reward, {"base_reward": base_reward}
+
+
+class BerryComponentFactory(ComponentFactoryInterface):
+    """Creates component instances from saved data for this simulation."""
+
+    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
+        class_name = component_type.split(".")[-1]
+        component_map = {
+            "PositionComponent": PositionComponent,
+            "HealthComponent": HealthComponent,
+            "BerryComponent": BerryComponent,
+            "WaterComponent": WaterComponent,
+            "RockComponent": RockComponent,
+            "PurifierCrystalComponent": PurifierCrystalComponent,
+            "MetabolicBoostComponent": MetabolicBoostComponent,
+            "TimeBudgetComponent": TimeBudgetComponent,
+            "QLearningComponent": QLearningComponent,
+            "PerceptionComponent": PerceptionComponent,
+        }
+
+        if class_name in component_map:
+            if class_name == "QLearningComponent":
+                return QLearningComponent(
+                    state_feature_dim=14,  # 4 (agent) + 5*2 (perception) = 14
+                    internal_state_dim=1,
+                    action_feature_dim=5,  # move, red, blue, yellow, orange
+                    q_learning_alpha=0.1,
+                    device=torch.device("cpu"),
+                )
+            return component_map[class_name](**data)
+
+        raise TypeError(f"Unknown component type for factory: {component_type}")
+
+
+class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
     def get_normalized_vitality_metrics(
         self, entity_id, components, config
     ) -> Dict[str, float]:
@@ -239,11 +368,6 @@ class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
 
 
 class BerryStateNodeEncoder(StateNodeEncoderInterface):
-    """Encodes world context for the CausalGraphSystem."""
-
-    def __init__(self, simulation_state: Any):
-        self.simulation_state = simulation_state
-
     def encode_state_for_causal_graph(
         self,
         entity_id: str,
@@ -254,10 +378,9 @@ class BerryStateNodeEncoder(StateNodeEncoderInterface):
         pos_comp = components.get(PositionComponent)
         env = self.simulation_state.environment
         if not pos_comp or not isinstance(env, BerryWorldEnvironment):
-            return ("STATE", "unknown", "unknown")
+            return ("STATE", "unknown_context", "unknown_health")
 
         context = env.get_environmental_context(pos_comp.position)
-
         health_comp = components.get(HealthComponent)
         health_status = "healthy"
         if health_comp:
@@ -272,114 +395,5 @@ class BerryStateNodeEncoder(StateNodeEncoderInterface):
             f"health_{health_status}",
             f"near_water_{context['near_water']}",
             f"near_rocks_{context['near_rocks']}",
+            f"near_crystal_{context['near_crystal']}",
         )
-
-
-class BerryStateEncoder(StateEncoderInterface):
-    """
-    Encodes the simulation state into a feature vector for the Q-Learning model.
-    """
-
-    def __init__(self, simulation_state: Any):
-        self.simulation_state = simulation_state
-
-    def encode_state(
-        self,
-        sim_state: Any,
-        entity_id: str,
-        config: Any,
-        target_entity_id: Optional[str] = None,
-    ) -> np.ndarray:
-        """
-        Creates a feature vector including agent health and sensory data.
-        """
-        pos_comp = sim_state.get_component(entity_id, PositionComponent)
-        health_comp = sim_state.get_component(entity_id, HealthComponent)
-        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
-
-        env_params = config.environment.get("params", {})
-        width = env_params.get("width", 50)
-        height = env_params.get("height", 50)
-
-        agent_x = pos_comp.x / width if pos_comp else 0.5
-        agent_y = pos_comp.y / height if pos_comp else 0.5
-        health = (
-            health_comp.current_health / health_comp.initial_health
-            if health_comp
-            else 0.5
-        )
-        agent_state_vector = [agent_x, agent_y, health]
-
-        nearest_berries: Dict[str, Optional[Dict[str, Any]]] = {
-            "red": None,
-            "blue": None,
-            "yellow": None,
-        }
-        if perc_comp and perc_comp.visible_entities:
-            for entity_data in perc_comp.visible_entities.values():
-                if entity_data.get("type") == "berry":
-                    b_type = entity_data["berry_type"]
-
-                    # CORRECTED: This more explicit check is safer and satisfies mypy.
-                    # It checks for None before attempting to access the 'distance' key.
-                    current_nearest = nearest_berries.get(b_type)
-                    if (
-                        current_nearest is None
-                        or entity_data["distance"] < current_nearest["distance"]
-                    ):
-                        nearest_berries[b_type] = entity_data
-
-        perception_vector = []
-        for berry_type in ["red", "blue", "yellow"]:
-            berry_data = nearest_berries[berry_type]
-            if berry_data and pos_comp and perc_comp:
-                dist = berry_data["distance"] / perc_comp.vision_range
-                dx = berry_data["position"][0] - pos_comp.x
-                dy = berry_data["position"][1] - pos_comp.y
-                angle = math.atan2(dy, dx) / math.pi
-                perception_vector.extend([dist, angle])
-            else:
-                perception_vector.extend([1.0, 0.0])
-
-        return np.array(agent_state_vector + perception_vector, dtype=np.float32)
-
-    def encode_internal_state(
-        self, components: Dict[Type[Component], Component], config: Any
-    ) -> np.ndarray:
-        return np.array([0.0], dtype=np.float32)
-
-
-class BerryRewardCalculator(RewardCalculatorInterface):
-    def calculate_final_reward(
-        self, base_reward: float, **kwargs
-    ) -> Tuple[float, Dict[str, Any]]:
-        return base_reward, {"base_reward": base_reward}
-
-
-class BerryComponentFactory(ComponentFactoryInterface):
-    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
-        class_name = component_type.split(".")[-1]
-
-        component_map = {
-            "PositionComponent": PositionComponent,
-            "HealthComponent": HealthComponent,
-            "BerryComponent": BerryComponent,
-            "WaterComponent": WaterComponent,
-            "RockComponent": RockComponent,
-            "TimeBudgetComponent": TimeBudgetComponent,
-            "QLearningComponent": QLearningComponent,
-            "PerceptionComponent": PerceptionComponent,
-        }
-
-        if class_name in component_map:
-            if class_name == "QLearningComponent":
-                return QLearningComponent(
-                    state_feature_dim=9,
-                    internal_state_dim=1,
-                    action_feature_dim=4,
-                    q_learning_alpha=0.1,
-                    device=torch.device("cpu"),
-                )
-            return component_map[class_name](**data)
-
-        raise TypeError(f"Unknown component type for factory: {component_type}")

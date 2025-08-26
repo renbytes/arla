@@ -52,9 +52,11 @@ class MoveAction(ActionInterface):
     def get_feature_vector(
         self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
     ) -> List[float]:
-        # Padded the vector to have a length of 4 to match EatBerryAction.
-        # The schema is now [is_move, is_eat_red, is_eat_blue, is_eat_yellow]
-        return [1.0, 0.0, 0.0, 0.0]
+        """
+        Generates the feature vector for a move action.
+        Schema: [is_move, is_eat_red, is_eat_blue, is_eat_yellow, is_eat_orange]
+        """
+        return [1.0, 0.0, 0.0, 0.0, 0.0]
 
 
 @action_registry.register
@@ -100,11 +102,15 @@ class EatBerryAction(ActionInterface):
     def get_feature_vector(
         self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
     ) -> List[float]:
+        """
+        Generates the one-hot encoded feature vector for eating a specific berry.
+        Schema: [is_move, is_eat_red, is_eat_blue, is_eat_yellow, is_eat_orange]
+        """
         berry_type = params.get("berry_type", "")
-        # The schema is [is_move, is_eat_red, is_eat_blue, is_eat_yellow]
         return [
             0.0,
             1.0 if berry_type == "red" else 0.0,
             1.0 if berry_type == "blue" else 0.0,
             1.0 if berry_type == "yellow" else 0.0,
+            1.0 if berry_type == "orange" else 0.0,
         ]

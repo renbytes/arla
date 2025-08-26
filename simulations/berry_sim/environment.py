@@ -16,28 +16,44 @@ class BerryWorldEnvironment(EnvironmentInterface):
         self.height = height
         self.water_locations: Set[Tuple[int, int]] = set()
         self.rock_locations: Set[Tuple[int, int]] = set()
+        self.crystal_locations: Set[Tuple[int, int]] = set()
         self.berry_locations: Dict[Tuple[int, int], str] = {}
         self.agent_positions: Dict[str, Tuple[int, int]] = {}
         self._grid_entities: Dict[Tuple[int, int], str] = {}
 
     def is_occupied(self, position: Tuple[int, int]) -> bool:
-        """Check if a cell is occupied by a blocking object (agent, rock, water)."""
+        """Check if a cell is occupied by a blocking object."""
         return (
             position in self._grid_entities
             or position in self.water_locations
             or position in self.rock_locations
+            or position in self.crystal_locations
         )
 
     def get_random_empty_cell(self) -> Optional[Tuple[int, int]]:
-        """Finds a random unoccupied cell."""
-        for _ in range(self.width * self.height):  # Avoid infinite loops
-            pos = (
-                random.randint(0, self.width - 1),
-                random.randint(0, self.height - 1),
-            )
-            if not self.is_occupied(pos) and pos not in self.berry_locations:
-                return pos
-        return None
+        """
+        Finds a random unoccupied cell.
+
+        This implementation is deterministic in finding all empty cells and will
+        not fail if only one empty cell remains.
+        """
+        # Changed from a probabilistic search to a deterministic one.
+        # This guarantees finding an empty cell if one exists.
+        occupied_cells = (
+            self.water_locations
+            | self.rock_locations
+            | self.crystal_locations
+            | set(self.berry_locations.keys())
+            | set(self.agent_positions.values())
+        )
+
+        all_cells = set((x, y) for x in range(self.width) for y in range(self.height))
+        empty_cells = list(all_cells - occupied_cells)
+
+        if not empty_cells:
+            return None
+
+        return random.choice(empty_cells)
 
     def get_berry_toxicity(
         self, berry_type: str, position: Tuple[int, int], tick: int
@@ -46,16 +62,19 @@ class BerryWorldEnvironment(EnvironmentInterface):
         if berry_type == "red":
             return 10.0
         elif berry_type == "blue":
-            return (
-                -20.0
-                if self.is_near_feature(position, self.water_locations, 2)
-                else 10.0
-            )
+            is_near_water = self.is_near_feature(position, self.water_locations, 2)
+            is_near_crystal = self.is_near_feature(position, self.crystal_locations, 2)
+            if is_near_crystal:
+                return 10.0  # Crystals purify blue berries
+            if tick >= 1000 and is_near_water:
+                return -20.0  # Toxic after tick 1000 if near water
+            return 10.0
         elif berry_type == "yellow":
-            # Toxicity is random, but seeded by position and tick for reproducibility
-            seed = hash((position, tick // 100))  # Stable toxicity for a period
+            seed = hash((position, tick // 100))
             rng = random.Random(seed)
             return -20.0 if rng.random() < 0.5 else 10.0
+        elif berry_type == "orange":
+            return 5.0  # Small direct health boost, main effect is metabolic
         return 0.0
 
     def is_near_feature(
@@ -73,6 +92,7 @@ class BerryWorldEnvironment(EnvironmentInterface):
         return {
             "near_water": self.is_near_feature(position, self.water_locations, 2),
             "near_rocks": self.is_near_feature(position, self.rock_locations, 2),
+            "near_crystal": self.is_near_feature(position, self.crystal_locations, 2),
         }
 
     # --- Interface Methods ---
@@ -123,7 +143,7 @@ class BerryWorldEnvironment(EnvironmentInterface):
         return 0 <= position[0] < self.width and 0 <= position[1] < self.height
 
     def get_entities_in_radius(self, center: Any, radius: int) -> List[Tuple[str, Any]]:
-        return []  # Not needed for this simulation
+        return []
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -131,10 +151,14 @@ class BerryWorldEnvironment(EnvironmentInterface):
             "height": self.height,
             "water_locations": [list(pos) for pos in self.water_locations],
             "rock_locations": [list(pos) for pos in self.rock_locations],
+            "crystal_locations": [list(pos) for pos in self.crystal_locations],
         }
 
     def restore_from_dict(self, data: Dict[str, Any]) -> None:
         self.width = data["width"]
         self.height = data["height"]
-        self.water_locations = {tuple(pos) for pos in data["water_locations"]}
-        self.rock_locations = {tuple(pos) for pos in data["rock_locations"]}
+        self.water_locations = {tuple(pos) for pos in data.get("water_locations", [])}
+        self.rock_locations = {tuple(pos) for pos in data.get("rock_locations", [])}
+        self.crystal_locations = {
+            tuple(pos) for pos in data.get("crystal_locations", [])
+        }
