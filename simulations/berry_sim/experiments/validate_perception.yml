@@ -1,0 +1,31 @@
+# simulations/berry_sim/experiments/validate_perception.yml
+
+experiment_name: "Exp2 - Validating Agent Perception"
+
+base_config_path: "simulations/berry_sim/config/config.yml"
+
+simulation_package: "simulations.berry_sim"
+
+scenarios:
+  - "simulations/berry_sim/scenarios/default.json"
+
+# Run only a few times for a quick check
+runs_per_scenario: 2
+
+variations:
+  - name: "QLearning-Agent-With-Vision"
+    overrides:
+      # We want to test the full cognitive model with perception
+      simulation:
+        enable_causal_system: true
+      agent:
+        # Let's make the simulation smaller and faster for this test
+        foundational:
+          num_agents: 25
+        vision_range: 7 # Make sure vision is on
+      environment:
+        params:
+          width: 25
+          height: 25
+      decision_selector:
+        class: "simulations.berry_sim.providers.QLearningDecisionSelector"

@@ -56,9 +56,12 @@ setup:
 
 ## run: Start Celery workers and run a full experiment.
 run:
-	@echo "👷 Starting $(WORKERS) Celery workers in the background..."
-	@docker compose up -d worker --scale worker=$(WORKERS)
-	@echo "▶️ Running experiment from: $(FILE)"
+	@echo "👷 Starting services and $(WORKERS) Celery workers..."
+	@docker compose up -d app worker --scale worker=$(WORKERS)
+	@echo "⏳ Waiting 5 seconds for services to initialize..."
+	@sleep 5
+	@echo "▶️ Submitting experiment from: $(FILE)"
+	# This command will now succeed because the 'app' container is running.
 	@docker compose exec app poetry run agentsim run-experiment $(FILE)
 
 ## run-local: Run a single, local simulation for quick testing and debugging.

@@ -1,6 +1,6 @@
 # simulations/berry_sim/experiments/causal_ab_test.yml
 
-experiment_name: "Berry Sim - Causal Agent A/B Test"
+experiment_name: "Exp1 - Isolating Causal Reasoning"
 
 base_config_path: "simulations/berry_sim/config/config.yml"
 
@@ -9,24 +9,40 @@ simulation_package: "simulations.berry_sim"
 scenarios:
   - "simulations/berry_sim/scenarios/default.json"
 
-# Run each variation 3 times for statistical significance
-runs_per_scenario: 3
+# Run each variation 50 times for statistical power
+runs_per_scenario: 50
 
 variations:
-  - name: "Baseline-Heuristic-Agent"
+  - name: "GroupA-Heuristic-Baseline"
     overrides:
       simulation:
-        # Explicitly disable the causal system for the baseline
         enable_causal_system: false
       decision_selector:
-        # Use the simple, hard-coded heuristic policy
-        class: "simulations.berry_sim.providers.BerryDecisionSelector"
+        # Simple rule-based agent with perfect environmental knowledge
+        class: "simulations.berry_sim.providers.HeuristicDecisionSelector"
 
-  - name: "Causal-QLearning-Agent"
+  - name: "GroupB-Full-Causal-Model"
     overrides:
       simulation:
-        # Enable the causal system for the advanced agent
+        # The full cognitive model with causal reasoning enabled
         enable_causal_system: true
       decision_selector:
-        # Use the new, intelligent policy that queries the neural network
+        # Q-learning agent that uses the causal system's output
         class: "simulations.berry_sim.providers.QLearningDecisionSelector"
+
+  - name: "GroupC-Perception-Only-Control"
+    overrides:
+      simulation:
+        # Causal reasoning is turned off for this control group
+        enable_causal_system: false
+      decision_selector:
+        # Standard Q-learning agent without causal feedback
+        class: "simulations.berry_sim.providers.QLearningDecisionSelector"
+
+  - name: "GroupD-Exploration-Matched-Heuristic"
+    overrides:
+      simulation:
+        enable_causal_system: false
+      decision_selector:
+        # Rule-based agent with exploration to match the Q-learning agents
+        class: "simulations.berry_sim.providers.ExplorationHeuristicDecisionSelector"

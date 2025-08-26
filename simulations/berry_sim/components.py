@@ -44,17 +44,31 @@ class HealthComponent(Component):
         return True, []
 
 
+class MetabolicBoostComponent(Component):
+    """Tracks the status of a temporary metabolic boost for an agent."""
+
+    def __init__(self, active: bool = False, ticks_remaining: int = 0):
+        self.active = active
+        self.ticks_remaining = ticks_remaining
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"active": self.active, "ticks_remaining": self.ticks_remaining}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
 class BerryComponent(Component):
     """Represents a berry resource in the environment."""
 
     def __init__(self, berry_type: str) -> None:
-        self.berry_type = berry_type  # "red", "blue", or "yellow"
+        self.berry_type = berry_type  # "red", "blue", "yellow", or "orange"
 
     def to_dict(self) -> Dict[str, Any]:
         return {"berry_type": self.berry_type}
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
-        if self.berry_type not in ["red", "blue", "yellow"]:
+        if self.berry_type not in ["red", "blue", "yellow", "orange"]:
             return False, [f"Invalid berry type: {self.berry_type}"]
         return True, []
 
@@ -71,6 +85,16 @@ class WaterComponent(Component):
 
 class RockComponent(Component):
     """A marker component for a rock tile."""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+class PurifierCrystalComponent(Component):
+    """A marker component for a purifier crystal tile."""
 
     def to_dict(self) -> Dict[str, Any]:
         return {}

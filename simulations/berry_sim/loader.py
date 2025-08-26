@@ -10,8 +10,8 @@ from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterf
 from .components import (
     HealthComponent,
     PositionComponent,
-    WaterComponent,
     RockComponent,
+    WaterComponent,
 )
 from .environment import BerryWorldEnvironment
 
@@ -36,53 +36,58 @@ class BerryScenarioLoader(ScenarioLoaderInterface):
         num_water_sources = scenario_data.get("num_water_sources", 10)
         placed_water = 0
         while placed_water < num_water_sources:
-            pos = (random.randint(0, env.width - 1), random.randint(0, env.height - 1))
-            if pos in env.water_locations:
+            # Using a unique variable name 'water_pos' here
+            water_pos = (
+                random.randint(0, env.width - 1),
+                random.randint(0, env.height - 1),
+            )
+            if water_pos in env.water_locations:
                 continue
 
-            env.water_locations.add(pos)
-            entity_id = f"water_{pos[0]}_{pos[1]}"
+            env.water_locations.add(water_pos)
+            entity_id = f"water_{water_pos[0]}_{water_pos[1]}"
             self.simulation_state.add_entity(entity_id)
             self.simulation_state.add_component(entity_id, WaterComponent())
             placed_water += 1
 
         # Place rock formations
         for _ in range(scenario_data.get("num_rock_formations", 20)):
-            pos = env.get_random_empty_cell()
-            # CORRECTED: Check if a valid position was found before using it.
-            if pos:
-                env.rock_locations.add(pos)
-                entity_id = f"rock_{pos[0]}_{pos[1]}"
+            # Using a unique variable name 'rock_pos' here
+            rock_pos = env.get_random_empty_cell()
+            if rock_pos:
+                env.rock_locations.add(rock_pos)
+                entity_id = f"rock_{rock_pos[0]}_{rock_pos[1]}"
                 self.simulation_state.add_entity(entity_id)
                 self.simulation_state.add_component(entity_id, RockComponent())
 
         # Create agents
-        num_agents = scenario_data.get("num_agents", 100)
+        num_agents = self.simulation_state.config.agent.foundational.num_agents
         config = self.simulation_state.config
         initial_health = config.agent.vitals.initial_health
-        vision_range = config.agent.get(
-            "vision_range", 7
-        )  # Get vision range from config
+        vision_range = config.agent.vision_range
 
         for i in range(num_agents):
             agent_id = f"agent_{i}"
             self.simulation_state.add_entity(agent_id)
 
-            pos = env.get_random_empty_cell()
-            if pos:
+            # Using a unique variable name 'agent_pos' here
+            agent_pos = env.get_random_empty_cell()
+            if agent_pos:
                 self.simulation_state.add_component(
-                    agent_id, PositionComponent(x=pos[0], y=pos[1])
+                    agent_id, PositionComponent(x=agent_pos[0], y=agent_pos[1])
                 )
                 self.simulation_state.add_component(
                     agent_id, HealthComponent(initial_health, initial_health)
                 )
                 self.simulation_state.add_component(
-                    agent_id, TimeBudgetComponent(initial_time_budget=2000)
+                    agent_id,
+                    TimeBudgetComponent(
+                        initial_time_budget=config.agent.foundational.vitals.initial_time_budget
+                    ),
                 )
-                # NEW: Add the PerceptionComponent to each agent
                 self.simulation_state.add_component(
                     agent_id, PerceptionComponent(vision_range=vision_range)
                 )
-                env.add_entity(agent_id, pos)
+                env.add_entity(agent_id, agent_pos)
             else:
                 print(f"Warning: Could not find empty cell for agent {agent_id}")
