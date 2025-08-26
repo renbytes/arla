@@ -1,12 +1,13 @@
 # simulations/schelling_sim/actions.py
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
-from agent_core.agents.actions.base_action import ActionOutcome
-from agent_core.core.ecs.abstractions import SimulationState
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_engine.simulation.simulation_state import SimulationState
 
 # --- FIX: Import the new, separated components ---
 from .components import PositionComponent, SatisfactionComponent
@@ -29,24 +30,34 @@ class MoveToEmptyCellAction(ActionInterface):
         """A human-readable name for the action."""
         return "Move to Empty Cell"
 
-    def get_base_cost(self, simulation_state: SimulationState) -> float:
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
         """The base time budget cost to perform the action."""
         return 1.0
 
     def generate_possible_params(
-        self, entity_id: str, simulation_state: SimulationState, current_tick: int
+        self,
+        entity_id: str,
+        simulation_state: AbstractSimulationState,
+        current_tick: int,
     ) -> List[Dict[str, Any]]:
         """
         Generates a move parameter if the agent is unsatisfied and there are
         empty cells available.
         """
-        # --- FIX: Use the SatisfactionComponent to check the agent's state ---
+        if not isinstance(simulation_state, SimulationState):
+            return []
+
         satisfaction_comp = simulation_state.get_component(
             entity_id, SatisfactionComponent
         )
 
+        if not satisfaction_comp:
+            return []
+
+        satisfaction_comp = cast(SatisfactionComponent, satisfaction_comp)
+
         # Only generate a move action if the agent is unsatisfied.
-        if not satisfaction_comp or satisfaction_comp.is_satisfied:
+        if satisfaction_comp.is_satisfied:
             return []
 
         env = simulation_state.environment
@@ -64,7 +75,7 @@ class MoveToEmptyCellAction(ActionInterface):
     def execute(
         self,
         entity_id: str,
-        simulation_state: SimulationState,
+        simulation_state: AbstractSimulationState,
         params: Dict[str, Any],
         current_tick: int,
     ) -> ActionOutcome:
@@ -80,6 +91,8 @@ class MoveToEmptyCellAction(ActionInterface):
                 base_reward=-0.1,
             )
 
+        pos_comp = cast(PositionComponent, pos_comp)
+
         target_pos = (params.get("target_x"), params.get("target_y"))
         return ActionOutcome(
             success=True,
@@ -88,7 +101,10 @@ class MoveToEmptyCellAction(ActionInterface):
         )
 
     def get_feature_vector(
-        self, entity_id: str, simulation_state: SimulationState, params: Dict[str, Any]
+        self,
+        entity_id: str,
+        simulation_state: AbstractSimulationState,
+        params: Dict[str, Any],
     ) -> List[float]:
         """Generates a feature vector for this action (not used in this model)."""
         return [1.0]

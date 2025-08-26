@@ -2,13 +2,14 @@
 
 import math
 import random
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
 import numpy as np
 import torch
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
     Component,
@@ -27,6 +28,7 @@ from agent_core.environment.vitality_metrics_provider_interface import (
 )
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
 from agent_core.policy.state_encoder_interface import StateEncoderInterface
+from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.systems.components import QLearningComponent
 
 from .actions import EatBerryAction, MoveAction
@@ -49,16 +51,22 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
         self,
         _entity_id: str,
         components: Dict[Type[Component], Component],
-        sim_state: Any,
+        sim_state: AbstractSimulationState,
         _current_tick: int,
     ) -> None:
         """Finds all berries and crystals within vision range."""
+        if not isinstance(sim_state, SimulationState):
+            return
+
         pos_comp = components.get(PositionComponent)
         perc_comp = components.get(PerceptionComponent)
         env = sim_state.environment
 
         if not pos_comp or not perc_comp or not isinstance(env, BerryWorldEnvironment):
             return
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        perc_comp = cast(PerceptionComponent, perc_comp)
 
         perc_comp.visible_entities.clear()
 
@@ -88,7 +96,9 @@ class BerryPerceptionProvider(PerceptionProviderInterface):
 class BerryActionGenerator(ActionGeneratorInterface):
     """Generates move and eat actions for agents."""
 
-    def generate(self, sim_state, entity_id, tick) -> List[ActionPlanComponent]:
+    def generate(
+        self, sim_state: AbstractSimulationState, entity_id: str, tick: int
+    ) -> List[ActionPlanComponent]:
         actions = []
         move_action = MoveAction()
         eat_action = EatBerryAction()
@@ -115,23 +125,31 @@ class HeuristicDecisionSelector(DecisionSelectorInterface):
         pass
 
     def select(
-        self, sim_state, entity_id, possible_actions: List[ActionPlanComponent]
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
     ) -> Optional[ActionPlanComponent]:
-        if not possible_actions:
+        if not possible_actions or not isinstance(sim_state, SimulationState):
             return None
 
         eat_actions = [
-            a for a in possible_actions if isinstance(a.action_type, EatBerryAction)
+            a
+            for a in possible_actions
+            if a.action_type and isinstance(a.action_type, EatBerryAction)
         ]
         if eat_actions:
             return eat_actions[0]
 
         move_actions = [
-            a for a in possible_actions if isinstance(a.action_type, MoveAction)
+            a
+            for a in possible_actions
+            if a.action_type and isinstance(a.action_type, MoveAction)
         ]
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         env = sim_state.environment
         if pos_comp and isinstance(env, BerryWorldEnvironment) and move_actions:
+            pos_comp = cast(PositionComponent, pos_comp)
             closest_berry_pos = None
             min_dist = float("inf")
 
@@ -161,7 +179,10 @@ class ExplorationHeuristicDecisionSelector(HeuristicDecisionSelector):
         self.epsilon = config.learning.q_learning.get("initial_epsilon", 0.1)
 
     def select(
-        self, sim_state, entity_id, possible_actions: List[ActionPlanComponent]
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
     ) -> Optional[ActionPlanComponent]:
         if not possible_actions:
             return None
@@ -182,16 +203,17 @@ class QLearningDecisionSelector(DecisionSelectorInterface):
 
     def select(
         self,
-        sim_state: Any,
+        sim_state: AbstractSimulationState,
         entity_id: str,
         possible_actions: List[ActionPlanComponent],
     ) -> Optional[ActionPlanComponent]:
-        if not possible_actions:
+        if not possible_actions or not isinstance(sim_state, SimulationState):
             return None
 
         q_comp = sim_state.get_component(entity_id, QLearningComponent)
         if not q_comp:
             return random.choice(possible_actions)
+        q_comp = cast(QLearningComponent, q_comp)
 
         # Epsilon-greedy exploration
         epsilon = self.config.learning.q_learning.get("initial_epsilon", 0.1)
@@ -248,12 +270,15 @@ class BerryStateEncoder(StateEncoderInterface):
 
     def encode_state(
         self,
-        sim_state: Any,
+        sim_state: AbstractSimulationState,
         entity_id: str,
         config: Any,
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """Creates a feature vector including vitals, perception, and internal state."""
+        if not isinstance(sim_state, SimulationState):
+            return np.zeros(14, dtype=np.float32)
+
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         health_comp = sim_state.get_component(entity_id, HealthComponent)
         perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
@@ -264,18 +289,36 @@ class BerryStateEncoder(StateEncoderInterface):
         height = env_params.height
 
         # 1. Agent's own state vector
-        agent_x = pos_comp.x / width if pos_comp else 0.5
-        agent_y = pos_comp.y / height if pos_comp else 0.5
-        health = (
-            health_comp.current_health / health_comp.initial_health
-            if health_comp
-            else 0.5
-        )
-        is_boosted = 1.0 if boost_comp and boost_comp.active else 0.0
+        agent_x = 0.5
+        agent_y = 0.5
+        pos_comp_cast: Optional[PositionComponent] = None
+        if pos_comp:
+            pos_comp_cast = cast(PositionComponent, pos_comp)
+            agent_x = pos_comp_cast.x / width
+            agent_y = pos_comp_cast.y / height
+
+        if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
+            health = health_comp.current_health / health_comp.initial_health
+        else:
+            health = 0.5
+
+        if boost_comp:
+            boost_comp = cast(MetabolicBoostComponent, boost_comp)
+            is_boosted = 1.0 if boost_comp.active else 0.0
+        else:
+            is_boosted = 0.0
+
         agent_state_vector = [agent_x, agent_y, health, is_boosted]
 
         # 2. Agent's perception vector
-        visible_items = perc_comp.visible_entities if perc_comp else {}
+        visible_items: Dict[
+            str, Any
+        ] = {}  # Explicit type annotation to fix assignment error
+        if perc_comp:
+            perc_comp = cast(PerceptionComponent, perc_comp)
+            visible_items = perc_comp.visible_entities
+
         nearest: Dict[str, Optional[Dict[str, Any]]] = {
             "red": None,
             "blue": None,
@@ -298,10 +341,10 @@ class BerryStateEncoder(StateEncoderInterface):
         vision_range = config.agent.vision_range
         for item_type in ["red", "blue", "yellow", "orange", "crystal"]:
             item_data = nearest[item_type]
-            if item_data and pos_comp:
+            if item_data and pos_comp_cast:
                 dist = item_data["distance"] / vision_range
-                dx = item_data["position"][0] - pos_comp.x
-                dy = item_data["position"][1] - pos_comp.y
+                dx = item_data["position"][0] - pos_comp_cast.x
+                dy = item_data["position"][1] - pos_comp_cast.y
                 angle = math.atan2(dy, dx) / math.pi
                 perception_vector.extend([dist, angle])
             else:
@@ -318,8 +361,13 @@ class BerryStateEncoder(StateEncoderInterface):
 
 class BerryRewardCalculator(RewardCalculatorInterface):
     def calculate_final_reward(
-        self, base_reward: float, **kwargs
-    ) -> Tuple[float, Dict[str, Any]]:
+        self,
+        base_reward: float,
+        action_type: Any,
+        action_intent: str,
+        outcome_details: dict[str, Any],
+        entity_components: dict[type[Component], Component],
+    ) -> tuple[float, dict[str, Any]]:
         return base_reward, {"base_reward": base_reward}
 
 
@@ -361,6 +409,7 @@ class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
     ) -> Dict[str, float]:
         health_comp = components.get(HealthComponent)
         if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
             return {
                 "health_norm": health_comp.current_health / health_comp.initial_health
             }
@@ -368,10 +417,13 @@ class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
 
 
 class BerryStateNodeEncoder(StateNodeEncoderInterface):
+    def __init__(self, simulation_state: SimulationState):
+        self.simulation_state = simulation_state
+
     def encode_state_for_causal_graph(
         self,
         entity_id: str,
-        components: Dict[Type[Component], "Component"],
+        components: Dict[Type["Component"], "Component"],
         current_tick: int,
         config: Any,
     ) -> Tuple[Any, ...]:
@@ -380,10 +432,13 @@ class BerryStateNodeEncoder(StateNodeEncoderInterface):
         if not pos_comp or not isinstance(env, BerryWorldEnvironment):
             return ("STATE", "unknown_context", "unknown_health")
 
+        pos_comp = cast(PositionComponent, pos_comp)
+
         context = env.get_environmental_context(pos_comp.position)
         health_comp = components.get(HealthComponent)
         health_status = "healthy"
         if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
             health_ratio = health_comp.current_health / health_comp.initial_health
             if health_ratio < 0.3:
                 health_status = "critical"

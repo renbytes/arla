@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from agent_core.agents.actions.action_interface import ActionInterface
-from agent_core.agents.actions.base_action import ActionOutcome, Intent
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.agents.actions.base_action import Intent
 from agent_core.core.ecs.component import (
     ActionOutcomeComponent,
     ActionPlanComponent,

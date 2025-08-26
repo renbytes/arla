@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, create_autospec, patch
 import numpy as np
 import pytest
 from agent_core.agents.actions.action_interface import ActionInterface
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.systems.causal_graph_system import CausalGraphSystem
@@ -23,6 +23,8 @@ def system_setup():
     # The mock state must have an 'entities' attribute, as the system
     # accesses it directly via `simulation_state.entities.get(...)`.
     mock_state.entities = MagicMock()
+    # FIX: The state encoder needs access to the environment.
+    mock_state.environment = MagicMock()
 
     mock_bus = MagicMock()
     mock_encoder = MagicMock()

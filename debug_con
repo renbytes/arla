@@ -1,0 +1,63 @@
+#!/bin/bash
+# ------------------------------------------------------------------
+# ARLA Context Aggregator for Mypy Debugging
+#
+# This script collects all relevant source files for debugging the
+# sugarscape and berry_sim type-checking errors and concatenates
+# them into a single text file.
+#
+# Usage:
+#   Run this script from the root of the 'arla' project directory.
+#   $ bash collect_context.sh
+# ------------------------------------------------------------------
+
+OUTPUT_FILE="mypy_debug_context.txt"
+
+# List of all files to be included in the context.
+# Includes the files with errors and all their direct dependencies.
+FILES_TO_INCLUDE=(
+    # --- Files with Errors ---
+    "simulations/sugarscape_sim/systems.py"
+    "simulations/sugarscape_sim/providers.py"
+    "simulations/berry_sim/providers.py"
+
+    # --- Dependencies for Sugarscape ---
+    "simulations/sugarscape_sim/environment.py"
+    "simulations/sugarscape_sim/components.py"
+    "simulations/sugarscape_sim/actions.py"
+
+    # --- Dependencies for Berry Sim ---
+    "simulations/berry_sim/environment.py"
+    "simulations/berry_sim/components.py"
+    "simulations/berry_sim/actions.py"
+
+    # --- Core Interfaces and Base Classes ---
+    "agent-core/src/agent_core/core/ecs/abstractions.py"
+    "agent-core/src/agent_core/core/ecs/component.py"
+    "agent-core/src/agent_core/environment/interface.py"
+    "agent-core/src/agent_core/environment/perception_provider_interface.py"
+    "agent-core/src/agent_core/environment/state_node_encoder_interface.py"
+    "agent-core/src/agent_core/policy/state_encoder_interface.py"
+    "agent-engine/src/agent_engine//simulation/simulation_state.py"
+    "agent-engine/src/agent_engine//simulation/system.py"
+)
+
+# Start with a clean file
+echo "Creating ARLA mypy debug context file at: $OUTPUT_FILE"
+> "$OUTPUT_FILE"
+
+# Loop through the file list and append content with headers
+for FILE in "${FILES_TO_INCLUDE[@]}"; do
+    if [ -f "$FILE" ]; then
+        echo "Appending content of: $FILE"
+        echo "────────────────────────────────────────────────────────────────────────────────" >> "$OUTPUT_FILE"
+        echo " FILE: $FILE" >> "$OUTPUT_FILE"
+        echo "────────────────────────────────────────────────────────────────────────────────" >> "$OUTPUT_FILE"
+        cat "$FILE" >> "$OUTPUT_FILE"
+        echo -e "\n\n" >> "$OUTPUT_FILE"
+    else
+        echo "Warning: File not found, skipping: $FILE"
+    fi
+done
+
+echo "✅ Done. The full context has been written to $OUTPUT_FILE"

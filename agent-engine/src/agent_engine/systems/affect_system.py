@@ -9,7 +9,7 @@ import numpy as np
 
 # Imports from agent_core
 from agent_core.agents.actions.action_registry import action_registry
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import (
     AffectComponent,
     Component,

@@ -2,9 +2,9 @@
 
 import os
 import random
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Type, cast
 
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import Component, TimeBudgetComponent
 from agent_engine.simulation.system import System
 
@@ -84,11 +84,18 @@ class ConsumptionSystem(System):
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         env = self.simulation_state.environment
 
-        if not all([health_comp, pos_comp, isinstance(env, BerryWorldEnvironment)]):
+        if (
+            not health_comp
+            or not pos_comp
+            or not isinstance(env, BerryWorldEnvironment)
+        ):
             self._publish_outcome(
                 event_data, success=False, reward=-1.0, message="Missing components."
             )
             return
+
+        health_comp = cast(HealthComponent, health_comp)
+        pos_comp = cast(PositionComponent, pos_comp)
 
         berry_type = env.berry_locations.pop(pos_comp.position, None)
         if berry_type != params.get("berry_type"):
@@ -140,11 +147,13 @@ class MovementSystem(System):
         pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
         env = self.simulation_state.environment
 
-        if not all([pos_comp, isinstance(env, BerryWorldEnvironment)]):
+        if not pos_comp or not isinstance(env, BerryWorldEnvironment):
             self._publish_outcome(
                 event_data, success=False, reward=-1.0, message="Missing components."
             )
             return
+
+        pos_comp = cast(PositionComponent, pos_comp)
 
         target_pos = params["target_pos"]
         if not env.is_valid_position(target_pos) or env.is_occupied(target_pos):
@@ -192,7 +201,13 @@ class VitalsSystem(System):
             health_comp = components.get(HealthComponent)
             time_comp = components.get(TimeBudgetComponent)
 
-            if not time_comp or not health_comp or not time_comp.is_active:
+            if not time_comp or not health_comp:
+                continue
+
+            time_comp = cast(TimeBudgetComponent, time_comp)
+            health_comp = cast(HealthComponent, health_comp)
+
+            if not time_comp.is_active:
                 continue
 
             if health_comp.current_health <= 0:

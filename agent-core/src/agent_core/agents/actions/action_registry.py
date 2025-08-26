@@ -1,7 +1,8 @@
 # src/agent_core/agents/actions/action_registry.py
 """
 Defines the ActionRegistry, a singleton object that discovers and manages
-all available actions in the simulation.
+all available actions in the simulation. This version is designed to be
+"override-friendly" for testing purposes.
 """
 
 import importlib
@@ -13,23 +14,27 @@ from agent_core.agents.actions.action_interface import ActionInterface
 class ActionRegistry:
     """
     A registry for discovering, storing, and retrieving action classes.
+
+    In its default mode (`strict=False`), it allows new actions to override
+    existing actions with the same `action_id`. This is useful in testing
+    environments where multiple simulations define their own version of a
+    common action (e.g., 'move').
+
+    In `strict=True` mode, it will raise a ValueError if a duplicate
+    action_id is registered, which is useful for production to prevent
+    accidental naming collisions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, strict: bool = False) -> None:
         self._actions: Dict[str, Type[ActionInterface]] = {}
-        print("ActionRegistry initialized.")
+        self.strict = strict
+        print(
+            f"ActionRegistry initialized in {'strict' if self.strict else 'override'} mode."
+        )
 
     def load_actions_from_paths(self, module_paths: List[str]) -> None:
         """
         Dynamically imports Python modules from a list of string paths.
-
-        This is the core of the plugin system. Importing a module that
-        contains an @action_registry.register decorator will cause that
-        action to be registered.
-
-        Args:
-            module_paths: A list of module paths, e.g.,
-                          ["simulations.soul_sim.actions.move_action"].
         """
         print(f"Dynamically loading actions from: {module_paths}")
         for path in module_paths:
@@ -64,9 +69,11 @@ class ActionRegistry:
                 f"Action class {action_class.__name__} has an invalid 'action_id' property."
             )
 
-        if action_id in self._actions:
+        # Only raise an error if the registry is in strict mode.
+        if action_id in self._actions and self.strict:
             raise ValueError(f"Action with ID '{action_id}' is already registered.")
 
+        # Silently override the existing action if not in strict mode.
         self._actions[action_id] = action_class
         print(f"Action '{action_name}' registered with ID '{action_id}'.")
         return action_class
@@ -88,6 +95,5 @@ class ActionRegistry:
         return sorted(self._actions.keys())
 
 
-# Create a global singleton instance of the registry.
-# All other parts of the application will import this instance.
-action_registry = ActionRegistry()
+# Create a global singleton instance of the registry in non-strict mode.
+action_registry = ActionRegistry(strict=False)

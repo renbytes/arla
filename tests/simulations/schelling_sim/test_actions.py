@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 
 import pytest
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 
 from simulations.schelling_sim.actions import MoveToEmptyCellAction
 from simulations.schelling_sim.components import (

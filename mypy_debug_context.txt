@@ -1,0 +1,3331 @@
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/sugarscape_sim/systems.py
+────────────────────────────────────────────────────────────────────────────────
+"""
+Defines the logic systems for the Sugarscape simulation.
+Systems contain all the business logic of the simulation. They operate on
+entities that have a specific set of components and communicate with each other
+indirectly through an event bus. This file implements the core mechanics
+of the Sugarscape model as described in the paper.
+"""
+
+import random
+import uuid
+from typing import Any, Dict, List, Type, cast
+
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.core.ecs.component import Component, TimeBudgetComponent
+from agent_engine.simulation.system import System
+
+from .components import (
+    EnergyComponent,
+    MetabolismComponent,
+    PositionComponent,
+)
+from .environment import SugarscapeEnvironment
+
+
+class MetabolismSystem(System):
+    """
+    Handles agent metabolism, energy decay, death, and sugar regeneration.
+    This system runs every tick for all agents with energy and metabolism.
+    """
+
+    REQUIRED_COMPONENTS: List[Type[Component]] = [
+        EnergyComponent,
+        MetabolismComponent,
+        TimeBudgetComponent,
+    ]
+
+    async def update(self, current_tick: int) -> None:
+        """
+        Processes passive energy decay for all agents and handles death.
+        Also regenerates sugar in the environment.
+        """
+        env = self.simulation_state.environment
+        if not isinstance(env, SugarscapeEnvironment):
+            return
+
+        # Regenerate sugar across the entire map
+        env.regenerate_sugar()
+
+        # Process agent metabolism
+        agents = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
+        for agent_id, components in agents.items():
+            energy_comp = cast(EnergyComponent, components.get(EnergyComponent))
+            metabolism_comp = cast(
+                MetabolismComponent, components.get(MetabolismComponent)
+            )
+            time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
+
+            if not time_comp.is_active:
+                continue
+
+            # Apply metabolic cost
+            energy_comp.current_energy -= metabolism_comp.metabolic_rate
+
+            # Check for death
+            if energy_comp.current_energy <= 0:
+                time_comp.is_active = False
+                env.remove_entity(agent_id)
+                if self.event_bus:
+                    self.event_bus.publish(
+                        "agent_deactivated",
+                        {"entity_id": agent_id, "current_tick": current_tick},
+                    )
+
+
+class MovementSystem(System):
+    """Handles the execution of agent movement actions."""
+
+    def __init__(self, sim_state: Any, config: Any, scaffold: Any):
+        super().__init__(sim_state, config, scaffold)
+        if self.event_bus:
+            self.event_bus.subscribe("execute_move_action", self.on_move)
+
+    def on_move(self, event_data: Dict[str, Any]):
+        """Event handler for when a move action is chosen."""
+        entity_id = event_data["entity_id"]
+        params = event_data["action_plan_component"].params
+        pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
+        env = self.simulation_state.environment
+
+        if not pos_comp or not isinstance(env, SugarscapeEnvironment):
+            self._publish_outcome(
+                event_data, success=False, reward=-1.0, message="Missing components."
+            )
+            return
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        target_pos = params["target_pos"]
+        old_pos = pos_comp.position
+        pos_comp.x, pos_comp.y = target_pos
+        env.update_entity_position(entity_id, old_pos, target_pos)
+
+        self._publish_outcome(
+            event_data, success=True, reward=0.0, message="Move successful."
+        )
+
+    def _publish_outcome(
+        self, event_data: Dict[str, Any], success: bool, reward: float, message: str
+    ):
+        """Publishes the final outcome of the action."""
+        event_data["action_outcome"] = ActionOutcome(
+            success, message, base_reward=reward
+        )
+        event_data["original_action_plan"] = event_data.pop("action_plan_component")
+        if self.event_bus:
+            self.event_bus.publish("action_outcome_ready", event_data)
+
+    async def update(self, current_tick: int):
+        """This system is purely event-driven."""
+        pass
+
+
+class HarvestSystem(System):
+    """Handles the execution of sugar harvesting actions."""
+
+    def __init__(self, sim_state: Any, config: Any, scaffold: Any):
+        super().__init__(sim_state, config, scaffold)
+        if self.event_bus:
+            self.event_bus.subscribe("execute_harvest_action", self.on_harvest)
+
+    def on_harvest(self, event_data: Dict[str, Any]):
+        """Event handler for when a harvest action is chosen."""
+        entity_id = event_data["entity_id"]
+        pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
+        energy_comp = self.simulation_state.get_component(entity_id, EnergyComponent)
+        env = self.simulation_state.environment
+
+        if (
+            not pos_comp
+            or not energy_comp
+            or not isinstance(env, SugarscapeEnvironment)
+        ):
+            self._publish_outcome(
+                event_data, success=False, reward=-1.0, message="Missing components."
+            )
+            return
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        energy_comp = cast(EnergyComponent, energy_comp)
+
+        harvested_amount = env.consume_sugar(pos_comp.position)
+        energy_comp.current_energy += harvested_amount
+
+        self._publish_outcome(
+            event_data,
+            success=True,
+            reward=float(harvested_amount),
+            message=f"Harvested {harvested_amount} sugar.",
+        )
+
+    def _publish_outcome(
+        self, event_data: Dict[str, Any], success: bool, reward: float, message: str
+    ):
+        """Publishes the final outcome of the action."""
+        event_data["action_outcome"] = ActionOutcome(
+            success, message, base_reward=reward
+        )
+        event_data["original_action_plan"] = event_data.pop("action_plan_component")
+        if self.event_bus:
+            self.event_bus.publish("action_outcome_ready", event_data)
+
+    async def update(self, current_tick: int):
+        """This system is purely event-driven."""
+        pass
+
+
+class SocialSystem(System):
+    """Handles all social interactions: sharing, attacking, and reproducing."""
+
+    def __init__(self, sim_state: Any, config: Any, scaffold: Any):
+        super().__init__(sim_state, config, scaffold)
+        if self.event_bus:
+            self.event_bus.subscribe("execute_share_action", self.on_share)
+            self.event_bus.subscribe("execute_attack_action", self.on_attack)
+            self.event_bus.subscribe("execute_reproduce_action", self.on_reproduce)
+
+    def on_share(self, event_data: Dict[str, Any]):
+        """Handles energy sharing between agents."""
+        sender_id = event_data["entity_id"]
+        params = event_data["action_plan_component"].params
+        target_id = params["target_id"]
+        amount = params["amount"]
+
+        sender_energy = self.simulation_state.get_component(sender_id, EnergyComponent)
+        target_energy = self.simulation_state.get_component(target_id, EnergyComponent)
+
+        if not sender_energy or not target_energy:
+            self._publish_outcome(event_data, False, -0.1, "Share failed.")
+            return
+
+        sender_energy = cast(EnergyComponent, sender_energy)
+        target_energy = cast(EnergyComponent, target_energy)
+
+        if sender_energy.current_energy < amount:
+            self._publish_outcome(event_data, False, -0.1, "Share failed.")
+            return
+
+        sender_energy.current_energy -= amount
+        target_energy.current_energy += amount
+        self._publish_outcome(event_data, True, float(amount), "Shared energy.")
+
+    def on_attack(self, event_data: Dict[str, Any]):
+        """Handles one agent attacking another to steal energy."""
+        attacker_id = event_data["entity_id"]
+        params = event_data["action_plan_component"].params
+        target_id = params["target_id"]
+
+        attacker_energy = self.simulation_state.get_component(
+            attacker_id, EnergyComponent
+        )
+        target_energy = self.simulation_state.get_component(target_id, EnergyComponent)
+        target_time = self.simulation_state.get_component(
+            target_id, TimeBudgetComponent
+        )
+
+        if not attacker_energy or not target_energy or not target_time:
+            self._publish_outcome(event_data, False, -1.0, "Attack failed.")
+            return
+
+        attacker_energy = cast(EnergyComponent, attacker_energy)
+        target_energy = cast(EnergyComponent, target_energy)
+        target_time = cast(TimeBudgetComponent, target_time)
+
+        stolen_energy = target_energy.current_energy
+        attacker_energy.current_energy += stolen_energy
+        target_energy.current_energy = 0
+        target_time.is_active = False  # The target is eliminated
+
+        env = self.simulation_state.environment
+        if isinstance(env, SugarscapeEnvironment):
+            env.remove_entity(target_id)
+
+        self._publish_outcome(
+            event_data, True, float(stolen_energy), "Attack successful."
+        )
+
+    def on_reproduce(self, event_data: Dict[str, Any]):
+        """Handles agent reproduction."""
+        parent_id = event_data["entity_id"]
+        parent_energy = self.simulation_state.get_component(parent_id, EnergyComponent)
+        parent_pos = self.simulation_state.get_component(parent_id, PositionComponent)
+        parent_metabolism = self.simulation_state.get_component(
+            parent_id, MetabolismComponent
+        )
+        env = self.simulation_state.environment
+
+        if not all(
+            [
+                parent_energy,
+                parent_pos,
+                parent_metabolism,
+                isinstance(env, SugarscapeEnvironment),
+            ]
+        ):
+            self._publish_outcome(event_data, False, -1.0, "Reproduction failed.")
+            return
+
+        parent_energy = cast(EnergyComponent, parent_energy)
+        parent_metabolism = cast(MetabolismComponent, parent_metabolism)
+
+        # Find an empty cell for the offspring
+        empty_cell = env.get_random_empty_cell()
+        if not empty_cell:
+            self._publish_outcome(event_data, False, -0.5, "No space to reproduce.")
+            return
+
+        # Split energy
+        repro_cost = event_data["action_plan_component"].action_type.get_base_cost(
+            self.simulation_state
+        )
+        parent_energy.current_energy -= repro_cost
+        child_energy = repro_cost / 2.0
+
+        # Create the new agent (child)
+        child_id = f"agent_{uuid.uuid4().hex[:6]}"
+        self.simulation_state.add_entity(child_id)
+
+        # Inherit traits with slight mutation (a classic Sugarscape feature)
+        child_metabolism_rate = max(
+            1, parent_metabolism.metabolic_rate + random.randint(-1, 1)
+        )
+        child_vision = max(1, parent_metabolism.vision_range + random.randint(-1, 1))
+
+        # Add all necessary components for the new agent
+        self.simulation_state.add_component(
+            child_id, PositionComponent(x=empty_cell[0], y=empty_cell[1])
+        )
+        self.simulation_state.add_component(
+            child_id,
+            EnergyComponent(current_energy=child_energy, initial_energy=child_energy),
+        )
+        self.simulation_state.add_component(
+            child_id,
+            MetabolismComponent(
+                metabolic_rate=child_metabolism_rate, vision_range=child_vision
+            ),
+        )
+        self.simulation_state.add_component(
+            child_id, TimeBudgetComponent(initial_time_budget=9999)
+        )  # Effectively infinite lifespan
+
+        env.update_entity_position(child_id, None, empty_cell)
+        self._publish_outcome(event_data, True, 50.0, "Reproduction successful.")
+
+    def _publish_outcome(
+        self, event_data: Dict[str, Any], success: bool, reward: float, message: str
+    ):
+        """Helper to publish the outcome of a social action."""
+        event_data["action_outcome"] = ActionOutcome(
+            success, message, base_reward=reward
+        )
+        event_data["original_action_plan"] = event_data.pop("action_plan_component")
+        if self.event_bus:
+            self.event_bus.publish("action_outcome_ready", event_data)
+
+    async def update(self, current_tick: int):
+        """This system is purely event-driven."""
+        pass
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/sugarscape_sim/providers.py
+────────────────────────────────────────────────────────────────────────────────
+"""
+Defines the Provider classes for the Sugarscape simulation.
+Providers are the bridge between the world-agnostic agent-engine and the
+specific rules of this simulation. They implement the interfaces defined in
+agent-core to supply world-specific data and logic to the core cognitive systems.
+"""
+
+import math
+import random
+from typing import Any, Dict, List, Optional, Tuple, Type, cast
+
+import numpy as np
+import torch
+from agent_core.agents.action_generator_interface import ActionGeneratorInterface
+from agent_core.agents.actions.action_registry import action_registry
+from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_core.core.ecs.component import (
+    ActionPlanComponent,
+    Component,
+    PerceptionComponent,
+    TimeBudgetComponent,
+)
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
+from agent_core.environment.perception_provider_interface import (
+    PerceptionProviderInterface,
+)
+from agent_core.environment.state_node_encoder_interface import (
+    StateNodeEncoderInterface,
+)
+from agent_core.environment.vitality_metrics_provider_interface import (
+    VitalityMetricsProviderInterface,
+)
+from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
+from agent_core.policy.state_encoder_interface import StateEncoderInterface
+from agent_engine.simulation.simulation_state import SimulationState
+from agent_engine.systems.components import QLearningComponent
+
+from .components import (
+    CommunicationComponent,
+    EnergyComponent,
+    MetabolismComponent,
+    PositionComponent,
+)
+from .environment import SugarscapeEnvironment
+
+
+class SugarscapePerceptionProvider(PerceptionProviderInterface):
+    """Provides Sugarscape-specific sensory information to agents."""
+
+    def update_perception(
+        self,
+        entity_id: str,
+        components: Dict[Type[Component], Component],
+        sim_state: AbstractSimulationState,
+        current_tick: int,
+    ) -> None:
+        """Finds all visible agents and sugar patches within vision range."""
+        if not isinstance(sim_state, SimulationState):
+            return
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        metabolism_comp = sim_state.get_component(entity_id, MetabolismComponent)
+        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        env = sim_state.environment
+
+        if not all(
+            [
+                pos_comp,
+                metabolism_comp,
+                perc_comp,
+                isinstance(env, SugarscapeEnvironment),
+            ]
+        ):
+            return
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        metabolism_comp = cast(MetabolismComponent, metabolism_comp)
+        perc_comp = cast(PerceptionComponent, perc_comp)
+
+        perc_comp.visible_entities.clear()
+        vision_range = metabolism_comp.vision_range
+
+        # Perceive other agents
+        for other_id, other_pos in env.agent_positions.items():
+            if other_id == entity_id:
+                continue
+            dist = env.distance(pos_comp.position, other_pos)
+            if dist <= vision_range:
+                perc_comp.visible_entities[other_id] = {
+                    "type": "agent",
+                    "position": other_pos,
+                    "distance": dist,
+                }
+
+        # Perceive sugar patches
+        for y in range(env.height):
+            for x in range(env.width):
+                pos = (x, y)
+                if env.get_sugar_at(pos) > 0:
+                    dist = env.distance(pos_comp.position, pos)
+                    if dist <= vision_range:
+                        patch_id = f"sugar_{x}_{y}"
+                        perc_comp.visible_entities[patch_id] = {
+                            "type": "sugar",
+                            "position": pos,
+                            "distance": dist,
+                            "amount": env.get_sugar_at(pos),
+                        }
+
+
+class SugarscapeActionGenerator(ActionGeneratorInterface):
+    """Generates all possible actions for an agent in the Sugarscape."""
+
+    def generate(
+        self, sim_state: AbstractSimulationState, entity_id: str, tick: int
+    ) -> List[ActionPlanComponent]:
+        """Iterates through all registered actions and generates their parameters."""
+        all_plans: List[ActionPlanComponent] = []
+        for action_class in action_registry.get_all_actions():
+            action_instance = action_class()
+            params_list = action_instance.generate_possible_params(
+                entity_id, sim_state, tick
+            )
+            all_plans.extend(
+                [
+                    ActionPlanComponent(action_type=action_instance, params=p)
+                    for p in params_list
+                ]
+            )
+        return all_plans
+
+
+class HeuristicDecisionSelector(DecisionSelectorInterface):
+    """A simple, rule-based decision policy for baseline agents."""
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        """Selects an action based on a simple survival heuristic."""
+        if not possible_actions or not isinstance(sim_state, SimulationState):
+            return None
+
+        harvest_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and a.action_type.action_id == "harvest"
+        ]
+        if harvest_actions:
+            return harvest_actions[0]
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        env = sim_state.environment
+
+        if not pos_comp or not perc_comp or not isinstance(env, SugarscapeEnvironment):
+            return random.choice(possible_actions) if possible_actions else None
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        perc_comp = cast(PerceptionComponent, perc_comp)
+
+        richest_patch = None
+        max_sugar = -1
+        for entity_data in perc_comp.visible_entities.values():
+            if entity_data["type"] == "sugar" and entity_data["amount"] > max_sugar:
+                max_sugar = entity_data["amount"]
+                richest_patch = entity_data["position"]
+
+        if richest_patch:
+            move_actions = [
+                a
+                for a in possible_actions
+                if a.action_type and a.action_type.action_id == "move"
+            ]
+            if move_actions:
+                best_move = min(
+                    move_actions,
+                    key=lambda m: env.distance(m.params["target_pos"], richest_patch),
+                )
+                return best_move
+
+        return random.choice(possible_actions)
+
+
+class SugarscapeStateEncoder(StateEncoderInterface):
+    """Encodes the Sugarscape state for the Q-Learning model."""
+
+    def encode_state(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        config: Any,
+        target_entity_id: Optional[str] = None,
+    ) -> np.ndarray:
+        """Encodes agent vitals and perception into a feature vector."""
+        if not isinstance(sim_state, SimulationState):
+            return np.zeros(10, dtype=np.float32)
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        energy_comp = sim_state.get_component(entity_id, EnergyComponent)
+        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        metabolism_comp = sim_state.get_component(entity_id, MetabolismComponent)
+        env = sim_state.environment
+
+        if not all(
+            [
+                pos_comp,
+                energy_comp,
+                perc_comp,
+                metabolism_comp,
+                isinstance(env, SugarscapeEnvironment),
+            ]
+        ):
+            return np.zeros(10, dtype=np.float32)
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        energy_comp = cast(EnergyComponent, energy_comp)
+        perc_comp = cast(PerceptionComponent, perc_comp)
+        metabolism_comp = cast(MetabolismComponent, metabolism_comp)
+
+        agent_state = [
+            pos_comp.x / env.width,
+            pos_comp.y / env.height,
+            energy_comp.current_energy / energy_comp.initial_energy,
+        ]
+
+        sugar_patches = sorted(
+            [v for v in perc_comp.visible_entities.values() if v["type"] == "sugar"],
+            key=lambda p: p["distance"],
+        )
+
+        perception_vector = []
+        for i in range(2):
+            if i < len(sugar_patches):
+                patch = sugar_patches[i]
+                dist = patch["distance"] / metabolism_comp.vision_range
+                amount = patch["amount"] / env.max_sugar_per_cell
+                dx = patch["position"][0] - pos_comp.x
+                dy = patch["position"][1] - pos_comp.y
+                angle = math.atan2(dy, dx) / math.pi
+                perception_vector.extend([dist, angle, amount])
+            else:
+                perception_vector.extend([1.0, 0.0, 0.0])
+
+        return np.array(agent_state + perception_vector, dtype=np.float32)
+
+    def encode_internal_state(
+        self, components: Dict[Type[Component], Component], config: Any
+    ) -> np.ndarray:
+        return np.array([0.0], dtype=np.float32)
+
+
+class SugarscapeRewardCalculator(RewardCalculatorInterface):
+    """Calculates final, subjective rewards for the Sugarscape simulation."""
+
+    def calculate_final_reward(
+        self,
+        base_reward: float,
+        action_type: Any,
+        action_intent: str,
+        outcome_details: Dict[str, Any],
+        entity_components: Dict[Type[Component], "Component"],
+    ) -> Tuple[float, Dict[str, Any]]:
+        energy_comp = entity_components.get(EnergyComponent)
+        if not energy_comp:
+            return base_reward, {"base_reward": base_reward}
+
+        energy_comp = cast(EnergyComponent, energy_comp)
+
+        survival_penalty = 0.0
+        if energy_comp.current_energy < 20:
+            survival_penalty = -10.0
+
+        final_reward = base_reward + survival_penalty
+        return final_reward, {
+            "base_reward": base_reward,
+            "survival_penalty": survival_penalty,
+        }
+
+
+class SugarscapeComponentFactory(ComponentFactoryInterface):
+    """Creates component instances from saved data."""
+
+    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
+        class_name = component_type.split(".")[-1]
+        component_map = {
+            "PositionComponent": PositionComponent,
+            "EnergyComponent": EnergyComponent,
+            "MetabolismComponent": MetabolismComponent,
+            "CommunicationComponent": CommunicationComponent,
+            "TimeBudgetComponent": TimeBudgetComponent,
+            "PerceptionComponent": PerceptionComponent,
+            "QLearningComponent": QLearningComponent,
+        }
+
+        if class_name in component_map:
+            if class_name == "QLearningComponent":
+                return QLearningComponent(
+                    state_feature_dim=9,
+                    internal_state_dim=1,
+                    action_feature_dim=6,
+                    q_learning_alpha=0.1,
+                    device=torch.device("cpu"),
+                )
+            return component_map[class_name](**data)
+        raise TypeError(f"Unknown component type for factory: {component_type}")
+
+
+class SugarscapeVitalityMetricsProvider(VitalityMetricsProviderInterface):
+    """Provides normalized vitality metrics for the AffectSystem."""
+
+    def get_normalized_vitality_metrics(
+        self,
+        entity_id: str,
+        components: Dict[Type[Component], "Component"],
+        config: Any,
+    ) -> Dict[str, float]:
+        energy_comp = components.get(EnergyComponent)
+        if energy_comp:
+            energy_comp = cast(EnergyComponent, energy_comp)
+            return {
+                "energy_norm": energy_comp.current_energy / energy_comp.initial_energy
+            }
+        return {"energy_norm": 0.5}
+
+
+class SugarscapeStateNodeEncoder(StateNodeEncoderInterface):
+    """Encodes the agent's state into a symbolic tuple for the CausalGraphSystem."""
+
+    def __init__(self, simulation_state: SimulationState):
+        self.simulation_state = simulation_state
+
+    def encode_state_for_causal_graph(
+        self,
+        entity_id: str,
+        components: Dict[Type["Component"], "Component"],
+        current_tick: int,
+        config: Any,
+    ) -> Tuple[Any, ...]:
+        energy_comp = components.get(EnergyComponent)
+        pos_comp = components.get(PositionComponent)
+        env = self.simulation_state.environment
+
+        energy_status = "stable"
+        if energy_comp:
+            energy_comp = cast(EnergyComponent, energy_comp)
+            energy_ratio = energy_comp.current_energy / energy_comp.initial_energy
+            if energy_ratio < 0.2:
+                energy_status = "critical"
+            elif energy_ratio < 0.5:
+                energy_status = "low"
+
+        local_sugar_status = "barren"
+        if pos_comp and isinstance(env, SugarscapeEnvironment):
+            pos_comp = cast(PositionComponent, pos_comp)
+            sugar_level = env.get_sugar_at(pos_comp.position)
+            if sugar_level > env.max_sugar_per_cell / 2:
+                local_sugar_status = "abundant"
+            elif sugar_level > 0:
+                local_sugar_status = "present"
+
+        return ("STATE", f"energy_{energy_status}", f"sugar_{local_sugar_status}")
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/berry_sim/providers.py
+────────────────────────────────────────────────────────────────────────────────
+# FILE: simulations/berry_sim/providers.py
+
+import math
+import random
+from typing import Any, Dict, List, Optional, Tuple, Type, cast
+
+import numpy as np
+import torch
+from agent_core.agents.action_generator_interface import ActionGeneratorInterface
+from agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_core.core.ecs.component import (
+    ActionPlanComponent,
+    Component,
+    PerceptionComponent,
+    TimeBudgetComponent,
+)
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
+from agent_core.environment.perception_provider_interface import (
+    PerceptionProviderInterface,
+)
+from agent_core.environment.state_node_encoder_interface import (
+    StateNodeEncoderInterface,
+)
+from agent_core.environment.vitality_metrics_provider_interface import (
+    VitalityMetricsProviderInterface,
+)
+from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
+from agent_core.policy.state_encoder_interface import StateEncoderInterface
+from agent_engine.simulation.simulation_state import SimulationState
+from agent_engine.systems.components import QLearningComponent
+
+from .actions import EatBerryAction, MoveAction
+from .components import (
+    BerryComponent,
+    HealthComponent,
+    MetabolicBoostComponent,
+    PositionComponent,
+    PurifierCrystalComponent,
+    RockComponent,
+    WaterComponent,
+)
+from .environment import BerryWorldEnvironment
+
+
+class BerryPerceptionProvider(PerceptionProviderInterface):
+    """Provides berry-specific sensory information to agents."""
+
+    def update_perception(
+        self,
+        _entity_id: str,
+        components: Dict[Type[Component], Component],
+        sim_state: AbstractSimulationState,
+        _current_tick: int,
+    ) -> None:
+        """Finds all berries and crystals within vision range."""
+        if not isinstance(sim_state, SimulationState):
+            return
+
+        pos_comp = components.get(PositionComponent)
+        perc_comp = components.get(PerceptionComponent)
+        env = sim_state.environment
+
+        if not pos_comp or not perc_comp or not isinstance(env, BerryWorldEnvironment):
+            return
+
+        pos_comp = cast(PositionComponent, pos_comp)
+        perc_comp = cast(PerceptionComponent, perc_comp)
+
+        perc_comp.visible_entities.clear()
+
+        # Perceive berries
+        for berry_pos, berry_type in env.berry_locations.items():
+            dist = env.distance(pos_comp.position, berry_pos)
+            if dist <= perc_comp.vision_range:
+                berry_id = f"berry_{berry_pos[0]}_{berry_pos[1]}"
+                perc_comp.visible_entities[berry_id] = {
+                    "type": "berry",
+                    "berry_type": berry_type,
+                    "position": berry_pos,
+                    "distance": dist,
+                }
+        # Perceive crystals
+        for crystal_pos in env.crystal_locations:
+            dist = env.distance(pos_comp.position, crystal_pos)
+            if dist <= perc_comp.vision_range:
+                crystal_id = f"crystal_{crystal_pos[0]}_{crystal_pos[1]}"
+                perc_comp.visible_entities[crystal_id] = {
+                    "type": "crystal",
+                    "position": crystal_pos,
+                    "distance": dist,
+                }
+
+
+class BerryActionGenerator(ActionGeneratorInterface):
+    """Generates move and eat actions for agents."""
+
+    def generate(
+        self, sim_state: AbstractSimulationState, entity_id: str, tick: int
+    ) -> List[ActionPlanComponent]:
+        actions = []
+        move_action = MoveAction()
+        eat_action = EatBerryAction()
+
+        move_params = move_action.generate_possible_params(entity_id, sim_state, tick)
+        actions.extend(
+            [
+                ActionPlanComponent(action_type=move_action, params=p)
+                for p in move_params
+            ]
+        )
+
+        eat_params = eat_action.generate_possible_params(entity_id, sim_state, tick)
+        actions.extend(
+            [ActionPlanComponent(action_type=eat_action, params=p) for p in eat_params]
+        )
+        return actions
+
+
+class HeuristicDecisionSelector(DecisionSelectorInterface):
+    """Group A: Simple heuristic policy with direct environment access."""
+
+    def __init__(self, simulation_state: Any, config: Any):
+        pass
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions or not isinstance(sim_state, SimulationState):
+            return None
+
+        eat_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and isinstance(a.action_type, EatBerryAction)
+        ]
+        if eat_actions:
+            return eat_actions[0]
+
+        move_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and isinstance(a.action_type, MoveAction)
+        ]
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if pos_comp and isinstance(env, BerryWorldEnvironment) and move_actions:
+            pos_comp = cast(PositionComponent, pos_comp)
+            closest_berry_pos = None
+            min_dist = float("inf")
+
+            for berry_pos in env.berry_locations.keys():
+                dist = env.distance(pos_comp.position, berry_pos)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_berry_pos = berry_pos
+
+            if closest_berry_pos:
+                best_move = min(
+                    move_actions,
+                    key=lambda m: env.distance(
+                        m.params["target_pos"], closest_berry_pos
+                    ),
+                )
+                return best_move
+
+        return random.choice(move_actions) if move_actions else None
+
+
+class ExplorationHeuristicDecisionSelector(HeuristicDecisionSelector):
+    """Group D: Heuristic policy with added exploration."""
+
+    def __init__(self, simulation_state: Any, config: Any):
+        super().__init__(simulation_state, config)
+        self.epsilon = config.learning.q_learning.get("initial_epsilon", 0.1)
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions:
+            return None
+
+        if random.random() < self.epsilon:
+            return random.choice(possible_actions)
+
+        return super().select(sim_state, entity_id, possible_actions)
+
+
+class QLearningDecisionSelector(DecisionSelectorInterface):
+    """Groups B & C: A decision selector that uses the agent's Q-learning network."""
+
+    def __init__(self, simulation_state: Any, config: Any):
+        self.simulation_state = simulation_state
+        self.config = config
+        self.state_encoder = BerryStateEncoder()
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions or not isinstance(sim_state, SimulationState):
+            return None
+
+        q_comp = sim_state.get_component(entity_id, QLearningComponent)
+        if not q_comp:
+            return random.choice(possible_actions)
+        q_comp = cast(QLearningComponent, q_comp)
+
+        # Epsilon-greedy exploration
+        epsilon = self.config.learning.q_learning.get("initial_epsilon", 0.1)
+        if random.random() < epsilon:
+            return random.choice(possible_actions)
+
+        # Exploitation
+        with torch.no_grad():
+            best_action = None
+            max_q_value = -float("inf")
+
+            state_features = self.state_encoder.encode_state(
+                sim_state, entity_id, self.config
+            )
+            state_tensor = torch.tensor(state_features, dtype=torch.float32).unsqueeze(
+                0
+            )
+
+            entity_components = sim_state.entities.get(entity_id)
+            if not entity_components:
+                return random.choice(possible_actions)
+
+            internal_state = self.state_encoder.encode_internal_state(
+                entity_components, self.config
+            )
+            internal_tensor = torch.tensor(
+                internal_state, dtype=torch.float32
+            ).unsqueeze(0)
+
+            for action_plan in possible_actions:
+                if not isinstance(action_plan.action_type, ActionInterface):
+                    continue
+
+                action_features = action_plan.action_type.get_feature_vector(
+                    entity_id, sim_state, action_plan.params
+                )
+                action_tensor = torch.tensor(
+                    action_features, dtype=torch.float32
+                ).unsqueeze(0)
+
+                q_value = q_comp.utility_network(
+                    state_tensor, internal_tensor, action_tensor
+                ).item()
+
+                if q_value > max_q_value:
+                    max_q_value = q_value
+                    best_action = action_plan
+
+            return best_action
+
+
+class BerryStateEncoder(StateEncoderInterface):
+    """Encodes the simulation state into a feature vector for the Q-Learning model."""
+
+    def encode_state(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        config: Any,
+        target_entity_id: Optional[str] = None,
+    ) -> np.ndarray:
+        """Creates a feature vector including vitals, perception, and internal state."""
+        if not isinstance(sim_state, SimulationState):
+            return np.zeros(14, dtype=np.float32)
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        health_comp = sim_state.get_component(entity_id, HealthComponent)
+        perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+        boost_comp = sim_state.get_component(entity_id, MetabolicBoostComponent)
+
+        env_params = config.environment.params
+        width = env_params.width
+        height = env_params.height
+
+        # 1. Agent's own state vector
+        agent_x = pos_comp.x / width if pos_comp else 0.5
+        agent_y = pos_comp.y / height if pos_comp else 0.5
+
+        if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
+            health = health_comp.current_health / health_comp.initial_health
+        else:
+            health = 0.5
+
+        if boost_comp:
+            boost_comp = cast(MetabolicBoostComponent, boost_comp)
+            is_boosted = 1.0 if boost_comp.active else 0.0
+        else:
+            is_boosted = 0.0
+
+        agent_state_vector = [agent_x, agent_y, health, is_boosted]
+
+        # 2. Agent's perception vector
+        visible_items = perc_comp.visible_entities if perc_comp else {}
+        nearest: Dict[str, Optional[Dict[str, Any]]] = {
+            "red": None,
+            "blue": None,
+            "yellow": None,
+            "orange": None,
+            "crystal": None,
+        }
+
+        for item_data in visible_items.values():
+            item_type = item_data.get("berry_type") or item_data.get("type")
+            if item_type in nearest:
+                current_nearest = nearest[item_type]
+                if (
+                    current_nearest is None
+                    or item_data["distance"] < current_nearest["distance"]
+                ):
+                    nearest[item_type] = item_data
+
+        perception_vector = []
+        vision_range = config.agent.vision_range
+        for item_type in ["red", "blue", "yellow", "orange", "crystal"]:
+            item_data = nearest[item_type]
+            if item_data and pos_comp:
+                pos_comp = cast(PositionComponent, pos_comp)
+                dist = item_data["distance"] / vision_range
+                dx = item_data["position"][0] - pos_comp.x
+                dy = item_data["position"][1] - pos_comp.y
+                angle = math.atan2(dy, dx) / math.pi
+                perception_vector.extend([dist, angle])
+            else:
+                perception_vector.extend([1.0, 0.0])  # Default if not seen
+
+        return np.array(agent_state_vector + perception_vector, dtype=np.float32)
+
+    def encode_internal_state(
+        self, components: Dict[Type[Component], Component], config: Any
+    ) -> np.ndarray:
+        # This simulation doesn't use complex internal state for decisions
+        return np.array([0.0], dtype=np.float32)
+
+
+class BerryRewardCalculator(RewardCalculatorInterface):
+    def calculate_final_reward(
+        self,
+        base_reward: float,
+        action_type: Any,
+        action_intent: str,
+        outcome_details: dict[str, Any],
+        entity_components: dict[type[Component], Component],
+    ) -> tuple[float, dict[str, Any]]:
+        return base_reward, {"base_reward": base_reward}
+
+
+class BerryComponentFactory(ComponentFactoryInterface):
+    """Creates component instances from saved data for this simulation."""
+
+    def create_component(self, component_type: str, data: Dict[str, Any]) -> Component:
+        class_name = component_type.split(".")[-1]
+        component_map = {
+            "PositionComponent": PositionComponent,
+            "HealthComponent": HealthComponent,
+            "BerryComponent": BerryComponent,
+            "WaterComponent": WaterComponent,
+            "RockComponent": RockComponent,
+            "PurifierCrystalComponent": PurifierCrystalComponent,
+            "MetabolicBoostComponent": MetabolicBoostComponent,
+            "TimeBudgetComponent": TimeBudgetComponent,
+            "QLearningComponent": QLearningComponent,
+            "PerceptionComponent": PerceptionComponent,
+        }
+
+        if class_name in component_map:
+            if class_name == "QLearningComponent":
+                return QLearningComponent(
+                    state_feature_dim=14,  # 4 (agent) + 5*2 (perception) = 14
+                    internal_state_dim=1,
+                    action_feature_dim=5,  # move, red, blue, yellow, orange
+                    q_learning_alpha=0.1,
+                    device=torch.device("cpu"),
+                )
+            return component_map[class_name](**data)
+
+        raise TypeError(f"Unknown component type for factory: {component_type}")
+
+
+class BerryVitalityMetricsProvider(VitalityMetricsProviderInterface):
+    def get_normalized_vitality_metrics(
+        self, entity_id, components, config
+    ) -> Dict[str, float]:
+        health_comp = components.get(HealthComponent)
+        if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
+            return {
+                "health_norm": health_comp.current_health / health_comp.initial_health
+            }
+        return {"health_norm": 0.5}
+
+
+class BerryStateNodeEncoder(StateNodeEncoderInterface):
+    def __init__(self, simulation_state: SimulationState):
+        self.simulation_state = simulation_state
+
+    def encode_state_for_causal_graph(
+        self,
+        entity_id: str,
+        components: Dict[Type["Component"], "Component"],
+        current_tick: int,
+        config: Any,
+    ) -> Tuple[Any, ...]:
+        pos_comp = components.get(PositionComponent)
+        env = self.simulation_state.environment
+        if not pos_comp or not isinstance(env, BerryWorldEnvironment):
+            return ("STATE", "unknown_context", "unknown_health")
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        context = env.get_environmental_context(pos_comp.position)
+        health_comp = components.get(HealthComponent)
+        health_status = "healthy"
+        if health_comp:
+            health_comp = cast(HealthComponent, health_comp)
+            health_ratio = health_comp.current_health / health_comp.initial_health
+            if health_ratio < 0.3:
+                health_status = "critical"
+            elif health_ratio < 0.7:
+                health_status = "hurt"
+
+        return (
+            "STATE",
+            f"health_{health_status}",
+            f"near_water_{context['near_water']}",
+            f"near_rocks_{context['near_rocks']}",
+            f"near_crystal_{context['near_crystal']}",
+        )
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/sugarscape_sim/environment.py
+────────────────────────────────────────────────────────────────────────────────
+"""
+Defines the Sugarscape simulation environment.
+
+This class manages the 2D grid, the distribution and regeneration of the
+'sugar' resource, and provides an interface for systems to query and
+interact with the world state. It implements the EnvironmentInterface
+from agent-core.
+"""
+
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import numpy as np
+from agent_core.environment.interface import EnvironmentInterface
+
+
+class SugarscapeEnvironment(EnvironmentInterface):
+    """
+    Manages the grid, sugar resources, and agent positions for the simulation.
+
+    This version is updated to accept a seeded NumPy random number generator
+    to ensure that the initial resource distribution is fully reproducible.
+    """
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        rng: np.random.Generator,
+        initial_sugar_distribution: str = "gaussian",
+        sugar_regeneration_rate: int = 1,
+        max_sugar_per_cell: int = 4,
+    ) -> None:
+        self.width = width
+        self.height = height
+        self.rng = rng
+        self.sugar_regeneration_rate = sugar_regeneration_rate
+        self.max_sugar_per_cell = max_sugar_per_cell
+
+        self.sugar_map: np.ndarray = self._create_sugar_distribution(
+            initial_sugar_distribution
+        )
+        self.agent_positions: Dict[str, Tuple[int, int]] = {}
+
+    def _create_sugar_distribution(self, distribution_type: str) -> np.ndarray:
+        """Creates the initial sugar map based on the specified distribution."""
+        if distribution_type == "gaussian":
+            x, y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+
+            peak1_x = self.rng.uniform(0.2, 0.3) * self.width
+            peak1_y = self.rng.uniform(0.2, 0.3) * self.height
+            peak2_x = self.rng.uniform(0.7, 0.8) * self.width
+            peak2_y = self.rng.uniform(0.7, 0.8) * self.height
+
+            dist1 = np.sqrt((x - peak1_x) ** 2 + (y - peak1_y) ** 2)
+            dist2 = np.sqrt((x - peak2_x) ** 2 + (y - peak2_y) ** 2)
+            gaussian1 = np.exp(-(dist1**2) / (2 * (self.width / 6) ** 2))
+            gaussian2 = np.exp(-(dist2**2) / (2 * (self.width / 6) ** 2))
+            sugar = (gaussian1 + gaussian2) * self.max_sugar_per_cell
+            return sugar.astype(int)
+        else:
+            return self.rng.integers(
+                0, self.max_sugar_per_cell + 1, size=(self.width, self.height)
+            )
+
+    def regenerate_sugar(self) -> None:
+        """Increments the sugar in all cells up to the maximum."""
+        self.sugar_map += self.sugar_regeneration_rate
+        np.clip(self.sugar_map, 0, self.max_sugar_per_cell, out=self.sugar_map)
+
+    def get_sugar_at(self, position: Tuple[int, int]) -> int:
+        """Returns the amount of sugar at a given position."""
+        return self.sugar_map[position[1], position[0]]
+
+    def consume_sugar(self, position: Tuple[int, int]) -> int:
+        """Consumes all sugar at a position and returns the amount."""
+        sugar_amount = self.get_sugar_at(position)
+        self.sugar_map[position[1], position[0]] = 0
+        return int(sugar_amount)
+
+    def get_all_empty_cells(self) -> List[Tuple[int, int]]:
+        """
+        Returns a list of all unoccupied cells. This is a deterministic
+        method required by the loader for reproducible agent spawning.
+        """
+        all_cells = set((x, y) for x in range(self.width) for y in range(self.height))
+        occupied_cells = set(self.agent_positions.values())
+        return list(all_cells - occupied_cells)
+
+    def get_random_empty_cell(self) -> Optional[Tuple[int, int]]:
+        """Finds a single random cell not occupied by another agent."""
+        empty_cells = self.get_all_empty_cells()
+        if not empty_cells:
+            return None
+        # Use the seeded RNG for deterministic selection.
+        return empty_cells[self.rng.choice(len(empty_cells))]
+
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Any], new_pos: Any
+    ) -> None:
+        self.agent_positions[entity_id] = new_pos
+
+    def remove_entity(self, entity_id: str) -> None:
+        if entity_id in self.agent_positions:
+            del self.agent_positions[entity_id]
+
+    def is_valid_position(self, position: Any) -> bool:
+        return 0 <= position[0] < self.width and 0 <= position[1] < self.height
+
+    def get_entities_at_position(self, position: Any) -> Set[str]:
+        for agent_id, pos in self.agent_positions.items():
+            if pos == position:
+                return {agent_id}
+        return set()
+
+    def get_neighbors(self, position: Any) -> List[Any]:
+        x, y = position
+        neighbors = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if self.is_valid_position((nx, ny)):
+                    neighbors.append((nx, ny))
+        return neighbors
+
+    def distance(self, pos1: Any, pos2: Any) -> float:
+        return float(abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]))
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "width": self.width,
+            "height": self.height,
+            "sugar_map": self.sugar_map.tolist(),
+            "agent_positions": self.agent_positions,
+        }
+
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        self.width = data["width"]
+        self.height = data["height"]
+        self.sugar_map = np.array(data["sugar_map"])
+        self.agent_positions = {k: tuple(v) for k, v in data["agent_positions"].items()}
+
+    def get_valid_positions(self) -> List[Any]:
+        return [(x, y) for x in range(self.width) for y in range(self.height)]
+
+    def can_move(self, from_pos: Any, to_pos: Any) -> bool:
+        return not self.get_entities_at_position(to_pos)
+
+    def get_entities_in_radius(self, center: Any, radius: int) -> List[Tuple[str, Any]]:
+        return []
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/sugarscape_sim/components.py
+────────────────────────────────────────────────────────────────────────────────
+"""
+Defines the data components for the Sugarscape simulation.
+
+Components are pure data containers that store the state of an entity.
+They should not contain any logic. This separation of data and logic
+is a core principle of the Entity-Component-System (ECS) architecture.
+"""
+
+from typing import Any, Dict, List, Tuple
+
+from agent_core.core.ecs.component import Component
+
+
+class PositionComponent(Component):
+    """
+    Stores an entity's x, y coordinates in the grid world.
+
+    Args:
+        x (int): The x-coordinate of the entity.
+        y (int): The y-coordinate of the entity.
+
+    Sample Usage:
+        pos_comp = PositionComponent(x=10, y=20)
+        current_pos = pos_comp.position  # Returns (10, 20)
+    """
+
+    def __init__(self, x: int = 0, y: int = 0) -> None:
+        self.x = x
+        self.y = y
+
+    @property
+    def position(self) -> Tuple[int, int]:
+        """Returns the current position as a tuple."""
+        return (self.x, self.y)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data to a dictionary."""
+        return {"x": self.x, "y": self.y}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the component's internal state."""
+        errors: List[str] = []
+        if not isinstance(self.x, int) or not isinstance(self.y, int):
+            errors.append("Position coordinates must be integers")
+        return len(errors) == 0, errors
+
+
+class EnergyComponent(Component):
+    """
+    Stores the energy level of an agent. Replaces HealthComponent from
+    previous simulations.
+
+    Args:
+        current_energy (float): The agent's current energy level.
+        initial_energy (float): The energy level the agent started with.
+
+    Sample Usage:
+        energy_comp = EnergyComponent(current_energy=50.0, initial_energy=100.0)
+    """
+
+    def __init__(self, current_energy: float, initial_energy: float) -> None:
+        self.current_energy = current_energy
+        self.initial_energy = initial_energy
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data to a dictionary."""
+        return {
+            "current_energy": self.current_energy,
+            "initial_energy": self.initial_energy,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates that energy is not negative."""
+        if self.current_energy < 0:
+            return False, ["Energy cannot be negative."]
+        return True, []
+
+
+class MetabolismComponent(Component):
+    """
+    Stores agent-specific metabolic traits, allowing for heterogeneity.
+
+    Args:
+        metabolic_rate (int): Energy consumed per tick.
+        vision_range (int): How far the agent can see in the grid.
+
+    Sample Usage:
+        metabolism_comp = MetabolismComponent(metabolic_rate=2, vision_range=5)
+    """
+
+    def __init__(self, metabolic_rate: int, vision_range: int) -> None:
+        self.metabolic_rate = metabolic_rate
+        self.vision_range = vision_range
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data to a dictionary."""
+        return {
+            "metabolic_rate": self.metabolic_rate,
+            "vision_range": self.vision_range,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates metabolic traits."""
+        errors = []
+        if self.metabolic_rate <= 0:
+            errors.append("Metabolic rate must be positive.")
+        if self.vision_range < 0:
+            errors.append("Vision range cannot be negative.")
+        return len(errors) == 0, errors
+
+
+class CommunicationComponent(Component):
+    """
+    Stores an agent's incoming message queue for communication.
+
+    Args:
+        message_range (int): The range within which an agent can send/receive messages.
+
+    Sample Usage:
+        comm_comp = CommunicationComponent(message_range=7)
+    """
+
+    def __init__(self, message_range: int) -> None:
+        self.message_range = message_range
+        self.message_queue: List[Dict[str, Any]] = []
+
+    def add_message(self, sender_id: str, message: str, tick: int) -> None:
+        """Adds a new message to the agent's inbox."""
+        self.message_queue.append({"from": sender_id, "message": message, "tick": tick})
+
+    def get_messages(self) -> List[Dict[str, Any]]:
+        """Retrieves all messages and clears the queue."""
+        messages = self.message_queue[:]
+        self.message_queue.clear()
+        return messages
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data to a dictionary."""
+        return {
+            "message_range": self.message_range,
+            "message_queue": self.message_queue,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the message range."""
+        if self.message_range < 0:
+            return False, ["Message range cannot be negative."]
+        return True, []
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/sugarscape_sim/actions.py
+────────────────────────────────────────────────────────────────────────────────
+"""
+Defines the agent actions for the Sugarscape simulation.
+Each class implements the ActionInterface, defining what an agent can do.
+The logic for how these actions affect the world is handled by Systems,
+which listen for events published when an action's 'execute' method is called.
+"""
+
+from typing import Any, Dict, List, cast
+
+from agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.actions.action_registry import action_registry
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_engine.simulation.simulation_state import SimulationState
+
+from .components import EnergyComponent, PositionComponent
+from .environment import SugarscapeEnvironment
+
+
+@action_registry.register
+class MoveAction(ActionInterface):
+    """Allows an agent to move to an adjacent, unoccupied cell."""
+
+    @property
+    def action_id(self) -> str:
+        return "move"
+
+    @property
+    def name(self) -> str:
+        return "Move"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        """The paper specifies a movement cost of 2 energy units."""
+        return 2.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """Generates parameters for all valid moves (N, S, E, W)."""
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if not pos_comp or not isinstance(env, SugarscapeEnvironment):
+            return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        valid_moves = []
+        # N, S, E, W directions
+        for dx, dy in [(0, -1), (0, 1), (1, 0), (-1, 0)]:
+            new_pos = (pos_comp.position[0] + dx, pos_comp.position[1] + dy)
+            if env.is_valid_position(new_pos) and not env.get_entities_at_position(
+                new_pos
+            ):
+                valid_moves.append({"target_pos": new_pos})
+        return valid_moves
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Signals the intent to move; logic is handled by MovementSystem."""
+        return ActionOutcome(success=True, message="Move initiated.", base_reward=0.0)
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+@action_registry.register
+class HarvestAction(ActionInterface):
+    """Allows an agent to harvest sugar from its current cell."""
+
+    @property
+    def action_id(self) -> str:
+        return "harvest"
+
+    @property
+    def name(self) -> str:
+        return "Harvest Sugar"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        return 0.0  # Harvesting itself costs no energy
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """Action is possible if there is sugar at the agent's location."""
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if not pos_comp or not isinstance(env, SugarscapeEnvironment):
+            return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        if env.get_sugar_at(pos_comp.position) > 0:
+            return [{}]  # No parameters needed
+        return []
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Signals intent to harvest; logic is handled by HarvestSystem."""
+        return ActionOutcome(
+            success=True, message="Harvest initiated.", base_reward=0.0
+        )
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+
+
+@action_registry.register
+class ShareAction(ActionInterface):
+    """Allows an agent to share energy with an adjacent agent."""
+
+    @property
+    def action_id(self) -> str:
+        return "share"
+
+    @property
+    def name(self) -> str:
+        return "Share Energy"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        return 0.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """Generates share options for all adjacent agents."""
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        energy_comp = sim_state.get_component(entity_id, EnergyComponent)
+        env = sim_state.environment
+
+        if (
+            not pos_comp
+            or not energy_comp
+            or not isinstance(env, SugarscapeEnvironment)
+        ):
+            return []
+
+        energy_comp = cast(EnergyComponent, energy_comp)
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        if energy_comp.current_energy <= 1:
+            return []
+
+        possible_shares = []
+        neighbors = env.get_neighbors(pos_comp.position)
+        for neighbor_pos in neighbors:
+            target_agents = env.get_entities_at_position(neighbor_pos)
+            if target_agents:
+                target_id = target_agents.pop()
+                # Share a portion of current energy
+                share_amount = int(energy_comp.current_energy * 0.25)
+                if share_amount > 0:
+                    possible_shares.append(
+                        {"target_id": target_id, "amount": share_amount}
+                    )
+        return possible_shares
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Signals intent to share; logic is handled by SocialSystem."""
+        return ActionOutcome(success=True, message="Share initiated.", base_reward=0.0)
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+
+
+@action_registry.register
+class AttackAction(ActionInterface):
+    """Allows an agent to attack an adjacent agent to steal energy."""
+
+    @property
+    def action_id(self) -> str:
+        return "attack"
+
+    @property
+    def name(self) -> str:
+        return "Attack"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        return 1.0  # Attacking has a small energy cost
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """Generates attack options for all adjacent agents."""
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if not pos_comp or not isinstance(env, SugarscapeEnvironment):
+            return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        possible_attacks = []
+        neighbors = env.get_neighbors(pos_comp.position)
+        for neighbor_pos in neighbors:
+            target_agents = env.get_entities_at_position(neighbor_pos)
+            if target_agents:
+                possible_attacks.append({"target_id": target_agents.pop()})
+        return possible_attacks
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Signals intent to attack; logic is handled by SocialSystem."""
+        return ActionOutcome(success=True, message="Attack initiated.", base_reward=0.0)
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+
+
+@action_registry.register
+class ReproduceAction(ActionInterface):
+    """Allows an agent to reproduce if it has sufficient energy."""
+
+    @property
+    def action_id(self) -> str:
+        return "reproduce"
+
+    @property
+    def name(self) -> str:
+        return "Reproduce"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        """The paper specifies a reproduction cost of 150 energy units."""
+        return 150.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """Action is possible if agent has enough energy."""
+        energy_comp = sim_state.get_component(entity_id, EnergyComponent)
+        if not energy_comp:
+            return []
+
+        energy_comp = cast(EnergyComponent, energy_comp)
+        if energy_comp.current_energy > self.get_base_cost(sim_state):
+            return [{}]
+        return []
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Signals intent to reproduce; logic is handled by SocialSystem."""
+        return ActionOutcome(
+            success=True, message="Reproduction initiated.", base_reward=0.0
+        )
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [0.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+
+
+@action_registry.register
+class StayAction(ActionInterface):
+    """Allows an agent to stay in its current position."""
+
+    @property
+    def action_id(self) -> str:
+        return "stay"
+
+    @property
+    def name(self) -> str:
+        return "Stay"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        """The paper specifies a cost of 1 for staying put."""
+        return 1.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        """This action is always possible."""
+        return [{}]
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Logic is handled by MetabolismSystem (passive energy decay)."""
+        return ActionOutcome(success=True, message="Agent stays put.", base_reward=0.0)
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """One-hot encoding for the action space."""
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/berry_sim/environment.py
+────────────────────────────────────────────────────────────────────────────────
+# simulations/berry_sim/environment.py
+
+import random
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from agent_core.environment.interface import EnvironmentInterface
+
+
+class BerryWorldEnvironment(EnvironmentInterface):
+    """
+    Manages the grid, berry spawning, and toxicity rules for the experiment.
+    """
+
+    def __init__(self, width: int, height: int) -> None:
+        self.width = width
+        self.height = height
+        self.water_locations: Set[Tuple[int, int]] = set()
+        self.rock_locations: Set[Tuple[int, int]] = set()
+        self.crystal_locations: Set[Tuple[int, int]] = set()
+        self.berry_locations: Dict[Tuple[int, int], str] = {}
+        self.agent_positions: Dict[str, Tuple[int, int]] = {}
+        self._grid_entities: Dict[Tuple[int, int], str] = {}
+
+    def is_occupied(self, position: Tuple[int, int]) -> bool:
+        """Check if a cell is occupied by a blocking object."""
+        return (
+            position in self._grid_entities
+            or position in self.water_locations
+            or position in self.rock_locations
+            or position in self.crystal_locations
+        )
+
+    def get_random_empty_cell(self) -> Optional[Tuple[int, int]]:
+        """
+        Finds a random unoccupied cell.
+
+        This implementation is deterministic in finding all empty cells and will
+        not fail if only one empty cell remains.
+        """
+        # Changed from a probabilistic search to a deterministic one.
+        # This guarantees finding an empty cell if one exists.
+        occupied_cells = (
+            self.water_locations
+            | self.rock_locations
+            | self.crystal_locations
+            | set(self.berry_locations.keys())
+            | set(self.agent_positions.values())
+        )
+
+        all_cells = set((x, y) for x in range(self.width) for y in range(self.height))
+        empty_cells = list(all_cells - occupied_cells)
+
+        if not empty_cells:
+            return None
+
+        return random.choice(empty_cells)
+
+    def get_berry_toxicity(
+        self, berry_type: str, position: Tuple[int, int], tick: int
+    ) -> float:
+        """Determines the health effect of eating a berry based on experiment rules."""
+        if berry_type == "red":
+            return 10.0
+        elif berry_type == "blue":
+            is_near_water = self.is_near_feature(position, self.water_locations, 2)
+            is_near_crystal = self.is_near_feature(position, self.crystal_locations, 2)
+            if is_near_crystal:
+                return 10.0  # Crystals purify blue berries
+            if tick >= 1000 and is_near_water:
+                return -20.0  # Toxic after tick 1000 if near water
+            return 10.0
+        elif berry_type == "yellow":
+            seed = hash((position, tick // 100))
+            rng = random.Random(seed)
+            return -20.0 if rng.random() < 0.5 else 10.0
+        elif berry_type == "orange":
+            return 5.0  # Small direct health boost, main effect is metabolic
+        return 0.0
+
+    def is_near_feature(
+        self, pos: Tuple[int, int], features: Set[Tuple[int, int]], distance: int
+    ) -> bool:
+        """Checks if a position is within a certain Manhattan distance of any feature."""
+        for feature_pos in features:
+            dist = abs(pos[0] - feature_pos[0]) + abs(pos[1] - feature_pos[1])
+            if dist <= distance:
+                return True
+        return False
+
+    def get_environmental_context(self, position: Tuple[int, int]) -> Dict[str, bool]:
+        """Provides the context used by the CausalGraphSystem's StateNodeEncoder."""
+        return {
+            "near_water": self.is_near_feature(position, self.water_locations, 2),
+            "near_rocks": self.is_near_feature(position, self.rock_locations, 2),
+            "near_crystal": self.is_near_feature(position, self.crystal_locations, 2),
+        }
+
+    # --- Interface Methods ---
+    def add_entity(self, entity_id: str, position: Tuple[int, int]):
+        self._grid_entities[position] = entity_id
+        self.agent_positions[entity_id] = position
+
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Any], new_pos: Any
+    ):
+        if old_pos and old_pos in self._grid_entities:
+            del self._grid_entities[old_pos]
+        self._grid_entities[new_pos] = entity_id
+        self.agent_positions[entity_id] = new_pos
+
+    def remove_entity(self, entity_id: str):
+        if entity_id in self.agent_positions:
+            pos = self.agent_positions.pop(entity_id)
+            if pos in self._grid_entities:
+                del self._grid_entities[pos]
+
+    def get_entities_at_position(self, position: Any) -> Set[str]:
+        entity_id = self._grid_entities.get(position)
+        return {entity_id} if entity_id else set()
+
+    def get_valid_positions(self) -> List[Any]:
+        return [(x, y) for x in range(self.width) for y in range(self.height)]
+
+    def get_neighbors(self, position: Any) -> List[Any]:
+        x, y = position
+        neighbors = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    neighbors.append((nx, ny))
+        return neighbors
+
+    def distance(self, pos1: Any, pos2: Any) -> float:
+        return float(abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]))
+
+    def can_move(self, from_pos: Any, to_pos: Any) -> bool:
+        return not self.is_occupied(to_pos)
+
+    def is_valid_position(self, position: Any) -> bool:
+        return 0 <= position[0] < self.width and 0 <= position[1] < self.height
+
+    def get_entities_in_radius(self, center: Any, radius: int) -> List[Tuple[str, Any]]:
+        return []
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "width": self.width,
+            "height": self.height,
+            "water_locations": [list(pos) for pos in self.water_locations],
+            "rock_locations": [list(pos) for pos in self.rock_locations],
+            "crystal_locations": [list(pos) for pos in self.crystal_locations],
+        }
+
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        self.width = data["width"]
+        self.height = data["height"]
+        self.water_locations = {tuple(pos) for pos in data.get("water_locations", [])}
+        self.rock_locations = {tuple(pos) for pos in data.get("rock_locations", [])}
+        self.crystal_locations = {
+            tuple(pos) for pos in data.get("crystal_locations", [])
+        }
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/berry_sim/components.py
+────────────────────────────────────────────────────────────────────────────────
+# simulations/berry_sim/components.py
+
+from typing import Any, Dict, List, Tuple
+from agent_core.core.ecs.component import Component
+
+
+class PositionComponent(Component):
+    """Stores an entity's x, y coordinates in the grid world."""
+
+    def __init__(self, x: int = 0, y: int = 0) -> None:
+        self.x = x
+        self.y = y
+
+    @property
+    def position(self) -> Tuple[int, int]:
+        return (self.x, self.y)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"x": self.x, "y": self.y}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if not isinstance(self.x, int) or not isinstance(self.y, int):
+            errors.append("Position coordinates must be integers")
+        return len(errors) == 0, errors
+
+
+class HealthComponent(Component):
+    """Stores the health of an agent."""
+
+    def __init__(self, current_health: float, initial_health: float) -> None:
+        self.current_health = current_health
+        self.initial_health = initial_health
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "current_health": self.current_health,
+            "initial_health": self.initial_health,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if self.current_health < 0:
+            return False, ["Health cannot be negative."]
+        return True, []
+
+
+class MetabolicBoostComponent(Component):
+    """Tracks the status of a temporary metabolic boost for an agent."""
+
+    def __init__(self, active: bool = False, ticks_remaining: int = 0):
+        self.active = active
+        self.ticks_remaining = ticks_remaining
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"active": self.active, "ticks_remaining": self.ticks_remaining}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+class BerryComponent(Component):
+    """Represents a berry resource in the environment."""
+
+    def __init__(self, berry_type: str) -> None:
+        self.berry_type = berry_type  # "red", "blue", "yellow", or "orange"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"berry_type": self.berry_type}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if self.berry_type not in ["red", "blue", "yellow", "orange"]:
+            return False, [f"Invalid berry type: {self.berry_type}"]
+        return True, []
+
+
+class WaterComponent(Component):
+    """A marker component for a water tile."""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+class RockComponent(Component):
+    """A marker component for a rock tile."""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+class PurifierCrystalComponent(Component):
+    """A marker component for a purifier crystal tile."""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: simulations/berry_sim/actions.py
+────────────────────────────────────────────────────────────────────────────────
+# FILE: simulations/berry_sim/actions.py
+
+from typing import Any, Dict, List, cast
+from agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.actions.action_registry import action_registry
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
+from agent_engine.simulation.simulation_state import SimulationState
+from .components import PositionComponent
+from .environment import BerryWorldEnvironment
+
+
+@action_registry.register
+class MoveAction(ActionInterface):
+    """Allows an agent to move to an adjacent grid cell."""
+
+    @property
+    def action_id(self) -> str:
+        return "move"
+
+    @property
+    def name(self) -> str:
+        return "Move"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        return 1.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if not pos_comp or not isinstance(env, BerryWorldEnvironment):
+            return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        valid_moves = []
+        for dx, dy, direction in [(0, 1, "N"), (0, -1, "S"), (1, 0, "E"), (-1, 0, "W")]:
+            new_pos = (pos_comp.position[0] + dx, pos_comp.position[1] + dy)
+            if env.is_valid_position(new_pos) and not env.is_occupied(new_pos):
+                valid_moves.append({"target_pos": new_pos, "direction": direction})
+        return valid_moves
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Logic is handled by MovementSystem."""
+        return ActionOutcome(success=True, message="Move initiated.", base_reward=0.0)
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """
+        Generates the feature vector for a move action.
+        Schema: [is_move, is_eat_red, is_eat_blue, is_eat_yellow, is_eat_orange]
+        """
+        return [1.0, 0.0, 0.0, 0.0, 0.0]
+
+
+@action_registry.register
+class EatBerryAction(ActionInterface):
+    """Allows an agent to eat a berry at its current location."""
+
+    @property
+    def action_id(self) -> str:
+        return "eat_berry"
+
+    @property
+    def name(self) -> str:
+        return "Eat Berry"
+
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
+        return 1.0
+
+    def generate_possible_params(
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
+    ) -> List[Dict[str, Any]]:
+        if not isinstance(sim_state, SimulationState):
+            return []
+
+        pos_comp = sim_state.get_component(entity_id, PositionComponent)
+        env = sim_state.environment
+        if not pos_comp or not isinstance(env, BerryWorldEnvironment):
+            return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
+
+        berry_type = env.berry_locations.get(pos_comp.position)
+        if berry_type:
+            return [{"berry_type": berry_type}]
+        return []
+
+    def execute(
+        self,
+        entity_id: str,
+        sim_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        tick: int,
+    ) -> ActionOutcome:
+        """Logic is handled by ConsumptionSystem."""
+        return ActionOutcome(
+            success=True, message="Consumption initiated.", base_reward=0.0
+        )
+
+    def get_feature_vector(
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
+    ) -> List[float]:
+        """
+        Generates the one-hot encoded feature vector for eating a specific berry.
+        Schema: [is_move, is_eat_red, is_eat_blue, is_eat_yellow, is_eat_orange]
+        """
+        berry_type = params.get("berry_type", "")
+        return [
+            0.0,
+            1.0 if berry_type == "red" else 0.0,
+            1.0 if berry_type == "blue" else 0.0,
+            1.0 if berry_type == "yellow" else 0.0,
+            1.0 if berry_type == "orange" else 0.0,
+        ]
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/core/ecs/abstractions.py
+────────────────────────────────────────────────────────────────────────────────
+# FILE: src/agent_core/core/ecs/abstractions.py
+
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+
+if TYPE_CHECKING:
+    from .component import Component
+
+
+class AbstractSimulationState(ABC):
+    """
+    The abstract interface for the simulation's state container.
+    This contract ensures that any system can interact with the state
+    in a predictable way without knowing the concrete implementation.
+    """
+
+    @property
+    @abstractmethod
+    def event_bus(self) -> Optional[Any]:
+        """Provides access to the simulation's event bus."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_component(
+        self, entity_id: str, component_type: Type["Component"]
+    ) -> Optional["Component"]:
+        """Retrieves a component of a specific type for a given entity."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_entities_with_components(
+        self, component_types: List[Type["Component"]]
+    ) -> Dict[str, Dict[Type["Component"], "Component"]]:
+        """Retrieves all entities that have a specific set of components."""
+        raise NotImplementedError
+
+
+SimulationState = AbstractSimulationState
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/core/ecs/component.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_core/core/ecs/component.py
+
+from abc import ABC, abstractmethod
+from collections import defaultdict, deque
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
+from agent_core.agents.actions.base_action import Intent
+from agent_core.core.ecs.base import CognitiveComponent
+
+if TYPE_CHECKING:
+    from dowhy import CausalModel
+
+    from agent_core.core.schemas import (
+        Belief,
+        CounterfactualEpisode,
+        Episode,
+        RelationalSchema,
+    )
+
+
+# Define an interface to break the circular dependency with agent-engine.
+class MultiDomainIdentityInterface(ABC):
+    @abstractmethod
+    def get_global_identity_embedding(self) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_identity_coherence(self) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_identity_stability(self) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_domain_identity(
+        self,
+        domain: Any,
+        new_traits: np.ndarray,
+        context: Dict[str, Any],
+        current_tick: int,
+    ) -> Tuple[bool, float, Dict[str, float]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_domain_embedding(self, domain: Any) -> np.ndarray:
+        raise NotImplementedError
+
+
+class ComponentValidationError(Exception):
+    """Raised when component validation fails."""
+
+    def __init__(self, component_type: str, entity_id: str, errors: List[str]):
+        self.component_type = component_type
+        self.entity_id = entity_id
+        self.errors = errors
+        super().__init__(
+            f"{component_type} validation failed for {entity_id}: {', '.join(errors)}"
+        )
+
+
+class Component(CognitiveComponent):
+    """
+    Base class for all components with validation interface.
+    """
+
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """Converts the component's data to a dictionary for serialization/logging."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """
+        Validates component state and returns (is_valid, error_list).
+        """
+        raise NotImplementedError
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        """
+        Attempts to automatically fix validation errors.
+        """
+        return False  # Default: no auto-fix
+
+
+# -----------------------------------------------------------------------
+# Core Cognitive Components (World-Agnostic)
+# These components define the internal, psychological state of an agent.
+# -----------------------------------------------------------------------
+
+
+class MemoryComponent(Component):
+    """
+    Stores episodic, short-term, and causal memories. This component has been
+    updated to support formal causal reasoning with the `dowhy` library.
+    """
+
+    def __init__(self) -> None:
+        self.episodic_memory: List[Dict[str, Any]] = []
+        self.short_term_memory: deque[Dict[str, Any]] = deque(maxlen=10)
+        self.last_llm_reflection_summary: str = ""
+        self.counterfactual_memories: List["CounterfactualEpisode"] = []
+
+        # Attributes for formal causal reasoning
+        self.causal_data: List[Dict[str, Any]] = []
+        self.causal_model: Optional["CausalModel"] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's state, reflecting the new causal structure."""
+        return {
+            "episodic_memory_count": len(self.episodic_memory),
+            "causal_data_points": len(self.causal_data),
+            "has_causal_model": self.causal_model is not None,
+            "counterfactual_count": len(self.counterfactual_memories),
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the new memory structures."""
+        if not isinstance(self.episodic_memory, list) or not isinstance(
+            self.causal_data, list
+        ):
+            return False, ["Memory structures have incorrect types."]
+        return True, []
+
+
+class IdentityComponent(Component):
+    """Stores the agent's multi-domain identity."""
+
+    def __init__(self, multi_domain_identity: "MultiDomainIdentityInterface") -> None:
+        self.multi_domain_identity = multi_domain_identity
+        self.embedding: np.ndarray = (
+            self.multi_domain_identity.get_global_identity_embedding()
+        )
+        self.salient_traits_cache: Dict[str, float] = {}
+        self.learned_concepts: Dict[str, np.ndarray] = {}
+        self.identity_coherence_history: List[float] = []
+        self.last_identity_update_tick: int = 0
+        self.identity_change_resistance: float = 0.5
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "salient_traits_cache": self.salient_traits_cache,
+            "identity_coherence": self.multi_domain_identity.get_identity_coherence(),
+            "identity_stability": self.get_identity_stability(),
+        }
+
+    def get_identity_stability(self) -> float:
+        """Delegates the call to the underlying MultiDomainIdentity object."""
+        return self.multi_domain_identity.get_identity_stability()
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if self.embedding is None or not isinstance(self.embedding, np.ndarray):
+            errors.append("embedding is None or not a numpy array")
+        return len(errors) == 0, errors
+
+
+class ValidationComponent(Component):
+    """
+    Stores confidence scores for an agent's reflections and its causal model.
+    """
+
+    def __init__(self) -> None:
+        self.reflection_confidence_scores: Dict[int, float] = {}
+        self.causal_model_confidence: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "confidence_scores": self.reflection_confidence_scores,
+            "causal_model_confidence": self.causal_model_confidence,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if not isinstance(self.reflection_confidence_scores, dict):
+            return False, ["reflection_confidence_scores is not a dict"]
+        if not isinstance(self.causal_model_confidence, float):
+            return False, ["causal_model_confidence is not a float"]
+        return True, []
+
+
+class GoalComponent(Component):
+    """Stores agent goals."""
+
+    def __init__(self, embedding_dim: int) -> None:
+        self.current_symbolic_goal: Optional[str] = None
+        self.symbolic_goals_data: Dict[str, Dict[str, Any]] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"current_symbolic_goal": self.current_symbolic_goal}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if (
+            self.current_symbolic_goal
+            and self.current_symbolic_goal not in self.symbolic_goals_data
+        ):
+            return False, [
+                f"Current goal '{self.current_symbolic_goal}' not in goal data."
+            ]
+        return True, []
+
+
+class EmotionComponent(Component):
+    """Stores the agent's current emotional state (valence, arousal)."""
+
+    def __init__(
+        self,
+        valence: float = 0.0,
+        arousal: float = 0.5,
+        current_emotion_category: str = "neutral",
+    ) -> None:
+        self.valence: float = valence
+        self.arousal: float = arousal
+        self.current_emotion_category: str = current_emotion_category
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "valence": self.valence,
+            "arousal": self.arousal,
+            "current_emotion_category": self.current_emotion_category,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors = []
+        if not -1.0 <= self.valence <= 1.0:
+            errors.append("Valence out of bounds.")
+        if not 0.0 <= self.arousal <= 1.0:
+            errors.append("Arousal out of bounds.")
+        return len(errors) == 0, errors
+
+
+class AffectComponent(Component):
+    """Stores affective state, including prediction errors and dissonance."""
+
+    def __init__(self, affective_buffer_maxlen: int) -> None:
+        self.prediction_delta_magnitude: float = 0.0
+        self.predictive_delta_smooth: float = 0.5
+        self.cognitive_dissonance: float = 0.0
+        self.affective_experience_buffer: deque[Any] = deque(
+            maxlen=affective_buffer_maxlen
+        )
+        self.prev_reward: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "prediction_delta_magnitude": self.prediction_delta_magnitude,
+            "cognitive_dissonance": self.cognitive_dissonance,
+            "prev_reward": self.prev_reward,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        if np.isnan(self.cognitive_dissonance) or np.isinf(self.cognitive_dissonance):
+            return False, ["Cognitive dissonance is not a finite number."]
+        return True, []
+
+
+class CompetenceComponent(Component):
+    """
+    Stores an objective record of an agent's actions to track skill development.
+    """
+
+    def __init__(self) -> None:
+        self.action_counts: Dict[str, int] = defaultdict(int)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"action_counts": self.action_counts}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if not isinstance(self.action_counts, defaultdict):
+            errors.append(
+                f"action_counts is not a defaultdict but a {type(self.action_counts)}"
+            )
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        if not isinstance(self.action_counts, defaultdict):
+            self.action_counts = defaultdict(int)
+            return True
+        return False
+
+
+class EpisodeComponent(Component):
+    """Stores narrative arcs (episodes) chunked from the agent's experiences."""
+
+    def __init__(self) -> None:
+        self.episodes: List["Episode"] = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"episode_count": len(self.episodes)}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return isinstance(self.episodes, list), []
+
+
+class BeliefSystemComponent(Component):
+    """Holds the agent's core beliefs and actionable rules."""
+
+    def __init__(self) -> None:
+        self.belief_base: Dict[str, "Belief"] = {}
+        self.rule_base: List[str] = []
+        self.social_norms: Dict[str, float] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "belief_count": len(self.belief_base),
+            "rule_count": len(self.rule_base),
+            "social_norms": self.social_norms,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates that all attributes have the correct type."""
+        errors: List[str] = []
+        if not isinstance(self.belief_base, dict):
+            errors.append("'belief_base' attribute must be a dictionary.")
+        if not isinstance(self.rule_base, list):
+            errors.append("'rule_base' attribute must be a list.")
+        if not isinstance(self.social_norms, dict):
+            errors.append("'social_norms' attribute must be a dictionary.")
+
+        # Returns True if the errors list is empty, along with the list itself.
+        return len(errors) == 0, errors
+
+
+class SocialMemoryComponent(Component):
+    """Stores relational schemas about other agents."""
+
+    def __init__(self, schema_embedding_dim: int, device: Any) -> None:
+        self.schemas: Dict[str, "RelationalSchema"] = {}
+        self.schema_embedding_dim = schema_embedding_dim
+        self.device = device
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"num_schemas": len(self.schemas)}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return isinstance(self.schemas, dict), []
+
+
+class ValueSystemComponent(Component):
+    """Holds personal multipliers for subjective rewards and costs."""
+
+    def __init__(self) -> None:
+        self.combat_victory_multiplier: float = 1.0
+        self.collaboration_multiplier: float = 1.0
+        self.resource_yield_multiplier: float = 1.0
+        self.exploration_multiplier: float = 1.0
+        self.risk_tolerance: float = 1.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "collaboration_multiplier": self.collaboration_multiplier,
+            "risk_tolerance": self.risk_tolerance,
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+# -----------------------------------------------------------------------
+# Agnostic Utility Components
+# These components are necessary for the engine to function but are not
+# part of the agent's core cognitive state.
+# -----------------------------------------------------------------------
+
+
+class PerceptionComponent(Component):
+    """
+    A generic container for an agent's sensory input.
+
+    This component is world-agnostic and stores a dictionary of entities
+    that the agent can currently perceive, along with their observed features.
+    It is populated by a world-specific PerceptionProvider.
+    """
+
+    def __init__(self, vision_range: int) -> None:
+        """
+        Initializes the PerceptionComponent.
+
+        Args:
+            vision_range: The maximum distance the agent can perceive.
+        """
+        self.vision_range = vision_range
+        self.visible_entities: Dict[str, Dict[str, Any]] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the component's data."""
+        return {
+            "vision_range": self.vision_range,
+            "visible_entities_count": len(self.visible_entities),
+        }
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        """Validates the component's data."""
+        if self.vision_range < 0:
+            return False, ["Vision range cannot be negative."]
+        return True, []
+
+
+class TimeBudgetComponent(Component):
+    """
+    Manages an agent's time budget (or lifespan/energy) within the simulation.
+    This is a foundational utility component for the simulation engine,
+    representing an agent's capacity to perform actions.
+    """
+
+    def __init__(
+        self, initial_time_budget: float, lifespan_std_dev_percent: float = 0.0
+    ) -> None:
+        self.initial_time_budget = initial_time_budget
+        self.max_time_budget = initial_time_budget * 2  # Max capacity for time/energy
+        self.current_time_budget: float = initial_time_budget
+        self.is_active: bool = True  # Whether the agent is currently able to act
+        self.action_counts: Dict[str, int] = defaultdict(
+            int
+        )  # Tracks how many times each action was performed
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+        if self.initial_time_budget <= 0:
+            errors.append(
+                f"initial_time_budget must be > 0, got {self.initial_time_budget}"
+            )
+        if self.current_time_budget < 0:
+            errors.append(
+                f"current_time_budget cannot be negative, got {self.current_time_budget}"
+            )
+        if self.max_time_budget <= 0:
+            errors.append(f"max_time_budget must be > 0, got {self.max_time_budget}")
+        if self.is_active and self.current_time_budget <= 0:
+            errors.append(
+                f"Entity marked active but has no time budget ({self.current_time_budget})"
+            )
+        if not self.is_active and self.current_time_budget > 0:
+            errors.append(
+                f"Entity marked inactive but has time budget ({self.current_time_budget})"
+            )
+        if (
+            self.current_time_budget > self.max_time_budget * 1.1
+        ):  # Allow slight overshoot for float precision
+            errors.append(
+                f"current_time_budget ({self.current_time_budget}) exceeds max ({self.max_time_budget})"
+            )
+        return len(errors) == 0, errors
+
+    def auto_fix(self, entity_id: str, config: Dict[str, Any]) -> bool:
+        fixed: bool = False
+        if self.current_time_budget < 0:
+            self.current_time_budget = 0
+            self.is_active = False
+            fixed = True
+        if self.is_active and self.current_time_budget <= 0:
+            self.is_active = False
+            fixed = True
+        if (
+            not self.is_active
+            and self.current_time_budget > 0
+            and self.current_time_budget < self.initial_time_budget * 0.1
+        ):
+            self.current_time_budget = 0
+            fixed = True
+        if self.current_time_budget > self.max_time_budget:
+            self.current_time_budget = self.max_time_budget
+            fixed = True
+        return fixed
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "initial_time_budget": self.initial_time_budget,
+            "current_time_budget": self.current_time_budget,
+            "is_active": self.is_active,
+            "action_counts": self.action_counts,
+        }
+
+
+class ActionPlanComponent(Component):
+    """A placeholder for the agent's chosen action for the current tick."""
+
+    def __init__(
+        self,
+        action_type: Optional[Any] = None,
+        intent: Optional[Intent] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.action_type = action_type
+        self.intent = intent
+        self.params = params if params is not None else {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"action_type": str(self.action_type), "intent": str(self.intent)}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+class ActionOutcomeComponent(Component):
+    """Stores the result of the last executed action."""
+
+    def __init__(self) -> None:
+        self.success: bool = False
+        self.reward: float = 0.0
+        self.details: Dict[str, Any] = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"success": self.success, "reward": self.reward}
+
+    def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
+        return True, []
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/environment/interface.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_core/environment/interface.py
+"""
+Defines the abstract interface for all environments in the simulation,
+allowing for different world structures (e.g., 2D Grid, Graph, etc.).
+"""
+
+from abc import ABC, abstractmethod
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
+
+
+# Placeholder for SpatialIndex if it's not a separate, shared component.
+# If SpatialIndex is a specific implementation detail of a GridWorld,
+# it should NOT be in agent_core. For now, assuming it's a general concept
+# that environments might use, or it needs to be defined in the application layer.
+# For the purpose of making EnvironmentInterface importable, we'll make a simple placeholder.
+class SpatialIndex:
+    """
+    A placeholder for a spatial indexing structure.
+    Concrete implementations would live in the application layer.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def add_entity(self, entity_id: str, position: Tuple[int, int]) -> None:
+        pass
+
+    def remove_entity(self, entity_id: str) -> None:
+        pass
+
+    def update_entity_position(
+        self,
+        entity_id: str,
+        old_pos: Optional[Tuple[int, int]],
+        new_pos: Tuple[int, int],
+    ) -> None:
+        pass
+
+    def get_entities_at_position(self, position: Tuple[int, int]) -> Set[str]:
+        return set()
+
+    def get_entities_in_radius(
+        self, center: Tuple[int, int], radius: int
+    ) -> List[Tuple[str, Tuple[int, int]]]:
+        return []
+
+
+class EnvironmentInterface(ABC):
+    """
+    Abstract Base Class for all simulation environments.
+    """
+
+    @abstractmethod
+    def get_valid_positions(
+        self,
+    ) -> List[Any]:  # Return type could be more specific, e.g., List[Tuple[int, int]]
+        """Return all valid positions in this environment."""
+        pass
+
+    @abstractmethod
+    def get_neighbors(
+        self, position: Any
+    ) -> List[Any]:  # Position type can be abstract
+        """Get all valid neighboring positions for a given position."""
+        pass
+
+    @abstractmethod
+    def distance(self, pos1: Any, pos2: Any) -> float:  # Position type can be abstract
+        """Calculate the distance between two positions."""
+        pass
+
+    @abstractmethod
+    def can_move(
+        self, from_pos: Any, to_pos: Any
+    ) -> bool:  # Position type can be abstract
+        """Check if movement between two positions is valid."""
+        pass
+
+    @abstractmethod
+    def is_valid_position(self, position: Any) -> bool:  # Position type can be abstract
+        """Checks if a given position is valid within the environment bounds."""
+        pass
+
+    @abstractmethod
+    def get_entities_at_position(
+        self, position: Any
+    ) -> Set[str]:  # Position type can be abstract
+        """Get all entities at a specific position."""
+        pass
+
+    @abstractmethod
+    def get_entities_in_radius(
+        self, center: Any, radius: int
+    ) -> List[Tuple[str, Any]]:  # Position type can be abstract
+        """Get all entities within a radius of a position."""
+        pass
+
+    @abstractmethod
+    def update_entity_position(
+        self, entity_id: str, old_pos: Optional[Any], new_pos: Any
+    ) -> None:  # Position type can be abstract
+        """Update an entity's position in any underlying spatial data structures."""
+        pass
+
+    @abstractmethod
+    def remove_entity(self, entity_id: str) -> None:
+        """Remove an entity from any underlying spatial data structures."""
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes the environment's state to a dictionary."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        """
+        Restores the environment's state from a dictionary snapshot.
+        This is the counterpart to to_dict().
+        """
+        raise NotImplementedError
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/environment/perception_provider_interface.py
+────────────────────────────────────────────────────────────────────────────────
+# FILE: agent-core/src/agent_core/environment/perception_provider_interface.py
+
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Dict, Type
+
+if TYPE_CHECKING:
+    from agent_core.core.ecs.abstractions import SimulationState
+    from agent_core.core.ecs.component import Component
+
+
+class PerceptionProviderInterface(ABC):
+    """
+
+    An abstract interface for a class that provides world-specific
+    sensory information to an agent's PerceptionComponent.
+    """
+
+    @abstractmethod
+    def update_perception(
+        self,
+        entity_id: str,
+        components: Dict[Type["Component"], "Component"],
+        simulation_state: "SimulationState",
+        current_tick: int,
+    ) -> None:
+        """
+        Populates the PerceptionComponent of an entity with data about
+        visible entities in the environment.
+
+        Args:
+            entity_id: The ID of the agent whose perception is being updated.
+            components: The components of the perceiving agent.
+            simulation_state: The current state of the entire simulation.
+            current_tick: The current simulation tick.
+        """
+        raise NotImplementedError
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/environment/state_node_encoder_interface.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_core/environment/state_node_encoder_interface.py
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Tuple, Type
+
+# Forward reference for Component from agent_core
+if "TYPE_CHECKING" not in globals():
+    from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from agent_core.core.ecs.component import Component
+
+
+class StateNodeEncoderInterface(ABC):
+    """
+    Abstract Base Class for state node encoders.
+
+    This interface defines the contract for how a specific simulation's
+    world state (represented by an entity's components) is transformed
+    into a generalized, symbolic tuple for the CausalGraphSystem.
+
+    The concrete implementation of this interface will live in the final
+    simulation application (e.g., agent-soul-sim) and will be responsible
+    for extracting relevant information from world-specific components
+    (like HealthComponent, PositionComponent, etc.) and converting it
+    into a world-agnostic representation for the causal graph.
+    """
+
+    @abstractmethod
+    def encode_state_for_causal_graph(
+        self,
+        entity_id: str,
+        components: Dict[Type["Component"], "Component"],
+        current_tick: int,
+        config: Dict[str, Any],
+    ) -> Tuple[Any, ...]:
+        """
+        Encodes the current state of an entity into a tuple that represents
+        a node in the causal graph. This tuple should be generalized and
+        not contain direct references to world-specific component types
+        (e.g., 'HealthComponent', 'PositionComponent').
+
+        Instead, it should derive abstract concepts like 'health_status',
+        'location_type', 'danger_level', etc., from the world-specific components
+        provided in 'components'.
+
+        Args:
+            entity_id: The ID of the entity whose state is being encoded.
+            components: A dictionary of the entity's components (world-specific included).
+            current_tick: The current simulation tick.
+            config: The simulation configuration.
+
+        Returns:
+            A tuple representing the abstract state node for the causal graph.
+            Example: ("STATE", "health_good", "at_base", "no_danger", "goal_explore")
+        """
+        raise NotImplementedError
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-core/src/agent_core/policy/state_encoder_interface.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_core/policy/state_encoder_interface.py
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from agent_core.core.ecs.abstractions import SimulationState
+    from agent_core.core.ecs.component import Component
+
+
+class StateEncoderInterface(ABC):
+    """
+    Abstract Base Class for a state encoder.
+    This interface allows the Q-learning system to be decoupled from the specific
+    state representation of any given simulation. The concrete implementation will
+    be provided by the final application (e.g., agent-soul-sim) and will contain
+    the logic for converting that world's state into a feature vector.
+    """
+
+    @abstractmethod
+    def encode_state(
+        self,
+        simulation_state: "SimulationState",
+        entity_id: str,
+        config: Dict[str, Any],
+        target_entity_id: Optional[str] = None,
+    ) -> np.ndarray:
+        """
+        Encodes the current simulation state into a fixed-size numerical
+        feature vector from the perspective of a given entity.
+
+        Args:
+            simulation_state: The main state object of the simulation.
+            entity_id: The ID of the entity for whom the state is being encoded.
+            config: The simulation configuration dictionary.
+            target_entity_id: An optional ID of another entity that is the
+                              focus of the current action, for social contexts.
+        Returns:
+            A 1D numpy array representing the encoded state features.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def encode_internal_state(
+        self, components: Dict[Type["Component"], "Component"], config: Any
+    ) -> np.ndarray:
+        """
+        Encodes an agent's internal, cognitive components into a fixed-size
+        numerical feature vector.
+
+        Args:
+            components: The dictionary of components for the specific agent.
+            config: The simulation configuration object.
+
+        Returns:
+            A 1D numpy array representing the encoded internal state features.
+        """
+        raise NotImplementedError
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-engine/src/agent_engine//simulation/simulation_state.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_engine/simulation/simulation_state.py
+"""
+Consolidates all simulation data, acting as the central state container.
+"""
+
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+
+import numpy as np
+from agent_core.core.ecs.abstractions import AbstractSimulationState
+from agent_core.core.ecs.component import (
+    Component,
+)
+from agent_core.core.ecs.component_factory_interface import ComponentFactoryInterface
+from agent_persist.models import AgentSnapshot, ComponentSnapshot, SimulationSnapshot
+
+# Forward references for type hinting to avoid circular imports
+if TYPE_CHECKING:
+    from agent_core.cognition.scaffolding import CognitiveScaffold
+    from agent_core.core.ecs.event_bus import EventBus
+    from agent_core.environment.interface import EnvironmentInterface
+
+    from agent_engine.simulation.system import SystemManager
+
+
+class SimulationState(AbstractSimulationState):
+    """
+    Consolidates all simulation data into a single, world-agnostic container.
+    """
+
+    def __init__(self, config: Any, device: Any) -> None:
+        self.config = config
+        self.device = device
+        self.entities: Dict[str, Dict[Type[Component], Component]] = {}
+        self.simulation_id: str = ""
+        self.environment: Optional["EnvironmentInterface"] = None
+        self._event_bus: Optional["EventBus"] = None
+        self.system_manager: Optional["SystemManager"] = None
+        self.cognitive_scaffold: Optional["CognitiveScaffold"] = None
+        self.main_rng: Optional[np.random.Generator] = None
+        self.current_tick: int = 0
+        self.db_logger: Optional[Any] = None
+
+    @property
+    def event_bus(self) -> Optional["EventBus"]:
+        """Provides access to the simulation's event bus."""
+        return self._event_bus
+
+    @event_bus.setter
+    def event_bus(self, value: Optional["EventBus"]) -> None:
+        self._event_bus = value
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        snapshot: SimulationSnapshot,
+        config: Any,
+        component_factory: ComponentFactoryInterface,
+        environment: "EnvironmentInterface",
+        event_bus: "EventBus",
+        db_logger: Any,
+    ) -> "SimulationState":
+        """Creates a new SimulationState instance from a snapshot."""
+        # Initialize a new state object
+        sim_state = cls(config, "cpu")
+        sim_state.current_tick = snapshot.current_tick
+        sim_state.simulation_id = snapshot.simulation_id
+        sim_state.environment = environment
+        sim_state.event_bus = event_bus
+        sim_state.db_logger = db_logger
+
+        # Restore environment state first
+        if snapshot.environment_state and sim_state.environment:
+            sim_state.environment.restore_from_dict(snapshot.environment_state)
+
+        # Restore agents and their components using the factory
+        for agent_snapshot in snapshot.agents:
+            agent_id = agent_snapshot.agent_id
+            sim_state.add_entity(agent_id)
+            for comp_snapshot in agent_snapshot.components:
+                try:
+                    # The factory handles the creation of all components
+                    component_instance = component_factory.create_component(
+                        comp_snapshot.component_type, comp_snapshot.data
+                    )
+                    sim_state.add_component(agent_id, component_instance)
+                except Exception as e:
+                    print(
+                        f"Could not restore component {comp_snapshot.component_type} for agent {agent_id}: {e}"
+                    )
+
+        return sim_state
+
+    def to_snapshot(self) -> SimulationSnapshot:
+        """
+        Converts the live SimulationState object into a serializable SimulationSnapshot model.
+        """
+        agent_snapshots = []
+        for agent_id, components in self.entities.items():
+            component_snapshots = []
+            for component in components.values():
+                comp_snapshot = ComponentSnapshot(
+                    component_type=f"{component.__class__.__module__}.{component.__class__.__name__}",
+                    data=component.to_dict(),
+                )
+                component_snapshots.append(comp_snapshot)
+
+            agent_snapshots.append(
+                AgentSnapshot(agent_id=agent_id, components=component_snapshots)
+            )
+
+        return SimulationSnapshot(
+            simulation_id=self.simulation_id,
+            current_tick=self.current_tick,
+            agents=agent_snapshots,
+            environment_state=(
+                self.environment.to_dict() if self.environment else None
+            ),
+        )
+
+    def add_entity(self, entity_id: str) -> None:
+        if entity_id in self.entities:
+            raise ValueError(f"Entity with ID {entity_id} already exists.")
+        self.entities[entity_id] = {}
+
+    def add_component(self, entity_id: str, component: Component) -> None:
+        if entity_id not in self.entities:
+            raise ValueError(
+                f"Cannot add component. Entity with ID {entity_id} does not exist."
+            )
+        self.entities[entity_id][type(component)] = component
+
+    def get_component(
+        self, entity_id: str, component_type: Type[Component]
+    ) -> Optional[Component]:
+        return self.entities.get(entity_id, {}).get(component_type)
+
+    def remove_entity(self, entity_id: str) -> None:
+        if entity_id in self.entities:
+            del self.entities[entity_id]
+
+    def get_entities_with_components(
+        self, component_types: List[Type[Component]]
+    ) -> Dict[str, Dict[Type[Component], Component]]:
+        matching_entities = {}
+        for entity_id, components in self.entities.items():
+            if all(comp_type in components for comp_type in component_types):
+                matching_entities[entity_id] = components
+        return matching_entities
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ FILE: agent-engine/src/agent_engine//simulation/system.py
+────────────────────────────────────────────────────────────────────────────────
+# src/agent_engine/simulation/system.py
+
+from abc import abstractmethod
+from typing import Any, Dict, List, Optional, Type
+
+# Imports from the new concurrent library
+from agent_concurrent.runners import AsyncSystemRunner, SystemProtocol, SystemRunner
+
+# Imports from the core library
+from agent_core.cognition.scaffolding import CognitiveScaffold
+
+# Imports from agent_engine
+from agent_engine.simulation.abstractions import CognitiveSystem
+from agent_engine.simulation.simulation_state import SimulationState
+
+
+class System(CognitiveSystem, SystemProtocol):
+    """
+    Abstract base class for all systems in the engine.
+    It now directly inherits the asynchronous contract from CognitiveSystem.
+    """
+
+    # No need to override __init__ as the parent class handles it.
+
+    @abstractmethod
+    async def update(self, current_tick: int) -> None:
+        """
+        Processes the system's logic for the current simulation tick.
+        The system is responsible for fetching the entities it needs to operate on
+        from self.simulation_state, typically using self.REQUIRED_COMPONENTS.
+        """
+        raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} System"
+
+
+class SystemManager:
+    """
+    Manages the registration, initialization, and execution of all systems
+    using a specified runner (e.g., AsyncSystemRunner).
+    """
+
+    def __init__(
+        self,
+        simulation_state: "SimulationState",
+        config: Dict[str, Any],
+        cognitive_scaffold: "CognitiveScaffold",
+    ) -> None:
+        self.simulation_state = simulation_state
+        self.config = config
+        self._systems: List[System] = []
+        self.cognitive_scaffold = cognitive_scaffold
+
+        # Instantiate the runner from our new library.
+        # This is where the integration with agent-concurrent happens.
+        self.runner: SystemRunner = AsyncSystemRunner()
+
+    def register_system(self, system_class: Type[System], **kwargs: Any) -> None:
+        """
+        Instantiates and registers a system, passing extra keyword arguments
+        to its constructor. This is crucial for dependency injection.
+        """
+        system_instance = system_class(
+            self.simulation_state, self.config, self.cognitive_scaffold, **kwargs
+        )
+        self._systems.append(system_instance)
+        print(f"Registered System: {system_instance}")
+
+    # The update method is now async and delegates execution to the runner.
+    async def update_all(self, current_tick: int) -> None:
+        """
+        Executes the update method for all registered systems using the runner.
+        """
+        # The runner handles concurrent execution and error logging.
+        await self.runner.run(self._systems, current_tick=current_tick)
+
+    def get_system(self, system_type: Type[System]) -> Optional[System]:
+        """
+        Retrieves a system instance of the given type.
+        NOTE: This should be used sparingly, primarily for debugging or post-simulation
+        analysis. Prefer using the EventBus for inter-system communication.
+        """
+        for system_instance in self._systems:
+            if isinstance(system_instance, system_type):
+                return system_instance
+        print(
+            f"Warning: System of type {system_type.__name__} not found in SystemManager."
+        )
+        return None

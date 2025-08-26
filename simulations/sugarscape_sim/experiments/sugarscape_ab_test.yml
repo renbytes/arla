@@ -1,0 +1,30 @@
+# simulations/sugarscape_sim/experiments/sugarscape_ab_test.yml
+
+experiment_name: "Sugarscape - Heuristic vs. Learning Agent"
+
+# Path to the base configuration file for this simulation.
+base_config_path: "simulations/sugarscape_sim/config/config.yml"
+
+# The Python package for the Sugarscape simulation.
+simulation_package: "simulations.sugarscape_sim"
+
+# The scenario file defining the world's initial state.
+scenarios:
+  - "simulations/sugarscape_sim/scenarios/default.json"
+
+# Number of times to run each variation for statistical significance.
+runs_per_scenario: 10
+
+# Define the two experimental groups for our A/B test.
+variations:
+  - name: "GroupA-Heuristic-Baseline"
+    overrides:
+      decision_selector:
+        # This variation uses the simple, rule-based agent.
+        class: "simulations.sugarscape_sim.providers.HeuristicDecisionSelector"
+
+  - name: "GroupB-QLearning-Agent"
+    overrides:
+      decision_selector:
+        # This variation uses the advanced agent that learns from experience.
+        class: "agent_engine.policy.q_learning_decision_selector.QLearningDecisionSelector"

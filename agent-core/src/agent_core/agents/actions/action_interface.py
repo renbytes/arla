@@ -7,6 +7,7 @@ behave in a way the rest of the simulation can understand.
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List
+from .action_outcome import ActionOutcome
 
 if TYPE_CHECKING:
     from agent_core.core.ecs.abstractions import SimulationState
@@ -52,7 +53,7 @@ class ActionInterface(ABC):
         simulation_state: "SimulationState",
         params: Dict[str, Any],
         current_tick: int,
-    ) -> Dict[str, Any]:
+    ) -> ActionOutcome:
         """
         Executes the action's logic and modifies the simulation state.
         """
