@@ -1,3 +1,4 @@
+# FILE: simulations/sugarscape_sim/actions.py
 """
 Defines the agent actions for the Sugarscape simulation.
 Each class implements the ActionInterface, defining what an agent can do.
@@ -11,7 +12,6 @@ from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
-from agent_engine.simulation.simulation_state import SimulationState
 
 from .components import EnergyComponent, PositionComponent
 from .environment import SugarscapeEnvironment
@@ -37,7 +37,8 @@ class MoveAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates parameters for all valid moves (N, S, E, W)."""
-        if not isinstance(sim_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
@@ -93,7 +94,8 @@ class HarvestAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Action is possible if there is sugar at the agent's location."""
-        if not isinstance(sim_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
@@ -145,7 +147,8 @@ class ShareAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates share options for all adjacent agents."""
-        if not isinstance(sim_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
@@ -215,7 +218,8 @@ class AttackAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates attack options for all adjacent agents."""
-        if not isinstance(sim_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)

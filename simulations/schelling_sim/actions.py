@@ -7,7 +7,6 @@ from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
-from agent_engine.simulation.simulation_state import SimulationState
 
 # --- FIX: Import the new, separated components ---
 from .components import PositionComponent, SatisfactionComponent
@@ -44,7 +43,8 @@ class MoveToEmptyCellAction(ActionInterface):
         Generates a move parameter if the agent is unsatisfied and there are
         empty cells available.
         """
-        if not isinstance(simulation_state, SimulationState):
+        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        if not hasattr(simulation_state, "environment"):
             return []
 
         satisfaction_comp = simulation_state.get_component(

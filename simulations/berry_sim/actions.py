@@ -5,7 +5,6 @@ from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
-from agent_engine.simulation.simulation_state import SimulationState
 from .components import PositionComponent
 from .environment import BerryWorldEnvironment
 
@@ -28,7 +27,7 @@ class MoveAction(ActionInterface):
     def generate_possible_params(
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
-        if not isinstance(sim_state, SimulationState):
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
@@ -83,7 +82,7 @@ class EatBerryAction(ActionInterface):
     def generate_possible_params(
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
-        if not isinstance(sim_state, SimulationState):
+        if not hasattr(sim_state, "environment"):
             return []
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)

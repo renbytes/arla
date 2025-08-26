@@ -1,3 +1,4 @@
+# FILE: tests/simulations/sugarscape_sim/test_sugarscape_providers.py
 """
 Unit tests for the Provider classes in the Sugarscape simulation.
 
@@ -30,6 +31,7 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
 
     def test_update_perception(self):
         """Verify that the provider correctly identifies visible entities."""
+        # FIX: The provider instance was never created.
         provider = SugarscapePerceptionProvider()
         mock_sim_state = MagicMock()
         mock_env = MagicMock(spec=SugarscapeEnvironment)
@@ -41,11 +43,8 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
         mock_env.agent_positions = {"agent_2": (11, 11)}
         mock_env.sugar_map = np.zeros((20, 20))
         mock_env.sugar_map[12, 12] = 4
-        mock_env.sugar_map[18, 18] = 2
+        mock_env.sugar_map[18, 18] = 2  # This one is out of range
 
-        # FIX: Explicitly set width and height on the mock object.
-        # The AttributeError occurred because the mock spec doesn't automatically
-        # create instance attributes, only method signatures.
         mock_env.width = 20
         mock_env.height = 20
 
@@ -58,18 +57,14 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
         )
         mock_sim_state.environment = mock_env
 
-        def get_component(entity_id, comp_type):
-            if comp_type == PositionComponent:
-                return mock_pos
-            if comp_type == MetabolismComponent:
-                return mock_metabolism
-            if comp_type == PerceptionComponent:
-                return mock_perc
-            return None
+        # Create a dictionary of components to be returned by the mock
+        components = {
+            PositionComponent: mock_pos,
+            MetabolismComponent: mock_metabolism,
+            PerceptionComponent: mock_perc,
+        }
 
-        mock_sim_state.get_component.side_effect = get_component
-
-        provider.update_perception("agent_1", {}, mock_sim_state, 0)
+        provider.update_perception("agent_1", components, mock_sim_state, 0)
 
         visible = mock_perc.visible_entities
         self.assertEqual(len(visible), 2)
@@ -91,6 +86,7 @@ class TestHeuristicDecisionSelector(unittest.TestCase):
 
         # Mock actions
         harvest_action = MagicMock()
+        # FIX: The mock needs the action_id attribute for the selector's logic.
         harvest_action.action_type.action_id = "harvest"
         move_to_sugar_action = MagicMock()
         move_to_sugar_action.action_type.action_id = "move"
@@ -171,16 +167,20 @@ class TestSugarscapeStateEncoder(unittest.TestCase):
 
         vector = encoder.encode_state(mock_sim_state, "agent_1", mock_config)
 
+        # FIX: The vector size is 9 (3 for agent state + 2*3 for perception).
         self.assertEqual(len(vector), 9)
 
-        self.assertAlmostEqual(vector[0], 0.5)
-        self.assertAlmostEqual(vector[1], 0.5)
-        self.assertAlmostEqual(vector[2], 0.5)
+        # Agent state assertions
+        self.assertAlmostEqual(vector[0], 0.5)  # x
+        self.assertAlmostEqual(vector[1], 0.5)  # y
+        self.assertAlmostEqual(vector[2], 0.5)  # energy
 
-        self.assertAlmostEqual(vector[3], 0.2)
-        self.assertAlmostEqual(vector[4], 0.25)
-        self.assertAlmostEqual(vector[5], 1.0)
+        # Nearest sugar patch assertions
+        self.assertAlmostEqual(vector[3], 0.2)  # distance
+        self.assertAlmostEqual(vector[4], 0.25)  # angle
+        self.assertAlmostEqual(vector[5], 1.0)  # amount
 
+        # Second nearest sugar patch (defaults)
         self.assertAlmostEqual(vector[6], 1.0)
         self.assertAlmostEqual(vector[7], 0.0)
         self.assertAlmostEqual(vector[8], 0.0)
