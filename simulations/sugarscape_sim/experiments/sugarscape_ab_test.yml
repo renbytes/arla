@@ -27,4 +27,4 @@ variations:
     overrides:
       decision_selector:
         # This variation uses the advanced agent that learns from experience.
-        class: "agent_engine.policy.q_learning_decision_selector.QLearningDecisionSelector"
+        class: "simulations.sugarscape_sim.providers.QLearningDecisionSelector"

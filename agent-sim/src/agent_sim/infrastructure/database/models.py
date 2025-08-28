@@ -1,4 +1,4 @@
-# src/data/models.py
+# FILE: agent-sim/src/agent_sim/infrastructure/database/models.py
 """
 Defines the SQLAlchemy ORM models for the entire simulation database.
 This includes tables for experiments, simulation runs, agent states, events,
@@ -45,7 +45,6 @@ class Experiment(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     mlflow_experiment_id: Mapped[str] = mapped_column(String, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String, index=True)
-    # This column will store the name of the simulation package, e.g., 'soul_sim'.
     simulation_package: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONB, nullable=True)
@@ -67,6 +66,10 @@ class SimulationRun(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     experiment_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("experiments.id"), index=True
+    )
+    # NEW: Added column to store the variation name
+    variation_name: Mapped[Optional[str]] = mapped_column(
+        String, index=True, nullable=True
     )
     task_id: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True)
     scenario_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -159,7 +162,6 @@ class Metric(Base):
         Uuid, ForeignKey("simulation_runs.id"), index=True
     )
     tick: Mapped[int] = mapped_column(Integer, index=True)
-    # This single JSONB column can store any set of key-value metrics
     data: Mapped[Dict[str, Any]] = mapped_column(JSONB)
 
 

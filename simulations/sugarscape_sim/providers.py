@@ -12,7 +12,9 @@ from typing import Any, Dict, List, Optional, Tuple, Type, cast
 
 import numpy as np
 import torch
+from agent_core.agents.action_cost_provider_interface import ActionCostProviderInterface
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
+from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
 from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
@@ -57,7 +59,6 @@ class SugarscapePerceptionProvider(PerceptionProviderInterface):
         current_tick: int,
     ) -> None:
         """Finds all visible agents and sugar patches within vision range."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return
 
@@ -115,13 +116,30 @@ class SugarscapePerceptionProvider(PerceptionProviderInterface):
 class SugarscapeActionGenerator(ActionGeneratorInterface):
     """Generates all possible actions for an agent in the Sugarscape."""
 
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        self.simulation_state = simulation_state
+        self.config = config
+
     def generate(
         self, sim_state: AbstractSimulationState, entity_id: str, tick: int
     ) -> List[ActionPlanComponent]:
         """Iterates through all registered actions and generates their parameters."""
         all_plans: List[ActionPlanComponent] = []
+
+        is_survival_phase = self.config.simulation.get(
+            "learning_phase_survival_only", False
+        )
+
         for action_class in action_registry.get_all_actions():
             action_instance = action_class()
+
+            if is_survival_phase and action_instance.action_id not in [
+                "move",
+                "harvest",
+                "stay",
+            ]:
+                continue
+
             params_list = action_instance.generate_possible_params(
                 entity_id, sim_state, tick
             )
@@ -136,6 +154,10 @@ class SugarscapeActionGenerator(ActionGeneratorInterface):
 
 class HeuristicDecisionSelector(DecisionSelectorInterface):
     """A simple, rule-based decision policy for baseline agents."""
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        self.simulation_state = simulation_state
+        self.config = config
 
     def select(
         self,
@@ -185,7 +207,119 @@ class HeuristicDecisionSelector(DecisionSelectorInterface):
                 )
                 return best_move
 
-        return random.choice(possible_actions) if possible_actions else None
+        move_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and a.action_type.action_id == "move"
+        ]
+        return random.choice(move_actions) if move_actions else None
+
+
+class ExplorationHeuristicDecisionSelector(HeuristicDecisionSelector):
+    """Group A (Revised Baseline): Heuristic policy with added exploration."""
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        super().__init__(simulation_state, config)
+        self.epsilon = config.learning.q_learning.min_epsilon if config else 0.1
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions:
+            return None
+        if random.random() < self.epsilon:
+            return random.choice(possible_actions)
+        return super().select(sim_state, entity_id, possible_actions)
+
+
+class RandomDecisionSelector(DecisionSelectorInterface):
+    """Group D (Null Baseline): A policy that selects a random valid action."""
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        pass
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions:
+            return None
+        return random.choice(possible_actions)
+
+
+class QLearningDecisionSelector(DecisionSelectorInterface):
+    """A decision selector that uses the agent's Q-learning network."""
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        self.simulation_state = simulation_state
+        self.config = config
+        self.state_encoder = SugarscapeStateEncoder()
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions or not isinstance(sim_state, SimulationState):
+            return None
+
+        q_comp = sim_state.get_component(entity_id, QLearningComponent)
+        if not q_comp:
+            return random.choice(possible_actions)
+        q_comp = cast(QLearningComponent, q_comp)
+
+        epsilon = self.config.learning.q_learning.min_epsilon
+        if random.random() < epsilon:
+            return random.choice(possible_actions)
+
+        with torch.no_grad():
+            best_action = None
+            max_q_value = -float("inf")
+
+            state_features = self.state_encoder.encode_state(
+                sim_state, entity_id, self.config
+            )
+            state_tensor = torch.tensor(state_features, dtype=torch.float32).unsqueeze(
+                0
+            )
+
+            entity_components = sim_state.entities.get(entity_id)
+            if not entity_components:
+                return random.choice(possible_actions)
+
+            internal_state = self.state_encoder.encode_internal_state(
+                entity_components, self.config
+            )
+            internal_tensor = torch.tensor(
+                internal_state, dtype=torch.float32
+            ).unsqueeze(0)
+
+            for action_plan in possible_actions:
+                if not isinstance(action_plan.action_type, ActionInterface):
+                    continue
+
+                action_features = action_plan.action_type.get_feature_vector(
+                    entity_id, sim_state, action_plan.params
+                )
+                action_tensor = torch.tensor(
+                    action_features, dtype=torch.float32
+                ).unsqueeze(0)
+
+                q_value = q_comp.utility_network(
+                    state_tensor, internal_tensor, action_tensor
+                ).item()
+
+                if q_value > max_q_value:
+                    max_q_value = q_value
+                    best_action = action_plan
+
+            return best_action
 
 
 class SugarscapeStateEncoder(StateEncoderInterface):
@@ -199,7 +333,6 @@ class SugarscapeStateEncoder(StateEncoderInterface):
         target_entity_id: Optional[str] = None,
     ) -> np.ndarray:
         """Encodes agent vitals and perception into a feature vector."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return np.zeros(9, dtype=np.float32)
 
@@ -261,6 +394,21 @@ class SugarscapeStateEncoder(StateEncoderInterface):
 class SugarscapeRewardCalculator(RewardCalculatorInterface):
     """Calculates final, subjective rewards for the Sugarscape simulation."""
 
+    def __init__(self, simulation_state: Any, config: Any):
+        self.simulation_state = simulation_state
+        self.config = config
+
+    def _get_distance_to_nearest_sugar(self, pos, env):
+        min_dist = float("inf")
+        # Inefficient, but suitable for this simulation's scale
+        for y in range(env.height):
+            for x in range(env.width):
+                if env.get_sugar_at((x, y)) > 0:
+                    dist = env.distance(pos, (x, y))
+                    if dist < min_dist:
+                        min_dist = dist
+        return min_dist
+
     def calculate_final_reward(
         self,
         base_reward: float,
@@ -279,10 +427,23 @@ class SugarscapeRewardCalculator(RewardCalculatorInterface):
         if energy_comp.current_energy < 20:
             survival_penalty = -10.0
 
-        final_reward = base_reward + survival_penalty
+        reward_shaping_bonus = 0.0
+        shaping_enabled = self.config.simulation.get("reward_shaping_enabled", False)
+        if shaping_enabled and action_type.action_id == "move":
+            env = self.simulation_state.environment
+            old_pos = outcome_details.get("old_pos")
+            new_pos = outcome_details.get("target_pos")
+
+            if old_pos and new_pos and isinstance(env, SugarscapeEnvironment):
+                old_dist = self._get_distance_to_nearest_sugar(old_pos, env)
+                new_dist = self._get_distance_to_nearest_sugar(new_pos, env)
+                reward_shaping_bonus = (old_dist - new_dist) * 0.1
+
+        final_reward = base_reward + survival_penalty + reward_shaping_bonus
         return final_reward, {
             "base_reward": base_reward,
             "survival_penalty": survival_penalty,
+            "reward_shaping_bonus": reward_shaping_bonus,
         }
 
 
@@ -369,3 +530,19 @@ class SugarscapeStateNodeEncoder(StateNodeEncoderInterface):
                 local_sugar_status = "present"
 
         return ("STATE", f"energy_{energy_status}", f"sugar_{local_sugar_status}")
+
+
+class SugarscapeActionCostProvider(ActionCostProviderInterface):
+    """Applies action costs to an agent's EnergyComponent."""
+
+    def apply_action_cost(
+        self,
+        entity_id: str,
+        cost: float,
+        simulation_state: "AbstractSimulationState",
+    ) -> None:
+        """Deducts the cost from the agent's current energy."""
+        energy_comp = simulation_state.get_component(entity_id, EnergyComponent)
+        if energy_comp:
+            energy_comp = cast(EnergyComponent, energy_comp)
+            energy_comp.current_energy -= cost

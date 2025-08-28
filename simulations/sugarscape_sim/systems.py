@@ -1,3 +1,4 @@
+# FILE: simulations/sugarscape_sim/systems.py
 """
 Defines the logic systems for the Sugarscape simulation.
 Systems contain all the business logic of the simulation. They operate on
@@ -6,6 +7,7 @@ indirectly through an event bus. This file implements the core mechanics
 of the Sugarscape model as described in the paper.
 """
 
+import os
 import random
 import uuid
 from typing import Any, Dict, List, Type, cast
@@ -20,12 +22,13 @@ from .components import (
     PositionComponent,
 )
 from .environment import SugarscapeEnvironment
+from .metrics.sugarscape_metrics_calculator import SugarscapeMetricsCalculator
+from .renderer import SugarscapeRenderer
 
 
 class MetabolismSystem(System):
     """
-    Handles agent metabolism, energy decay, death, and sugar regeneration.
-    This system runs every tick for all agents with energy and metabolism.
+    Handles agent metabolism (energy decay) and environment sugar regeneration.
     """
 
     REQUIRED_COMPONENTS: List[Type[Component]] = [
@@ -36,8 +39,7 @@ class MetabolismSystem(System):
 
     async def update(self, current_tick: int) -> None:
         """
-        Processes passive energy decay for all agents and handles death.
-        Also regenerates sugar in the environment.
+        Processes passive energy decay for all active agents and regenerates sugar.
         """
         env = self.simulation_state.environment
         if not isinstance(env, SugarscapeEnvironment):
@@ -62,6 +64,34 @@ class MetabolismSystem(System):
 
             # Apply metabolic cost
             energy_comp.current_energy -= metabolism_comp.metabolic_rate
+
+            # REMOVED: Death check logic is now in VitalsSystem.
+
+
+class VitalsSystem(System):
+    """
+    Checks agent vitals and handles deactivation (death) when energy is depleted.
+    """
+
+    REQUIRED_COMPONENTS: List[Type[Component]] = [EnergyComponent, TimeBudgetComponent]
+
+    async def update(self, current_tick: int) -> None:
+        """Checks for agents with zero or less energy and deactivates them."""
+        env = self.simulation_state.environment
+        if not isinstance(env, SugarscapeEnvironment):
+            return
+
+        agents = self.simulation_state.get_entities_with_components(
+            self.REQUIRED_COMPONENTS
+        )
+
+        # Use a list to avoid modifying the dictionary while iterating
+        for agent_id, components in list(agents.items()):
+            energy_comp = cast(EnergyComponent, components.get(EnergyComponent))
+            time_comp = cast(TimeBudgetComponent, components.get(TimeBudgetComponent))
+
+            if not time_comp.is_active:
+                continue
 
             # Check for death
             if energy_comp.current_energy <= 0:
@@ -91,7 +121,11 @@ class MovementSystem(System):
 
         if not pos_comp or not isinstance(env, SugarscapeEnvironment):
             self._publish_outcome(
-                event_data, success=False, reward=-1.0, message="Missing components."
+                event_data,
+                success=False,
+                reward=-1.0,
+                message="Missing components.",
+                details={},
             )
             return
 
@@ -102,16 +136,26 @@ class MovementSystem(System):
         pos_comp.x, pos_comp.y = target_pos
         env.update_entity_position(entity_id, old_pos, target_pos)
 
+        details = {"old_pos": old_pos, "target_pos": target_pos}
         self._publish_outcome(
-            event_data, success=True, reward=0.0, message="Move successful."
+            event_data,
+            success=True,
+            reward=0.0,
+            message="Move successful.",
+            details=details,
         )
 
     def _publish_outcome(
-        self, event_data: Dict[str, Any], success: bool, reward: float, message: str
+        self,
+        event_data: Dict[str, Any],
+        success: bool,
+        reward: float,
+        message: str,
+        details: Dict[str, Any],
     ):
         """Publishes the final outcome of the action."""
         event_data["action_outcome"] = ActionOutcome(
-            success, message, base_reward=reward
+            success, message, base_reward=reward, details=details
         )
         event_data["original_action_plan"] = event_data.pop("action_plan_component")
         if self.event_bus:
@@ -236,7 +280,7 @@ class SocialSystem(System):
         stolen_energy = target_energy.current_energy
         attacker_energy.current_energy += stolen_energy
         target_energy.current_energy = 0
-        target_time.is_active = False  # The target is eliminated
+        target_time.is_active = False
 
         env = self.simulation_state.environment
         if isinstance(env, SugarscapeEnvironment):
@@ -269,34 +313,27 @@ class SocialSystem(System):
 
         parent_energy = cast(EnergyComponent, parent_energy)
         parent_metabolism = cast(MetabolismComponent, parent_metabolism)
-        env = cast(
-            SugarscapeEnvironment, env
-        )  # Add explicit cast after isinstance check
+        env = cast(SugarscapeEnvironment, env)
 
-        # Find an empty cell for the offspring
         empty_cell = env.get_random_empty_cell()
         if not empty_cell:
             self._publish_outcome(event_data, False, -0.5, "No space to reproduce.")
             return
 
-        # Split energy
         repro_cost = event_data["action_plan_component"].action_type.get_base_cost(
             self.simulation_state
         )
         parent_energy.current_energy -= repro_cost
         child_energy = repro_cost / 2.0
 
-        # Create the new agent (child)
         child_id = f"agent_{uuid.uuid4().hex[:6]}"
         self.simulation_state.add_entity(child_id)
 
-        # Inherit traits with slight mutation (a classic Sugarscape feature)
         child_metabolism_rate = max(
             1, parent_metabolism.metabolic_rate + random.randint(-1, 1)
         )
         child_vision = max(1, parent_metabolism.vision_range + random.randint(-1, 1))
 
-        # Add all necessary components for the new agent
         self.simulation_state.add_component(
             child_id, PositionComponent(x=empty_cell[0], y=empty_cell[1])
         )
@@ -312,7 +349,7 @@ class SocialSystem(System):
         )
         self.simulation_state.add_component(
             child_id, TimeBudgetComponent(initial_time_budget=9999)
-        )  # Effectively infinite lifespan
+        )
 
         env.update_entity_position(child_id, None, empty_cell)
         self._publish_outcome(event_data, True, 50.0, "Reproduction successful.")
@@ -329,5 +366,67 @@ class SocialSystem(System):
             self.event_bus.publish("action_outcome_ready", event_data)
 
     async def update(self, current_tick: int):
+        """This system is purely event-driven."""
+        pass
+
+
+class RenderingSystem(System):
+    """A system that renders the simulation state to an image at each tick."""
+
+    def __init__(
+        self,
+        simulation_state: Any,
+        config: Any,
+        cognitive_scaffold: Any,
+    ):
+        super().__init__(simulation_state, config, cognitive_scaffold)
+
+        env_params = config.environment.get("params", {})
+        width = env_params.get("width", 50)
+        height = env_params.get("height", 50)
+
+        render_config = config.get("rendering", {})
+        base_output_dir = render_config.get(
+            "output_directory", "data/renders/default_sugarscape"
+        )
+        pixel_scale = render_config.get("pixel_scale", 1)
+
+        run_id = self.simulation_state.simulation_id
+        self.unique_output_dir = os.path.join(base_output_dir, run_id)
+
+        self.renderer = SugarscapeRenderer(
+            width, height, self.unique_output_dir, pixel_scale
+        )
+        print(
+            f"🎨 RenderingSystem initialized. Frames will be saved to '{self.unique_output_dir}'."
+        )
+
+    async def update(self, current_tick: int) -> None:
+        """On each tick, render a new frame."""
+        self.renderer.render_frame(self.simulation_state, current_tick)
+
+
+class MetricTrackerSystem(System):
+    """Listens to events to update the state of the metrics calculator."""
+
+    REQUIRED_COMPONENTS: List[Type[Component]] = []
+
+    def __init__(
+        self,
+        simulation_state: Any,
+        config: Any,
+        cognitive_scaffold: Any,
+        calculator: SugarscapeMetricsCalculator,
+    ):
+        super().__init__(simulation_state, config, cognitive_scaffold)
+        self.calculator = calculator
+        if self.event_bus:
+            self.event_bus.subscribe("action_executed", self.on_action_executed)
+
+    def on_action_executed(self, event_data: Dict[str, Any]) -> None:
+        """Passes event data to the calculator to update its internal state."""
+        self.calculator.update_with_event(event_data)
+
+    async def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""
         pass

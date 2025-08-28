@@ -20,7 +20,6 @@ def _flatten_dict(
     d: Dict[str, Any], parent_key: str = "", sep: str = "."
 ) -> Dict[str, Any]:
     """Flattens a nested dictionary for MLflow parameter logging."""
-    # CORRECTED: Added a type hint for the 'items' list.
     items: list[Tuple[str, Any]] = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -120,6 +119,8 @@ def run_simulation_task(
 
     except Exception as exc:
         _handle_simulation_exception(exc, self, task_id, run_id)
+        # Add a return statement here to satisfy mypy, although it's unreachable
+        return {"run_id": run_id, "status": "failed"}
 
 
 @app.task(bind=True, name="tasks.run_experiment", queue="experiments")
@@ -204,6 +205,7 @@ def run_experiment_task(
                 db_manager.create_simulation_run(
                     run_id=uuid.UUID(mlflow_run_id_str),
                     experiment_id=db_experiment_uuid,
+                    variation_name=variation_name,  # CHANGED: Pass variation_name
                     task_id=job.id,
                     scenario_name=os.path.basename(scenario_path).replace(".json", ""),
                     config=config_overrides,

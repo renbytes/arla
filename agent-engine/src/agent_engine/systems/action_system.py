@@ -6,6 +6,7 @@ Orchestrates the action execution pipeline.
 import uuid
 from typing import Any, Dict, List, Type, cast
 
+from agent_core.agents.action_cost_provider_interface import ActionCostProviderInterface
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import (
@@ -13,7 +14,6 @@ from agent_core.core.ecs.component import (
     ActionPlanComponent,
     CompetenceComponent,
     Component,
-    TimeBudgetComponent,
 )
 from agent_core.policy.reward_calculator_interface import RewardCalculatorInterface
 
@@ -35,14 +35,15 @@ class ActionSystem(System):
         config: Any,
         cognitive_scaffold: Any,
         reward_calculator: RewardCalculatorInterface,
+        action_cost_provider: ActionCostProviderInterface,
     ):
         super().__init__(simulation_state, config, cognitive_scaffold)
 
-        # The check here ensures the event_bus is not None upon initialization.
         if not self.event_bus:
             raise ValueError("EventBus cannot be None for ActionSystem.")
 
         self.reward_calculator = reward_calculator
+        self.action_cost_provider = action_cost_provider
         self.event_bus.subscribe("action_chosen", self.on_action_chosen)
         self.event_bus.subscribe("action_outcome_ready", self.on_action_outcome_ready)
 
@@ -55,7 +56,6 @@ class ActionSystem(System):
         if not action_plan or not isinstance(action_plan.action_type, ActionInterface):
             return
 
-        # FIX: Add a type guard to assure mypy that self.event_bus is not None here.
         if self.event_bus:
             specific_event_name = f"execute_{action_plan.action_type.action_id}_action"
             self.event_bus.publish(specific_event_name, event_data)
@@ -88,7 +88,6 @@ class ActionSystem(System):
 
         self._update_entity_components(entity_id, action_outcome, action_plan)
 
-        # FIX: Add a type guard for mypy before publishing.
         if self.event_bus:
             self.event_bus.publish(
                 "action_executed",
@@ -127,15 +126,13 @@ class ActionSystem(System):
             aoc.reward = outcome.reward
             aoc.details = outcome.details
 
-        if isinstance(
-            time_comp := self.simulation_state.get_component(
-                entity_id, TimeBudgetComponent
-            ),
-            TimeBudgetComponent,
-        ):
-            if isinstance(plan.action_type, ActionInterface):
-                action_cost = plan.action_type.get_base_cost(self.simulation_state)
-                time_comp.current_time_budget -= action_cost
+        # Remove the hard-coded logic for TimeBudgetComponent and delegate
+        # cost application to the injected provider.
+        if isinstance(plan.action_type, ActionInterface):
+            action_cost = plan.action_type.get_base_cost(self.simulation_state)
+            self.action_cost_provider.apply_action_cost(
+                entity_id, action_cost, self.simulation_state
+            )
 
     async def update(self, current_tick: int) -> None:
         """This system is purely event-driven."""

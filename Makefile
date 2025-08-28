@@ -26,10 +26,15 @@ WORKERS ?= 4
 
 # --- Core Docker Commands ---
 
-## up: Build images and start all services in the background.
+## up: Build images, start services, and initialize the database.
 up:
 	@echo "🚀 Building images and starting all services..."
 	@docker compose up -d --build
+	@echo "⏳ Waiting 10 seconds for services to stabilize..."
+	@sleep 10
+	@echo "🔑 Initializing database tables..."
+	@make init-db
+	@echo "✅ All services are up and the database is initialized."
 
 ## down: Stop and remove all containers, networks, and volumes.
 down:

@@ -1,4 +1,4 @@
-# src/data/async_database_manager.py
+# FILE: agent-sim/src/agent_sim/infrastructure/database/async_database_manager.py
 
 import asyncio
 import os
@@ -151,7 +151,6 @@ class AsyncDatabaseManager:
     ) -> uuid.UUID:
         """Create a new experiment record asynchronously."""
         if not self._is_operational:
-            # If DB is down, we can't create an experiment, so this must fail.
             raise ConnectionError(
                 "Database is not operational, cannot create experiment."
             )
@@ -175,6 +174,7 @@ class AsyncDatabaseManager:
         self,
         run_id: uuid.UUID,
         experiment_id: uuid.UUID,
+        variation_name: str,  # CHANGED: Added variation_name
         scenario_name: str,
         config: Dict[str, Any],
         task_id: str,
@@ -187,6 +187,7 @@ class AsyncDatabaseManager:
                 run = SimulationRun(
                     id=run_id,
                     experiment_id=experiment_id,
+                    variation_name=variation_name,  # CHANGED: Added variation_name
                     scenario_name=scenario_name,
                     config=config,
                     random_seed=config.get("random_seed"),

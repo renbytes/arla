@@ -1,4 +1,4 @@
-# simulations/sugarscape_sim/config/config.yml
+# FILE: simulations/sugarscape_sim/config/config.yml
 
 # A unique identifier for this simulation type
 simulation_package: "simulations.sugarscape_sim"
@@ -8,6 +8,9 @@ simulation:
   steps: 1000
   log_directory: "data/logs/sugarscape_sim"
   random_seed: 42
+  # NEW: Flags to control experimental conditions
+  reward_shaping_enabled: true
+  learning_phase_survival_only: true
 
 # Environment-specific parameters
 environment:
@@ -16,7 +19,7 @@ environment:
     width: 50
     height: 50
     initial_sugar_distribution: "gaussian"
-    sugar_regeneration_rate: 1
+    sugar_regeneration_rate: 0.8 # CHANGED: Reduced from 1 to create scarcity
     max_sugar_per_cell: 4
 
 # Agent foundational settings
@@ -73,6 +76,7 @@ systems:
   - "simulations.sugarscape_sim.systems.MovementSystem"
   - "simulations.sugarscape_sim.systems.HarvestSystem"
   - "simulations.sugarscape_sim.systems.SocialSystem"
+  - "simulations.sugarscape_sim.systems.RenderingSystem"
 
 # Path to the module containing the action definitions
 actions:
@@ -84,3 +88,9 @@ logging:
     - "simulations.sugarscape_sim.components.PositionComponent"
     - "simulations.sugarscape_sim.components.EnergyComponent"
     - "simulations.sugarscape_sim.components.MetabolismComponent"
+
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/sugarscape_sim"
+  frames_per_second: 15
+  pixel_scale: 10
