@@ -23,6 +23,7 @@ from simulations.sugarscape_sim.systems import (
     MetabolismSystem,
     MovementSystem,
     SocialSystem,
+    VitalsSystem,
 )
 
 
@@ -41,13 +42,20 @@ class TestMetabolismSystem:
 
     @pytest.mark.asyncio
     async def test_energy_decay_and_death(self, mock_sim_state):
-        """Verify that agents lose energy each tick and are deactivated at zero."""
-        system = MetabolismSystem(mock_sim_state, {}, MagicMock())
+        """
+        Verify that agents lose energy each tick via MetabolismSystem and are
+        correctly deactivated by VitalsSystem when energy reaches zero.
+        """
+        # System Instantiation
+        metabolism_system = MetabolismSystem(mock_sim_state, {}, MagicMock())
+        vitals_system = VitalsSystem(mock_sim_state, {}, MagicMock())
 
+        # Component Setup
         agent_id = "agent_1"
         energy_comp = EnergyComponent(current_energy=10, initial_energy=100)
         metabolism_comp = MetabolismComponent(metabolic_rate=2, vision_range=5)
         time_comp = TimeBudgetComponent(initial_time_budget=100)
+
         mock_sim_state.get_entities_with_components.return_value = {
             agent_id: {
                 EnergyComponent: energy_comp,
@@ -56,16 +64,25 @@ class TestMetabolismSystem:
             }
         }
 
-        await system.update(1)
+        # --- Tick 1: Agent should lose energy but survive ---
+        await metabolism_system.update(1)
+        await vitals_system.update(1)
+
         assert energy_comp.current_energy == 8
         assert time_comp.is_active
 
+        # --- Ticks 2-5: Agent should run out of energy and be deactivated ---
         for i in range(2, 6):
-            await system.update(i)
+            await metabolism_system.update(i)
+            await vitals_system.update(i)
 
-        assert energy_comp.current_energy <= 0
+        # Energy is depleted
+        assert energy_comp.current_energy == 0
+        # VitalsSystem should have deactivated the agent
         assert not time_comp.is_active
+        # VitalsSystem should have removed the agent from the environment
         mock_sim_state.environment.remove_entity.assert_called_with(agent_id)
+        # VitalsSystem should have published the deactivation event
         mock_sim_state.event_bus.publish.assert_called_with(
             "agent_deactivated", {"entity_id": agent_id, "current_tick": 5}
         )
