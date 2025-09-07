@@ -14,26 +14,24 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 # Set the working directory
 WORKDIR /app
 
-# Install system dependencies and Poetry itself
+# Step 1: Install ALL necessary system libraries and keep them.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl gifsicle \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       graphviz \
+       libgraphviz-dev \
+       gifsicle \
+       curl \
     && curl -sSL https://install.python-poetry.org | python - \
     && apt-get remove -y curl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy ALL project files before installing dependencies.
-# This ensures Poetry can find the local path dependencies (agent-core, etc.).
+# Step 2: Copy project files
 COPY . .
 
-# Install build dependencies, install Python packages, then remove build dependencies.
-# This ensures packages that need compilation (like ecos, osqp) can be built,
-# while keeping the final image size smaller.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential cmake git graphviz libgraphviz-dev \
-    && poetry install --without dev \
-    && apt-get purge -y --auto-remove build-essential cmake git graphviz libgraphviz-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Step 3: Now, run poetry install. The system libraries from Step 1 are still present.
+RUN poetry install --without dev
 
 # The default command to run when the container starts
 CMD ["tail", "-f", "/dev/null"]
