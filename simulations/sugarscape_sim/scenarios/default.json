@@ -1,0 +1,16 @@
+{
+  "name": "Isolated Cognitive Test Scenario",
+  "description": "A harsh world with a single, standardized agent archetype to strictly isolate the effects of different cognitive strategies.",
+  "agent_distribution": {
+    "standard_agent": 50
+  },
+  "agent_archetypes": [
+    {
+      "name": "standard_agent",
+      "description": "A calibrated agent with fixed parameters for all experimental groups.",
+      "initial_energy": 250,
+      "metabolic_rate": 1,
+      "vision_range": 4
+    }
+  ]
+}

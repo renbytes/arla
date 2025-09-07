@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 from agent_core.agents.actions.action_interface import ActionInterface
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import MemoryComponent, ValidationComponent
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.systems.causal_graph_system import CausalGraphSystem

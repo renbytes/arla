@@ -52,23 +52,23 @@ Pure data containers that define entity properties and state.
 ```python
 class HealthComponent(Component):
     """Manages agent health and damage tracking."""
-    
+
     def __init__(self, max_health: int = 100):
         self.max_health = max_health
         self.current_health = max_health
         self.last_damage_tick = 0
         self.damage_history: List[int] = []
-    
+
     @property
     def health_percentage(self) -> float:
         """Current health as percentage of maximum."""
         return self.current_health / self.max_health
-    
+
     @property
     def is_critical(self) -> bool:
         """True if health is below 25% of maximum."""
         return self.health_percentage < 0.25
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "max_health": self.max_health,
@@ -76,7 +76,7 @@ class HealthComponent(Component):
             "last_damage_tick": self.last_damage_tick,
             "damage_history": self.damage_history
         }
-    
+
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         errors = []
         if self.current_health < 0:
@@ -141,19 +141,19 @@ The provider pattern bridges the gap between world-agnostic cognitive systems an
 ```python
 class VitalityMetricsProvider(VitalityMetricsProviderInterface):
     """Bridges health/energy systems with cognitive architecture."""
-    
+
     def get_normalized_vitality_metrics(
-        self, 
-        entity_id: str, 
-        components: Dict[Type[Component], Component], 
+        self,
+        entity_id: str,
+        components: Dict[Type[Component], Component],
         config: Dict[str, Any]
     ) -> Dict[str, float]:
         health_comp = components.get(HealthComponent)
         energy_comp = components.get(EnergyComponent)
-        
+
         if not health_comp or not energy_comp:
             return {"health_norm": 0.5, "energy_norm": 0.5, "fatigue_norm": 0.5}
-        
+
         return {
             "health_norm": health_comp.current / health_comp.max_health,
             "energy_norm": energy_comp.current / energy_comp.max_energy,
@@ -214,38 +214,38 @@ The parent class for all simulation systems, providing event bus access and life
 ```python
 class ExampleSystem(System):
     """Example system demonstrating best practices."""
-    
+
     def __init__(self, simulation_state, config, cognitive_scaffold):
         super().__init__(simulation_state, config, cognitive_scaffold)
-        
+
         # Subscribe to relevant events
         if self.event_bus:
             self.event_bus.subscribe("target_event", self.handle_event)
             self.event_bus.subscribe("tick_completed", self.on_tick_complete)
-    
+
     def handle_event(self, event_data: Dict[str, Any]) -> None:
         """Process specific events with proper error handling."""
         try:
             entity_id = event_data.get("entity_id")
             if not entity_id:
                 return
-            
+
             # Process event logic here
             self._process_event_logic(entity_id, event_data)
-            
+
         except Exception as e:
             print(f"Error handling event in {self.__class__.__name__}: {e}")
-    
+
     async def update(self, current_tick: int) -> None:
         """Main system update loop called each simulation tick."""
         # Periodic processing logic here
         entities = self.simulation_state.get_entities_with_components([
             RequiredComponent
         ])
-        
+
         for entity_id, components in entities.items():
             await self._process_entity(entity_id, components, current_tick)
-    
+
     def _process_entity(self, entity_id: str, components: Dict, tick: int):
         """Process individual entity - separate method for testing."""
         pass
@@ -268,12 +268,12 @@ class AgentConfig(BaseModel):
     max_health: int = Field(default=100, gt=0, description="Maximum health points")
     learning_rate: float = Field(default=0.01, gt=0, le=1, description="Learning rate for Q-learning")
     memory_capacity: int = Field(default=1000, gt=0, description="Size of agent memory buffer")
-    
+
 class EnvironmentConfig(BaseModel):
     """Configuration for world environment settings."""
     grid_size: tuple[int, int] = Field(default=(50, 50), description="World dimensions")
     resource_spawn_rate: float = Field(default=0.02, ge=0, le=1, description="Resource spawn probability per tick")
-    
+
 class SimulationConfig(BaseModel):
     """Top-level simulation configuration."""
     agent: AgentConfig = Field(default_factory=AgentConfig)
@@ -328,7 +328,7 @@ class GoodComponent(Component):
         self.max_health = max_health
         self.current_health = max_health  # Just data storage
         self.damage_taken = 0
-    
+
     # Properties for computed values are acceptable
     @property
     def is_alive(self) -> bool:
@@ -366,7 +366,7 @@ for entity_id, components in entities.items():
 ```python
 class OptimizedComponent(Component):
     __slots__ = ['x', 'y', 'timestamp']  # Reduces memory overhead
-    
+
     def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
@@ -383,7 +383,7 @@ class OptimizedComponent(Component):
 # Efficient event handling
 def __init__(self, simulation_state, config, cognitive_scaffold):
     super().__init__(simulation_state, config, cognitive_scaffold)
-    
+
     # Subscribe to specific, relevant events only
     if self.event_bus:
         self.event_bus.subscribe("agent_death", self.handle_death)

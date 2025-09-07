@@ -3,7 +3,7 @@
 from collections import defaultdict
 from typing import Any, Dict
 
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import TimeBudgetComponent
 from agent_engine.logging.metrics_calculator_interface import MetricsCalculatorInterface
 

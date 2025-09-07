@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Type, cast
 
 import pandas as pd
 from agent_core.agents.actions.action_interface import ActionInterface
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
     Component,

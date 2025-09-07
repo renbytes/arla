@@ -1,7 +1,8 @@
 # src/agent_core/tests/agents/actions/test_base_action.py
 
 # Subject under test
-from agent_core.agents.actions.base_action import ActionOutcome, Intent
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.agents.actions.base_action import Intent
 
 # Test Cases for Intent Enum
 

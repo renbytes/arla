@@ -89,11 +89,14 @@ async def setup_and_run(
 
     # Connect providers to the manager's state
     loader.simulation_state = manager.simulation_state
-    manager.decision_selector.simulation_state = manager.simulation_state
+    if hasattr(manager.decision_selector, "simulation_state"):
+        manager.decision_selector.simulation_state = manager.simulation_state
 
     # Instantiate all providers
     state_encoder = BerryStateEncoder()
-    state_node_encoder = BerryStateNodeEncoder()
+    state_node_encoder = BerryStateNodeEncoder(
+        simulation_state=manager.simulation_state
+    )
     perception_provider = BerryPerceptionProvider()
     reward_calc = BerryRewardCalculator()
 

@@ -20,7 +20,6 @@ def _flatten_dict(
     d: Dict[str, Any], parent_key: str = "", sep: str = "."
 ) -> Dict[str, Any]:
     """Flattens a nested dictionary for MLflow parameter logging."""
-    # CORRECTED: Added a type hint for the 'items' list.
     items: list[Tuple[str, Any]] = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -92,7 +91,7 @@ def run_simulation_task(
     )
 
     try:
-        with mlflow.start_run(run_id=run_id):
+        with mlflow.start_run(run_id=run_id, experiment_id=experiment_id):
             mlflow.set_tag("status", "running")
             mlflow.set_tag("celery_task_id", task_id)
 
@@ -120,6 +119,7 @@ def run_simulation_task(
 
     except Exception as exc:
         _handle_simulation_exception(exc, self, task_id, run_id)
+        return {"run_id": run_id, "status": "failed"}
 
 
 @app.task(bind=True, name="tasks.run_experiment", queue="experiments")
@@ -132,8 +132,10 @@ def run_experiment_task(
     experiment_name: str,
     variation_name: str,
     variation_overrides: Dict[str, Any],
+    db_experiment_uuid: str,  # CHANGED: Receive ID
+    mlflow_exp_id: str,  # CHANGED: Receive ID
 ) -> Dict[str, Any]:
-    """Orchestrator task that creates DB/MLflow records and submits worker tasks."""
+    """Orchestrator task that creates simulation runs under a parent experiment."""
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
     if not tracking_uri:
         raise ValueError("MLFLOW_TRACKING_URI environment variable must be set.")
@@ -142,28 +144,7 @@ def run_experiment_task(
     async_runner = get_async_runner()
     mlflow_client = MlflowClient()
 
-    try:
-        mlflow_experiment = mlflow.get_experiment_by_name(experiment_name)
-        mlflow_exp_id = (
-            mlflow_experiment.experiment_id
-            if mlflow_experiment
-            else mlflow.create_experiment(name=experiment_name)
-        )
-
-        db_experiment_uuid = async_runner.run_async(
-            db_manager.create_experiment(
-                name=experiment_name,
-                config=base_config,
-                total_runs=len(scenario_paths) * runs_per_scenario,
-                simulation_package=simulation_package,
-                mlflow_experiment_id=mlflow_exp_id,
-            )
-        )
-    except Exception as e:
-        print(
-            f"[bold red]FATAL: Could not create/get MLflow/DB experiment. Error: {e}[/bold red]"
-        )
-        raise
+    # REMOVED: All experiment creation logic has been moved to the CLI.
 
     job_ids = []
     for scenario_path in scenario_paths:
@@ -171,25 +152,33 @@ def run_experiment_task(
             scenario_name = os.path.basename(scenario_path).replace(".json", "")
             run_name = f"{variation_name}-{scenario_name}-{run_num:03d}"
 
-            config_overrides = {**base_config, "scenario_path": scenario_path}
+            config_with_overrides = {
+                **base_config,
+                "scenario_path": scenario_path,
+                "name": variation_name,  # Store variation name in config
+            }
 
             sim_config = base_config.get("simulation", {})
             base_seed = sim_config.get("random_seed", 1)
             new_seed = base_seed + run_num
 
-            if "simulation" not in config_overrides:
-                config_overrides["simulation"] = {}
-            config_overrides["simulation"]["random_seed"] = new_seed
+            if "simulation" not in config_with_overrides:
+                config_with_overrides["simulation"] = {}
+            config_with_overrides["simulation"]["random_seed"] = new_seed
 
             run = mlflow_client.create_run(
                 experiment_id=mlflow_exp_id,
-                tags={"mlflow.runName": run_name, "status": "queued"},
+                tags={
+                    "mlflow.runName": run_name,
+                    "status": "queued",
+                    "variation": variation_name,
+                },
             )
             mlflow_run_id_str = run.info.run_id
 
             job = (
                 run_simulation_task.s(
-                    config_overrides,
+                    config_with_overrides,
                     simulation_package,
                     mlflow_run_id_str,
                     mlflow_exp_id,
@@ -203,10 +192,11 @@ def run_experiment_task(
             async_runner.run_async(
                 db_manager.create_simulation_run(
                     run_id=uuid.UUID(mlflow_run_id_str),
-                    experiment_id=db_experiment_uuid,
+                    experiment_id=uuid.UUID(db_experiment_uuid),
+                    variation_name=variation_name,
                     task_id=job.id,
                     scenario_name=os.path.basename(scenario_path).replace(".json", ""),
-                    config=config_overrides,
+                    config=config_with_overrides,
                 )
             )
 

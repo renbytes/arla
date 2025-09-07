@@ -61,20 +61,20 @@ from .config.schemas import YourNewSimAppConfig
 
 async def setup_and_run(
     run_id: str,
-    task_id: str, 
+    task_id: str,
     experiment_id: str,
     config_overrides: dict,
     checkpoint_path: str = None
 ):
     """Main entry point for running the simulation."""
-    
+
     # 1. Load base configuration
     base_config_path = Path(__file__).parent / "config" / "base_config.yml"
     base_config = OmegaConf.load(base_config_path)
-    
+
     # 2. Merge with any experiment overrides
     final_config_dict = OmegaConf.merge(base_config, config_overrides)
-    
+
     # 3. Validate using Pydantic schema
     try:
         config = YourNewSimAppConfig(**final_config_dict)
@@ -82,7 +82,7 @@ async def setup_and_run(
     except ValidationError as e:
         print(f"❌ Configuration validation failed: {e}")
         raise
-    
+
     # 4. Run simulation with validated config
     await run_simulation(config, run_id, task_id, experiment_id, checkpoint_path)
 ```
@@ -112,12 +112,12 @@ time_decay = self.config.agent.dynamics.decay.time_budget_per_step
 class YourNewSimSystem(System):
     def __init__(self, simulation_state: SimulationState, config: YourNewSimAppConfig):
         super().__init__(simulation_state, config)
-        
+
         # Type-safe access with IDE autocompletion
         self.max_health = config.agent.max_health
         self.learning_rate = config.agent.learning_rate
         self.grid_size = config.environment.grid_size
-        
+
         if config.debug_mode:
             print(f"Initialized with grid size: {self.grid_size}")
 ```
@@ -134,12 +134,12 @@ class AgentConfig(BaseModel):
     max_health: int = Field(default=100, gt=0)
     learning_rate: float = Field(default=0.01, gt=0, le=1)
     memory_size: int = Field(default=1000, gt=0)
-    
+
     # NEW: Add your new parameter
     aggression_level: float = Field(
-        default=0.5, 
-        ge=0, 
-        le=1, 
+        default=0.5,
+        ge=0,
+        le=1,
         description="Agent aggression level in combat"
     )
 ```
@@ -175,7 +175,7 @@ class CombatSystem(System):
     def __init__(self, simulation_state: SimulationState, config: YourNewSimAppConfig):
         super().__init__(simulation_state, config)
         self.aggression_level = config.agent.aggression_level
-    
+
     def calculate_damage(self, base_damage: int) -> int:
         # Use the new configuration parameter
         return int(base_damage * (1 + self.aggression_level))

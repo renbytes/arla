@@ -1,0 +1,21 @@
+# FILE: simulations/sugarscape_sim/experiments/smoke_test.yml
+
+experiment_name: "Sugarscape - Smoke Test"
+
+# Point to the new, harsher base configuration
+base_config_path: "simulations/sugarscape_sim/config/config_smoketest.yml"
+
+simulation_package: "simulations.sugarscape_sim"
+
+# Point to the new scenario with high-metabolism agents
+scenarios:
+  - "simulations/sugarscape_sim/scenarios/scenario_smoketest.json"
+
+runs_per_scenario: 5
+
+# Define a single variation that only uses the Random-Walker
+variations:
+  - name: "GroupD-Random-Walker"
+    overrides:
+      decision_selector:
+        class: "simulations.sugarscape_sim.providers.RandomDecisionSelector"

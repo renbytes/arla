@@ -4,7 +4,7 @@ Get ARLA running on your local machine in minutes. Our Docker-based setup ensure
 
 !!! info "What You'll Build"
     By the end of this guide, you'll have a complete ARLA development environment with:
-    
+
     - **Agent simulation engine** with cognitive systems
     - **PostgreSQL database** for experiment data and agent memories
     - **MLflow tracking server** for experiment management and visualization
@@ -163,8 +163,8 @@ You should see all services running with `healthy` status:
 
 ```
 NAME            STATUS                    PORTS
-arla-app-1      Up (healthy)             
-arla-worker-1   Up (healthy)             
+arla-app-1      Up (healthy)
+arla-worker-1   Up (healthy)
 arla-db-1       Up (healthy)             0.0.0.0:5432->5432/tcp
 arla-redis-1    Up (healthy)             0.0.0.0:6379->6379/tcp
 arla-mlflow-1   Up (healthy)             0.0.0.0:5001->5000/tcp

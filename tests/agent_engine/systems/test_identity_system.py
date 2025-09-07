@@ -1,4 +1,3 @@
-# tests/systems/test_identity_system.py
 """Unit-tests for :pymod:`agent_engine.systems.identity_system.IdentitySystem`.
 
 The key change compared to the previous version is that we patch the **exact**
@@ -33,10 +32,10 @@ def mock_simulation_state() -> MagicMock:
     """Return a mock SimulationState with a realistic IdentityComponent."""
     state = MagicMock()
 
-    # Use a real MultiDomainIdentity instance but mock its method
-    # to make the test more robust and realistic.
-    mock_mdi = MultiDomainIdentity(embedding_dim=4)
-    mock_mdi.update_domain_identity = MagicMock()
+    # FIX: Create a mock that has the same interface as MultiDomainIdentity.
+    # This makes its methods (like update_domain_identity) mocks by default,
+    # which resolves the mypy errors.
+    mock_mdi = MagicMock(spec=MultiDomainIdentity)
 
     id_comp_instance = IdentityComponent(multi_domain_identity=mock_mdi)
 
@@ -131,6 +130,8 @@ def test_on_reflection_completed_updates_identity(
     id_comp_instance: IdentityComponent = mock_simulation_state.entities["agent1"][
         IdentityComponent
     ]
+    # FIX: Cast to MagicMock to help mypy understand it has call_args_list
+    mocked_identity_model: MagicMock = id_comp_instance.multi_domain_identity  # type: ignore[assignment]
 
     # ACT
     identity_system.on_reflection_completed(event_data)
@@ -144,7 +145,7 @@ def test_on_reflection_completed_updates_identity(
     )
 
     # 2. update_domain_identity was called for the domains found in the LLM response.
-    calls = id_comp_instance.multi_domain_identity.update_domain_identity.call_args_list
+    calls = mocked_identity_model.update_domain_identity.call_args_list
     updated_domains = {c.kwargs["domain"] for c in calls}
 
     assert len(updated_domains) == 3

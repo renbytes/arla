@@ -151,7 +151,7 @@ graph LR
     B --> C[Semantic Memory]
     D[Emotional Memory] --> B
     E[Social Memory] --> B
-    
+
     subgraph "Retention Characteristics"
         F[Short-term: 5-10 experiences]
         G[Medium-term: 100s of episodes]
@@ -159,7 +159,7 @@ graph LR
         I[Enhanced: Emotionally significant]
         J[Relationship: Agent interactions]
     end
-    
+
     A -.-> F
     B -.-> G
     C -.-> H
@@ -182,13 +182,13 @@ graph TD
     G --> H[Outcome Evaluation]
     H --> I[Learning Update]
     I --> J[Memory Consolidation]
-    
+
     subgraph "Cognitive Modulation"
         K[Emotional State]
         L[Identity Consistency]
         M[Social Context]
     end
-    
+
     K --> E
     L --> F
     M --> D
@@ -247,7 +247,7 @@ class ReflectionSystem(System):
     def __init__(self, simulation_state, config, cognitive_scaffold):
         super().__init__(simulation_state, config, cognitive_scaffold)
         self.vitality_provider = None  # Injected at runtime
-    
+
     def reflect_on_experience(self, agent_id: str) -> str:
         # Use provider to get world-specific context
         vitality_data = self.vitality_provider.get_normalized_vitality_metrics(
@@ -262,7 +262,7 @@ class FantasyWorldVitalityProvider(VitalityMetricsProviderInterface):
         health = components.get(HealthComponent)
         mana = components.get(ManaComponent)
         stamina = components.get(StaminaComponent)
-        
+
         return {
             "physical_health": health.current / health.maximum,
             "magical_energy": mana.current / mana.maximum,
@@ -298,7 +298,7 @@ Systems execute concurrently while maintaining data consistency:
 ```python
 async def execute_simulation_tick(self, tick: int):
     """Execute one simulation tick with concurrent systems."""
-    
+
     # Phase 1: Perception and decision-making (can run concurrently)
     decision_tasks = [
         self.perception_system.update(tick),
@@ -306,10 +306,10 @@ async def execute_simulation_tick(self, tick: int):
         self.decision_system.update(tick)
     ]
     await asyncio.gather(*decision_tasks)
-    
+
     # Phase 2: Action execution (sequential for determinism)
     await self.action_system.update(tick)
-    
+
     # Phase 3: World updates (can run concurrently)
     world_tasks = [
         self.movement_system.update(tick),
@@ -317,7 +317,7 @@ async def execute_simulation_tick(self, tick: int):
         self.environment_system.update(tick)
     ]
     await asyncio.gather(*world_tasks)
-    
+
     # Phase 4: Learning and reflection (can run concurrently)
     learning_tasks = [
         self.q_learning_system.update(tick),
@@ -421,13 +421,13 @@ Create custom cognitive capabilities by extending the System base class:
 ```python
 class CreativitySystem(System):
     """Custom system for modeling creative problem-solving."""
-    
+
     def __init__(self, simulation_state, config, cognitive_scaffold):
         super().__init__(simulation_state, config, cognitive_scaffold)
-        
+
         if self.event_bus:
             self.event_bus.subscribe("problem_encountered", self.generate_creative_solution)
-    
+
     async def generate_creative_solution(self, event_data):
         # Custom creative reasoning logic
         pass
@@ -440,12 +440,12 @@ Define domain-specific data access patterns:
 ```python
 class CreativityContextProviderInterface(ABC):
     """Interface for providing creativity-relevant context."""
-    
+
     @abstractmethod
     def get_creative_resources(self, entity_id: str, components: Dict, config: Dict) -> Dict[str, Any]:
         """Return available creative resources and constraints."""
         pass
-    
+
     @abstractmethod
     def get_inspiration_sources(self, entity_id: str, components: Dict, config: Dict) -> List[str]:
         """Return potential sources of creative inspiration."""
@@ -459,24 +459,24 @@ Integrate ARLA with existing simulation environments:
 ```python
 class ExternalWorldAdapter:
     """Adapter pattern for integrating external simulation engines."""
-    
+
     def __init__(self, external_sim, arla_simulation_state):
         self.external_sim = external_sim
         self.arla_state = arla_simulation_state
-    
+
     async def sync_states(self):
         """Synchronize state between ARLA and external simulation."""
-        
+
         # Extract state from external simulation
         external_entities = self.external_sim.get_all_entities()
-        
+
         # Update ARLA components
         for entity_id, external_state in external_entities.items():
             self._update_arla_components(entity_id, external_state)
-    
+
     def _update_arla_components(self, entity_id: str, external_state: dict):
         """Convert external state to ARLA components."""
-        
+
         # Convert position
         if "position" in external_state:
             pos_comp = PositionComponent(
@@ -484,7 +484,7 @@ class ExternalWorldAdapter:
                 y=external_state["position"]["y"]
             )
             self.arla_state.add_component(entity_id, pos_comp)
-        
+
         # Convert health
         if "health" in external_state:
             health_comp = HealthComponent(

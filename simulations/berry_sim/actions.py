@@ -1,10 +1,10 @@
 # FILE: simulations/berry_sim/actions.py
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
-from agent_core.agents.actions.base_action import ActionOutcome
-from agent_core.core.ecs.abstractions import SimulationState
+from agent_core.agents.actions.action_outcome import ActionOutcome
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
 from .components import PositionComponent
 from .environment import BerryWorldEnvironment
 
@@ -21,16 +21,21 @@ class MoveAction(ActionInterface):
     def name(self) -> str:
         return "Move"
 
-    def get_base_cost(self, simulation_state: SimulationState) -> float:
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
         return 1.0
 
     def generate_possible_params(
-        self, entity_id: str, sim_state: SimulationState, tick: int
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
+        if not hasattr(sim_state, "environment"):
+            return []
+
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         env = sim_state.environment
         if not pos_comp or not isinstance(env, BerryWorldEnvironment):
             return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
 
         valid_moves = []
         for dx, dy, direction in [(0, 1, "N"), (0, -1, "S"), (1, 0, "E"), (-1, 0, "W")]:
@@ -42,7 +47,7 @@ class MoveAction(ActionInterface):
     def execute(
         self,
         entity_id: str,
-        sim_state: SimulationState,
+        sim_state: AbstractSimulationState,
         params: Dict[str, Any],
         tick: int,
     ) -> ActionOutcome:
@@ -50,7 +55,7 @@ class MoveAction(ActionInterface):
         return ActionOutcome(success=True, message="Move initiated.", base_reward=0.0)
 
     def get_feature_vector(
-        self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
     ) -> List[float]:
         """
         Generates the feature vector for a move action.
@@ -71,16 +76,21 @@ class EatBerryAction(ActionInterface):
     def name(self) -> str:
         return "Eat Berry"
 
-    def get_base_cost(self, simulation_state: SimulationState) -> float:
+    def get_base_cost(self, simulation_state: AbstractSimulationState) -> float:
         return 1.0
 
     def generate_possible_params(
-        self, entity_id: str, sim_state: SimulationState, tick: int
+        self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
+        if not hasattr(sim_state, "environment"):
+            return []
+
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         env = sim_state.environment
         if not pos_comp or not isinstance(env, BerryWorldEnvironment):
             return []
+
+        pos_comp = cast(PositionComponent, pos_comp)
 
         berry_type = env.berry_locations.get(pos_comp.position)
         if berry_type:
@@ -90,7 +100,7 @@ class EatBerryAction(ActionInterface):
     def execute(
         self,
         entity_id: str,
-        sim_state: SimulationState,
+        sim_state: AbstractSimulationState,
         params: Dict[str, Any],
         tick: int,
     ) -> ActionOutcome:
@@ -100,7 +110,7 @@ class EatBerryAction(ActionInterface):
         )
 
     def get_feature_vector(
-        self, entity_id: str, sim_state: SimulationState, params: Dict[str, Any]
+        self, entity_id: str, sim_state: AbstractSimulationState, params: Dict[str, Any]
     ) -> List[float]:
         """
         Generates the one-hot encoded feature vector for eating a specific berry.

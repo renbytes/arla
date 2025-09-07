@@ -9,6 +9,8 @@ site_author: Bordumb / Renbytes
 repo_url: https://github.com/renbytes/arla
 repo_name: arla
 
+use_directory_urls: false
+
 docs_dir: docs
 
 # Copyright
@@ -108,13 +110,13 @@ markdown_extensions:
   - pymdownx.tabbed: # Extension for content tabs (=== "title")
       alternate_style: true
   - pymdownx.emoji: # Extension for icons
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: material.extensions.emoji.twemoji
+      emoji_generator: material.extensions.emoji.to_svg
   - pymdownx.superfences: # Configuration block for Mermaid
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          format: pymdownx.superfences.fence_code_format
 
 extra_css:
   - stylesheets/custom.css

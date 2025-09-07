@@ -1,0 +1,94 @@
+# FILE: simulations/sugarscape_sim/config/config_harshenvironment.yml
+
+# A unique identifier for this simulation type
+simulation_package: "simulations.sugarscape_sim"
+
+# Core simulation settings
+simulation:
+  steps: 500
+  log_directory: "data/logs/sugarscape_harshenv"
+  random_seed: 42
+  reward_shaping_enabled: false
+  learning_phase_survival_only: false
+
+# Environment-specific parameters
+environment:
+  class: "simulations.sugarscape_sim.environment.SugarscapeEnvironment"
+  params:
+    width: 50
+    height: 50
+    initial_sugar_distribution: "gaussian"
+    sugar_regeneration_rate: 0.4
+    max_sugar_per_cell: 4
+
+# Agent foundational settings (copied from base config)
+agent:
+  foundational:
+    num_agents: 50
+    lifespan_std_dev_percent: 0.1
+    vitals:
+      initial_time_budget: 9999
+      initial_health: 100.0
+      initial_resources: 0
+    attributes:
+      initial_attack_power: 0.0
+      initial_speed: 1
+  cognitive:
+    embeddings: { identity_dim: 128, main_embedding_dim: 128, schema_embedding_dim: 128 }
+    architecture_flags: {}
+  costs:
+    actions: {}
+  dynamics:
+    decay: {}
+    regeneration: {}
+    growth: {}
+  emotional_dynamics:
+    temporal: {}
+    appraisal_weights: {}
+  identity_dynamics: {}
+
+# Learning parameters (copied from base config)
+learning:
+  q_learning:
+    alpha: 0.1
+    gamma: 0.95
+    initial_epsilon: 1.0
+    epsilon_decay_rate: 0.999
+    min_epsilon: 0.05
+  memory:
+    reflection_interval: 100
+
+# Paths to the provider and loader classes
+scenario_loader:
+  class: "simulations.sugarscape_sim.loader.SugarscapeScenarioLoader"
+action_generator:
+  class: "simulations.sugarscape_sim.providers.SugarscapeActionGenerator"
+decision_selector:
+  class: "simulations.sugarscape_sim.providers.HeuristicDecisionSelector"
+component_factory:
+  class: "simulations.sugarscape_sim.providers.SugarscapeComponentFactory"
+
+# List of world-specific systems to load
+systems:
+  - "simulations.sugarscape_sim.systems.MetabolismSystem"
+  - "simulations.sugarscape_sim.systems.MovementSystem"
+  - "simulations.sugarscape_sim.systems.HarvestSystem"
+  - "simulations.sugarscape_sim.systems.SocialSystem"
+  - "simulations.sugarscape_sim.systems.RenderingSystem"
+
+# Path to the module containing the action definitions
+actions:
+  - "simulations.sugarscape_sim.actions"
+
+# Components to log to the database each tick
+logging:
+  components_to_log:
+    - "simulations.sugarscape_sim.components.PositionComponent"
+    - "simulations.sugarscape_sim.components.EnergyComponent"
+    - "simulations.sugarscape_sim.components.MetabolismComponent"
+
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/sugarscape_sim"
+  frames_per_second: 15
+  pixel_scale: 10

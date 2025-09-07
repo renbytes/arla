@@ -1,9 +1,9 @@
-# tests/simulations/schelling_sim/test_actions.py
+# FILE: tests/simulations/schelling_sim/test_actions.py
 
 from unittest.mock import Mock
 
 import pytest
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 
 from simulations.schelling_sim.actions import MoveToEmptyCellAction
 from simulations.schelling_sim.components import (
@@ -55,6 +55,8 @@ def test_generate_possible_params_when_satisfied(move_action):
     mock_satisfaction_comp = SatisfactionComponent(satisfaction_threshold=0.5)
     mock_satisfaction_comp.is_satisfied = True
     mock_sim_state.get_component.return_value = mock_satisfaction_comp
+    #  The mock needs the environment attribute to pass the new check
+    mock_sim_state.environment = Mock(spec=SchellingGridEnvironment)
 
     params = move_action.generate_possible_params("agent1", mock_sim_state, 1)
 

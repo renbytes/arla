@@ -1,10 +1,10 @@
 # simulations/schelling_sim/systems.py
 
 import os
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Type, cast
 
 from agent_core.core.ecs.component import Component
-from agent_core.agents.actions.base_action import ActionOutcome
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_engine.simulation.system import System
 from simulations.schelling_sim.renderer import SchellingRenderer
 
@@ -45,6 +45,10 @@ class SatisfactionSystem(System):
             if not all([pos_comp, group_comp, satisfaction_comp]):
                 continue
 
+            pos_comp = cast(PositionComponent, pos_comp)
+            group_comp = cast(GroupComponent, group_comp)
+            satisfaction_comp = cast(SatisfactionComponent, satisfaction_comp)
+
             neighbors = env.get_neighbors_of_position(pos_comp.position)
             num_neighbors = len(neighbors)
 
@@ -59,11 +63,10 @@ class SatisfactionSystem(System):
                 neighbor_group_comp = self.simulation_state.get_component(
                     neighbor_id, GroupComponent
                 )
-                if (
-                    neighbor_group_comp
-                    and neighbor_group_comp.agent_type == group_comp.agent_type
-                ):
-                    same_type_neighbors += 1
+                if neighbor_group_comp:
+                    neighbor_group_comp = cast(GroupComponent, neighbor_group_comp)
+                    if neighbor_group_comp.agent_type == group_comp.agent_type:
+                        same_type_neighbors += 1
 
             # The agent is satisfied if the ratio of same-type neighbors
             # to total neighbors meets or exceeds its personal threshold.
@@ -103,13 +106,14 @@ class MovementSystem(System):
 
         outcome: ActionOutcome
 
-        if not all([pos_comp, isinstance(env, SchellingGridEnvironment)]):
+        if not pos_comp or not isinstance(env, SchellingGridEnvironment):
             outcome = ActionOutcome(
                 success=False,
                 message="Missing component or wrong env.",
                 base_reward=-0.1,
             )
         else:
+            pos_comp = cast(PositionComponent, pos_comp)
             from_pos = pos_comp.position
             to_pos = (params["target_x"], params["target_y"])
 

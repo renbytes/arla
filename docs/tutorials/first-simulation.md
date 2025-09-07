@@ -16,19 +16,19 @@ We'll create a basic simulation where agents move randomly in a 2D grid world. T
 <div class="grid cards" markdown>
 
 -   **🗂️ Components**
-    
+
     Store agent position data
 
 -   **⚡ Actions**
-    
+
     Define movement possibilities
 
 -   **⚙️ Systems**
-    
+
     Handle movement logic
 
 -   **📡 Events**
-    
+
     Coordinate between systems
 
 </div>
@@ -67,28 +67,28 @@ Components are pure data containers with no logic. Create your first component t
 
     class PositionComponent(Component):
         """Stores an entity's x, y coordinates in the grid world."""
-        
+
         def __init__(self, x: int = 0, y: int = 0):
             self.x = x
             self.y = y
             self.previous_x = x
             self.previous_y = y
-        
+
         def move_to(self, new_x: int, new_y: int) -> None:
             """Update position and track previous location."""
             self.previous_x, self.previous_y = self.x, self.y
             self.x, self.y = new_x, new_y
-        
+
         @property
         def position(self) -> Tuple[int, int]:
             """Current position as tuple."""
             return (self.x, self.y)
-        
+
         @property
         def previous_position(self) -> Tuple[int, int]:
             """Previous position as tuple."""
             return (self.previous_x, self.previous_y)
-        
+
         def to_dict(self) -> Dict[str, Any]:
             """Serialize component for persistence."""
             return {
@@ -97,21 +97,21 @@ Components are pure data containers with no logic. Create your first component t
                 "previous_x": self.previous_x,
                 "previous_y": self.previous_y
             }
-        
+
         def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
             """Validate component state."""
             errors = []
-            
+
             if not isinstance(self.x, int) or not isinstance(self.y, int):
                 errors.append("Position coordinates must be integers")
-            
+
             return len(errors) == 0, errors
     ```
 
 === "Key Features"
 
     - **Pure Data**: No business logic, only state storage
-    - **Validation**: Built-in error checking for data integrity  
+    - **Validation**: Built-in error checking for data integrity
     - **Serialization**: `to_dict()` enables saving/loading state
     - **Convenience Methods**: Helper properties for cleaner code
 
@@ -127,51 +127,51 @@ Actions define what agents can do. They generate possible parameters and delegat
     from typing import Any, Dict, List
     from agent_core.agents.actions.action_interface import ActionInterface
     from agent_core.agents.actions.action_registry import action_registry
-    from agent_core.agents.actions.base_action import ActionOutcome
+    from agent_core.agents.actions.action_outcome import ActionOutcome
     from agent_core.core.ecs.abstractions import SimulationState
     from ..components import PositionComponent
 
     @action_registry.register
     class MoveAction(ActionInterface):
         """Allows an agent to move to an adjacent grid cell."""
-        
+
         @property
         def action_id(self) -> str:
             return "move"
-        
+
         @property
         def name(self) -> str:
             return "Move"
-        
+
         def get_base_cost(self, simulation_state: SimulationState) -> float:
             """Energy cost for movement."""
             return 1.0
-        
+
         def generate_possible_params(
-            self, 
-            entity_id: str, 
-            simulation_state: SimulationState, 
+            self,
+            entity_id: str,
+            simulation_state: SimulationState,
             current_tick: int
         ) -> List[Dict[str, Any]]:
             """Generate all valid movement options."""
-            
+
             pos_comp = simulation_state.get_component(entity_id, PositionComponent)
             if not pos_comp:
                 return []
-            
+
             # Define possible movement directions
             directions = [
                 {"dx": 0, "dy": 1, "direction": "north"},
-                {"dx": 1, "dy": 0, "direction": "east"}, 
+                {"dx": 1, "dy": 0, "direction": "east"},
                 {"dx": 0, "dy": -1, "direction": "south"},
                 {"dx": -1, "dy": 0, "direction": "west"}
             ]
-            
+
             valid_moves = []
             for direction in directions:
                 new_x = pos_comp.x + direction["dx"]
                 new_y = pos_comp.y + direction["dy"]
-                
+
                 # Simple bounds checking (extend as needed)
                 if 0 <= new_x < 50 and 0 <= new_y < 50:
                     valid_moves.append({
@@ -181,9 +181,9 @@ Actions define what agents can do. They generate possible parameters and delegat
                         "target_y": new_y,
                         "direction": direction["direction"]
                     })
-            
+
             return valid_moves
-        
+
         def execute(
             self,
             entity_id: str,
@@ -194,13 +194,13 @@ Actions define what agents can do. They generate possible parameters and delegat
             """Return action outcome. Actual logic handled by MovementSystem."""
             direction = params.get("direction", "unknown")
             target = (params.get("target_x"), params.get("target_y"))
-            
+
             return ActionOutcome(
                 success=True,
                 message=f"Agent {entity_id} moves {direction} to {target}",
                 base_reward=0.1
             )
-        
+
         def get_feature_vector(
             self,
             entity_id: str,
@@ -238,57 +238,57 @@ Systems contain the business logic. They subscribe to events and update the simu
 
     class MovementSystem(System):
         """Handles agent movement in the grid world."""
-        
+
         def __init__(self, simulation_state, config, cognitive_scaffold):
             super().__init__(simulation_state, config, cognitive_scaffold)
-            
+
             # Subscribe to movement action events
             if self.event_bus:
                 self.event_bus.subscribe("execute_move_action", self.on_move_execute)
-        
+
         def on_move_execute(self, event_data: Dict[str, Any]) -> None:
             """Process movement action execution."""
             entity_id = event_data["entity_id"]
             action_plan = event_data["action_plan_component"]
             params = action_plan.params
-            
+
             # Get agent's position component
             pos_comp = self.simulation_state.get_component(entity_id, PositionComponent)
             if not pos_comp:
                 self._publish_failure(event_data, "Agent has no position component")
                 return
-            
+
             # Extract movement parameters
             target_x = params.get("target_x")
             target_y = params.get("target_y")
-            
+
             if target_x is None or target_y is None:
                 self._publish_failure(event_data, "Invalid movement parameters")
                 return
-            
+
             # Validate movement is within bounds
             if not self._is_valid_position(target_x, target_y):
                 self._publish_failure(event_data, f"Position ({target_x}, {target_y}) out of bounds")
                 return
-            
+
             # Update position
             old_pos = pos_comp.position
             pos_comp.move_to(target_x, target_y)
-            
+
             print(f"🚶 Agent {entity_id} moved from {old_pos} to {pos_comp.position}")
-            
+
             # Signal action completion
             self._publish_success(event_data)
-        
+
         def _is_valid_position(self, x: int, y: int) -> bool:
             """Check if position is within world bounds."""
             return 0 <= x < 50 and 0 <= y < 50
-        
+
         def _publish_success(self, event_data: Dict[str, Any]) -> None:
             """Notify that action completed successfully."""
             if self.event_bus:
                 self.event_bus.publish("action_outcome_ready", event_data)
-        
+
         def _publish_failure(self, event_data: Dict[str, Any], reason: str) -> None:
             """Notify that action failed."""
             print(f"❌ Movement failed: {reason}")
@@ -296,10 +296,10 @@ Systems contain the business logic. They subscribe to events and update the simu
             if hasattr(event_data.get("action_plan_component"), "outcome"):
                 event_data["action_plan_component"].outcome.success = False
                 event_data["action_plan_component"].outcome.message = reason
-            
+
             if self.event_bus:
                 self.event_bus.publish("action_outcome_ready", event_data)
-        
+
         async def update(self, current_tick: int) -> None:
             """Main system update loop. Movement is event-driven, so nothing needed here."""
             pass
@@ -326,22 +326,22 @@ Tie everything together with a main runner that registers your systems and start
     from pathlib import Path
     from typing import Optional
     from omegaconf import OmegaConf
-    
+
     from agent_engine.simulation.engine import SimulationManager
     from .systems import MovementSystem
     from .components import PositionComponent
 
     async def setup_and_run(
         run_id: str,
-        task_id: str, 
+        task_id: str,
         experiment_id: str,
         config_overrides: dict,
         checkpoint_path: Optional[str] = None
     ):
         """Initialize and run the simple movement simulation."""
-        
+
         print(f"🚀 Starting Simple Simulation - Run: {run_id}")
-        
+
         # Load base configuration
         config_path = Path(__file__).parent / "config" / "base_config.yml"
         if config_path.exists():
@@ -349,7 +349,7 @@ Tie everything together with a main runner that registers your systems and start
             final_config = OmegaConf.merge(base_config, config_overrides)
         else:
             final_config = OmegaConf.create(config_overrides)
-        
+
         # Create simulation manager with required dependencies
         # Note: In a real implementation, you'd inject proper dependencies
         manager = SimulationManager(
@@ -359,36 +359,36 @@ Tie everything together with a main runner that registers your systems and start
             experiment_id=experiment_id,
             checkpoint_path=checkpoint_path
         )
-        
+
         # Register custom systems
         manager.register_system(MovementSystem)
-        
+
         # Add startup entities (agents with position components)
         await _initialize_agents(manager, final_config)
-        
+
         print(f"🎯 Simulation configured with {final_config.get('agent_count', 10)} agents")
-        
+
         # Run the simulation
         await manager.run()
-        
+
         print(f"✅ Simulation {run_id} completed")
 
     async def _initialize_agents(manager: SimulationManager, config: dict):
         """Create initial agents with position components."""
         agent_count = config.get("agent_count", 10)
-        
+
         for i in range(agent_count):
             entity_id = f"agent_{i:03d}"
-            
+
             # Create agent at random position
             import random
             x = random.randint(0, 49)
             y = random.randint(0, 49)
-            
+
             # Add position component
             position_comp = PositionComponent(x=x, y=y)
             manager.simulation_state.add_component(entity_id, position_comp)
-            
+
             print(f"🤖 Created {entity_id} at position ({x}, {y})")
 
     def start_simulation(run_id: str, task_id: str, experiment_id: str, config_overrides: dict):
@@ -400,18 +400,18 @@ Tie everything together with a main runner that registers your systems and start
 
     ```yaml title="simulations/simple_sim/config/base_config.yml"
     # Basic configuration for simple movement simulation
-    
+
     simulation:
       max_ticks: 1000
       random_seed: 42
-    
+
     world:
       grid_size: 50
-      
+
     agents:
       count: 10
       start_energy: 100.0
-    
+
     logging:
       level: "INFO"
       log_movements: true

@@ -1,0 +1,53 @@
+# FILE: simulations/sugarscape_sim/experiments/full_cognitive_comparison.yml
+
+experiment_name: "Sugarscape - Full Cognitive Comparison"
+
+# Use the harsh environment config that is calibrated for survival
+base_config_path: "simulations/sugarscape_sim/config/config.yml"
+
+simulation_package: "simulations.sugarscape_sim"
+
+# Use the standardized scenario to ensure a fair test
+scenarios:
+  - "simulations/sugarscape_sim/scenarios/default.json"
+
+# Run each variation multiple times for statistical significance
+runs_per_scenario: 15
+
+# Define all experimental groups, including both LLM agent types
+variations:
+  - name: "GroupA-Revised-Heuristic"
+    overrides:
+      decision_selector:
+        class: "simulations.sugarscape_sim.providers.ExplorationHeuristicDecisionSelector"
+
+  - name: "GroupB-QLearning-NoShaping"
+    overrides:
+      decision_selector:
+        class: "simulations.sugarscape_sim.providers.QLearningDecisionSelector"
+      simulation:
+        reward_shaping_enabled: false
+
+  - name: "GroupC-QLearning-WithShaping"
+    overrides:
+      decision_selector:
+        class: "simulations.sugarscape_sim.providers.QLearningDecisionSelector"
+      simulation:
+        reward_shaping_enabled: true
+
+  - name: "GroupD-Random-Walker"
+    overrides:
+      decision_selector:
+        class: "simulations.sugarscape_sim.providers.RandomDecisionSelector"
+
+  - name: "GroupE-Tactical-LLM"
+    overrides:
+      decision_selector:
+        # The original LLM agent that calls the API on every tick
+        class: "simulations.sugarscape_sim.providers.LLMHeuristicDecisionSelector"
+
+  - name: "GroupF-Strategic-LLM"
+    overrides:
+      decision_selector:
+        # The new, more advanced LLM agent that uses periodic strategic planning
+        class: "simulations.sugarscape_sim.providers.StrategicLLMDecisionSelector"

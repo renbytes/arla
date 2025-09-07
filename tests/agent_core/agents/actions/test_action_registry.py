@@ -1,19 +1,13 @@
-# src/agent_core/tests/test_action_registry.py
-
-from typing import Any, Dict, List
-
 import pytest
+from typing import Any, Dict, List
 from agent_core.agents.actions.action_interface import ActionInterface
-
-# Subject under test
 from agent_core.agents.actions.action_registry import ActionRegistry, action_registry
+from agent_core.agents.actions.action_outcome import ActionOutcome
 
-# Mock Objects for Testing
 
-
+# A simple, valid action for testing
+@action_registry.register
 class MockAction(ActionInterface):
-    """A valid mock action for testing registration."""
-
     @property
     def action_id(self) -> str:
         return "mock_action"
@@ -28,7 +22,7 @@ class MockAction(ActionInterface):
     def generate_possible_params(
         self, entity_id: str, simulation_state: Any, current_tick: int
     ) -> List[Dict[str, Any]]:
-        return [{"param1": "value1"}]
+        return [{"param": 1}]
 
     def execute(
         self,
@@ -36,33 +30,43 @@ class MockAction(ActionInterface):
         simulation_state: Any,
         params: Dict[str, Any],
         current_tick: int,
-    ) -> Dict[str, Any]:
-        return {"status": "success"}
+    ) -> ActionOutcome:
+        return ActionOutcome(
+            success=True, message="Executed mock action", base_reward=1.0
+        )
 
     def get_feature_vector(
         self, entity_id: str, simulation_state: Any, params: Dict[str, Any]
     ) -> List[float]:
-        return [1.0, 0.0]
+        return [1.0]
 
 
-class AnotherMockAction(ActionInterface):
-    """Another valid mock action to test multiple registrations."""
-
+# Another action with a different ID
+@action_registry.register
+class AnotherMockAction(MockAction):
     @property
     def action_id(self) -> str:
-        return "another_action"
+        return "another_mock"
 
     @property
     def name(self) -> str:
-        return "Another Mock Action"
+        return "Another Mock"
 
-    def get_base_cost(self, simulation_state: Any) -> float:
-        return 2.0
 
-    def generate_possible_params(
-        self, entity_id: str, simulation_state: Any, current_tick: int
-    ) -> List[Dict[str, Any]]:
-        return []
+# An invalid action that doesn't implement the interface
+class NotAnAction:
+    pass
+
+
+# An action with a duplicate ID for testing strict mode
+class DuplicateMockAction(MockAction):
+    @property
+    def action_id(self) -> str:
+        return "mock_action"
+
+    @property
+    def name(self) -> str:
+        return "Duplicate Mock"
 
     def execute(
         self,
@@ -70,151 +74,75 @@ class AnotherMockAction(ActionInterface):
         simulation_state: Any,
         params: Dict[str, Any],
         current_tick: int,
-    ) -> Dict[str, Any]:
-        return {}
-
-    def get_feature_vector(
-        self, entity_id: str, simulation_state: Any, params: Dict[str, Any]
-    ) -> List[float]:
-        return [0.0, 1.0]
+    ) -> ActionOutcome:
+        return ActionOutcome(
+            success=True, message="Executed duplicate action", base_reward=2.0
+        )
 
 
-class InvalidAction:
-    """A class that does NOT implement the ActionInterface."""
-
-    pass
-
-
-# Test Fixtures
-
-
-@pytest.fixture
-def fresh_registry() -> ActionRegistry:
-    """Provides a fresh, empty ActionRegistry instance for each test."""
-    return ActionRegistry()
+def test_singleton_registry():
+    """Tests that the global action_registry instance works correctly."""
+    assert "mock_action" in action_registry.action_ids
+    assert "another_mock" in action_registry.action_ids
+    action_class = action_registry.get_action("mock_action")
+    assert issubclass(action_class, ActionInterface)
+    assert action_class().name == "Mock Action"
 
 
-# Test Cases
+def test_register_decorator():
+    """Tests the registration of a valid action class."""
+    registry = ActionRegistry()
 
-
-def test_register_valid_action(fresh_registry: ActionRegistry):
-    """
-    Tests that a valid action class that implements ActionInterface can be registered successfully.
-    """
-    # Act
-    fresh_registry.register(MockAction)
-
-    # Assert
-    assert "mock_action" in fresh_registry.action_ids
-    retrieved_action = fresh_registry.get_action("mock_action")
-    assert retrieved_action == MockAction
-
-
-def test_register_invalid_action_raises_type_error(fresh_registry: ActionRegistry):
-    """
-    Tests that attempting to register a class that does not implement
-    ActionInterface raises a TypeError.
-    """
-    # Act & Assert
-    with pytest.raises(
-        TypeError, match="Class InvalidAction must implement ActionInterface"
-    ):
-        fresh_registry.register(InvalidAction)  # type: ignore[arg-type]
-
-
-def test_register_duplicate_action_id_raises_value_error(
-    fresh_registry: ActionRegistry,
-):
-    """
-    Tests that attempting to register an action with an ID that is already
-    in the registry raises a ValueError.
-    """
-    # Arrange
-    fresh_registry.register(MockAction)  # Register the first time
-
-    # Act & Assert
-    with pytest.raises(
-        ValueError, match="Action with ID 'mock_action' is already registered."
-    ):
-        fresh_registry.register(MockAction)  # Attempt to register again
-
-
-def test_get_action_success(fresh_registry: ActionRegistry):
-    """
-    Tests that get_action successfully retrieves a registered action class.
-    """
-    # Arrange
-    fresh_registry.register(MockAction)
-
-    # Act
-    retrieved_action = fresh_registry.get_action("mock_action")
-
-    # Assert
-    assert retrieved_action is not None
-    assert retrieved_action == MockAction
-
-
-def test_get_nonexistent_action_raises_value_error(fresh_registry: ActionRegistry):
-    """
-    Tests that attempting to get an action that has not been registered
-    raises a ValueError.
-    """
-    # Act & Assert
-    with pytest.raises(
-        ValueError, match="No action with ID 'nonexistent_action' is registered."
-    ):
-        fresh_registry.get_action("nonexistent_action")
-
-
-def test_get_all_actions(fresh_registry: ActionRegistry):
-    """
-    Tests that get_all_actions returns a list of all registered action classes.
-    """
-    # Arrange
-    fresh_registry.register(MockAction)
-    fresh_registry.register(AnotherMockAction)
-
-    # Act
-    all_actions = fresh_registry.get_all_actions()
-
-    # Assert
-    assert len(all_actions) == 2
-    assert MockAction in all_actions
-    assert AnotherMockAction in all_actions
-
-
-def test_action_ids_property(fresh_registry: ActionRegistry):
-    """
-    Tests that the action_ids property returns a sorted list of registered action IDs.
-    """
-    # Arrange
-    fresh_registry.register(AnotherMockAction)
-    fresh_registry.register(MockAction)
-
-    # Act
-    ids = fresh_registry.action_ids
-
-    # Assert
-    assert ids == ["another_action", "mock_action"]
-
-
-def test_global_singleton_instance():
-    """
-    Tests that the global 'action_registry' singleton instance works as expected.
-    This test modifies a global state, which is generally not ideal, but it's
-    necessary here to test the singleton pattern.
-    """
-    # Reset the global registry for a clean test environment
-    action_registry._actions = {}
-
-    # Register an action using the decorator on the global instance
-    @action_registry.register
-    class GlobalTestAction(MockAction):
+    @registry.register
+    class TestAction(MockAction):
         @property
         def action_id(self) -> str:
-            return "global_test"
+            return "test_action"
 
-    # Assert that the action was registered on the global instance
-    assert "global_test" in action_registry.action_ids
-    retrieved_action = action_registry.get_action("global_test")
-    assert retrieved_action == GlobalTestAction
+    assert "test_action" in registry.action_ids
+    assert len(registry.get_all_actions()) == 1
+
+
+def test_register_invalid_class_raises_type_error():
+    """Tests that registering a class that doesn't implement ActionInterface raises an error."""
+    registry = ActionRegistry()
+    with pytest.raises(TypeError):
+        registry.register(NotAnAction)
+
+
+def test_get_action_success():
+    """Tests retrieving a registered action."""
+    registry = ActionRegistry()
+    registry.register(MockAction)
+    action_class = registry.get_action("mock_action")
+    assert action_class == MockAction
+
+
+def test_get_nonexistent_action_raises_value_error():
+    """Tests that retrieving a non-existent action raises an error."""
+    registry = ActionRegistry()
+    with pytest.raises(ValueError):
+        registry.get_action("nonexistent_action")
+
+
+def test_strict_mode_prevents_duplicates():
+    """Tests that strict mode raises a ValueError on duplicate action_id."""
+    registry = ActionRegistry(strict=True)
+    registry.register(MockAction)
+    with pytest.raises(ValueError):
+        registry.register(DuplicateMockAction)
+
+
+def test_override_mode_allows_duplicates():
+    """Tests that override mode (default) allows silent replacement of actions."""
+    registry = ActionRegistry(strict=False)
+    registry.register(MockAction)
+    registry.register(DuplicateMockAction)
+
+    # The new action should have replaced the old one
+    action_class = registry.get_action("mock_action")
+    assert issubclass(action_class, DuplicateMockAction)
+    instance = action_class()
+    # Check that it's the new one by checking a property or return value
+    assert instance.name == "Duplicate Mock"
+    assert instance.execute("", {}, {}, 0).base_reward == 2.0

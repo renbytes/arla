@@ -1,4 +1,4 @@
-# tests/simulations/berry_sim/test_actions.py
+# FILE: tests/simulations/berry_sim/test_berry_actions.py
 
 import unittest
 from unittest.mock import MagicMock
@@ -46,6 +46,8 @@ class TestMoveAction(unittest.TestCase):
         action = MoveAction()
         mock_sim_state = MagicMock()
         mock_sim_state.get_component.return_value = None  # No PositionComponent
+        #  The mock needs the environment attribute to pass the new check
+        mock_sim_state.environment = MagicMock(spec=BerryWorldEnvironment)
 
         params = action.generate_possible_params("agent_1", mock_sim_state, 1)
         self.assertEqual(len(params), 0)
@@ -54,7 +56,7 @@ class TestMoveAction(unittest.TestCase):
         """Test that the feature vector has the correct format and size."""
         action = MoveAction()
         vector = action.get_feature_vector("agent_1", MagicMock(), {})
-        # Cector size is now 5 due to the addition of the orange berry.
+        # Vector size is now 5 due to the addition of the orange berry.
         # Schema: [is_move, is_eat_red, is_eat_blue, is_eat_yellow, is_eat_orange]
         self.assertEqual(len(vector), 5)
         self.assertEqual(vector, [1.0, 0.0, 0.0, 0.0, 0.0])

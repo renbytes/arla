@@ -8,9 +8,10 @@ new plugin-based registry system.
 
 from abc import abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.actions.action_outcome import ActionOutcome
 
 
 class Intent(Enum):
@@ -19,23 +20,6 @@ class Intent(Enum):
     SOLITARY = "SOLITARY"
     COOPERATE = "COOPERATE"
     COMPETE = "COMPETE"
-
-
-class ActionOutcome:
-    """Standardized structure for the result of executing an action."""
-
-    def __init__(
-        self,
-        success: bool,
-        message: str,
-        base_reward: float,
-        details: Optional[Dict[str, Any]] = None,
-    ):
-        self.success = success
-        self.message = message
-        self.base_reward = base_reward
-        self.details = details if details is not None else {}
-        self.reward: float = base_reward
 
 
 class Action(ActionInterface):
@@ -71,7 +55,7 @@ class Action(ActionInterface):
         simulation_state: Any,
         params: Dict[str, Any],
         current_tick: int,
-    ) -> Dict[str, Any]:
+    ) -> ActionOutcome:
         raise NotImplementedError
 
     @abstractmethod

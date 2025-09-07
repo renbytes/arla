@@ -4,7 +4,7 @@ Get ARLA running on your local machine in minutes. Our Docker-based setup ensure
 
 !!! info "What You'll Build"
     By the end of this guide, you'll have a complete ARLA development environment with:
-    
+
     - **Agent simulation engine** with cognitive systems
     - **PostgreSQL database** for experiment data
     - **MLflow tracking server** for experiment management
@@ -152,8 +152,8 @@ You should see all services running with `healthy` status:
 
 ```
 NAME            STATUS                    PORTS
-arla-app-1      Up (healthy)             
-arla-worker-1   Up (healthy)             
+arla-app-1      Up (healthy)
+arla-worker-1   Up (healthy)
 arla-db-1       Up (healthy)             0.0.0.0:5432->5432/tcp
 arla-redis-1    Up (healthy)             0.0.0.0:6379->6379/tcp
 arla-mlflow-1   Up (healthy)             0.0.0.0:5001->5000/tcp
@@ -217,14 +217,14 @@ Open your browser and navigate to [http://localhost:5001](http://localhost:5001)
 ### Common Issues
 
 ??? failure "Docker Services Won't Start"
-    
+
     **Problem**: Services fail to start or remain unhealthy
-    
+
     **Solutions**:
     ```bash
     # Check if ports are already in use
     netstat -tlnp | grep ':5432\|:6379\|:5001'
-    
+
     # Reset and rebuild
     docker compose down -v
     docker compose build --no-cache
@@ -232,18 +232,18 @@ Open your browser and navigate to [http://localhost:5001](http://localhost:5001)
     ```
 
 ??? failure "MLflow Authentication Errors"
-    
+
     **Problem**: 401 Unauthorized when accessing MLflow UI
-    
+
     **Solutions**:
     - Verify credentials in `.env` file match MLflow configuration
     - Check MLflow logs: `docker compose logs mlflow`
     - Restart MLflow service: `docker compose restart mlflow`
 
 ??? failure "API Key Not Working"
-    
+
     **Problem**: OpenAI API errors during simulation
-    
+
     **Solutions**:
     - Verify API key is valid and has credits
     - Check the key starts with `sk-`

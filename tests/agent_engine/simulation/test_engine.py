@@ -72,7 +72,7 @@ def sim_manager_with_mocks(mock_config, mock_dependencies):
         mock_sim_state_instance = mock_sim_state.return_value
         mock_system_manager_instance = mock_system_manager.return_value
 
-        # FIX: Add the '_systems' attribute to the mock SystemManager to prevent AttributeError
+        #  Add the '_systems' attribute to the mock SystemManager to prevent AttributeError
         mock_system_manager_instance._systems = []
 
         # Configure SimulationState to represent one active entity
