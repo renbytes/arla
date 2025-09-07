@@ -32,7 +32,7 @@ def generate_counterfactual(
     Takes a past episode and generates a formal counterfactual "what if"
     scenario by querying the agent's CausalModel using a precise event_id.
     """
-    # FIX: Cast the generic component to the specific MemoryComponent type
+    #  Cast the generic component to the specific MemoryComponent type
     mem_comp = cast(
         MemoryComponent, simulation_state.get_component(agent_id, MemoryComponent)
     )

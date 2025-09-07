@@ -122,7 +122,7 @@ ARLA combines cutting-edge cognitive architectures with high-performance simulat
 === "Academic"
 
     Perfect for computational social science, AI research, and complex systems studies. Built-in support for:
-    
+
     - Reproducible experiments with configuration management
     - Statistical analysis with automated data collection
     - Publication-ready visualizations and metrics
@@ -130,7 +130,7 @@ ARLA combines cutting-edge cognitive architectures with high-performance simulat
 === "Industry"
 
     Prototype and test multi-agent systems for real-world applications:
-    
+
     - Market simulation and economic modeling
     - Social network analysis and recommendation systems
     - Human-AI interaction studies
@@ -138,7 +138,7 @@ ARLA combines cutting-edge cognitive architectures with high-performance simulat
 === "Education"
 
     Teach complex systems, AI, and social dynamics with engaging simulations:
-    
+
     - Pre-built scenarios for classroom use
     - Visual debugging and real-time monitoring
     - Comprehensive documentation and tutorials

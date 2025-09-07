@@ -41,7 +41,7 @@ def test_get_neighbors_of_position_center(env):
 
     neighbors = env.get_neighbors_of_position((5, 5))
 
-    # FIX: The test was asserting 2, but the setup clearly creates 3 neighbors.
+    #  The test was asserting 2, but the setup clearly creates 3 neighbors.
     assert len(neighbors) == 3
     assert neighbors[(5, 6)] == "agent_B"
     assert neighbors[(4, 5)] == "agent_C"

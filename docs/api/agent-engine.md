@@ -210,14 +210,14 @@ def calculate_emotion(self, event, agent_goals, agent_values):
     - Value alignment (does this match my values?)
     - Social context (how do others see this?)
     """
-    
+
     appraisal_scores = {
         'goal_relevance': self._assess_goal_relevance(event, agent_goals),
         'controllability': self._assess_controllability(event),
         'value_alignment': self._assess_value_alignment(event, agent_values),
         'social_approval': self._assess_social_context(event)
     }
-    
+
     # Emotions emerge from specific appraisal patterns
     if appraisal_scores['goal_relevance'] > 0.7 and appraisal_scores['controllability'] < 0.3:
         return 'frustration'
@@ -235,22 +235,22 @@ The CausalGraphSystem builds formal causal models using the DoWhy library:
 def estimate_action_effect(self, agent_id: str, action: str) -> float:
     """
     Estimate the causal effect of an action using do-calculus.
-    
+
     This answers: "What would happen if the agent were forced
     to take this action, controlling for confounding factors?"
     """
-    
+
     causal_model = self._get_agent_causal_model(agent_id)
     if not causal_model:
         return 0.0  # Fall back to observational data
-    
+
     # Perform causal intervention
     causal_effect = causal_model.estimate_effect(
         treatment_value=action,
         outcome='reward',
         method='iv'  # Instrumental variables
     )
-    
+
     return causal_effect.value
 ```
 
@@ -261,20 +261,20 @@ Agents maintain multiple memory systems with different retention and access patt
 ```python
 class MemoryComponent(Component):
     """Multi-layered memory architecture."""
-    
+
     def __init__(self):
         # Working memory for immediate context
         self.working_memory: List[Experience] = []
-        
+
         # Episodic memory for specific experiences
         self.episodic_memory: List[Episode] = []
-        
+
         # Semantic memory for general knowledge
         self.semantic_memory: Dict[str, ConceptNode] = {}
-        
+
         # Emotional memories with stronger retention
         self.emotional_memories: List[EmotionalEpisode] = []
-        
+
         # Social memories about other agents
         self.social_memory: Dict[str, AgentSchema] = {}
 ```
@@ -290,29 +290,29 @@ Systems communicate exclusively through the event bus, enabling loose coupling:
 ```python
 class CognitivePipeline:
     """Example of how cognitive systems coordinate."""
-    
+
     def __init__(self, event_bus):
         self.event_bus = event_bus
-        
+
         # Systems subscribe to relevant events
         self.event_bus.subscribe("action_executed", self.affect_system.process_outcome)
         self.event_bus.subscribe("action_executed", self.q_learning_system.update_policy)
         self.event_bus.subscribe("reflection_completed", self.goal_system.update_goals)
         self.event_bus.subscribe("identity_changed", self.social_system.update_reputation)
-    
+
     async def process_agent_tick(self, agent_id: str, tick: int):
         """Coordinate cognitive processing for one agent."""
-        
+
         # 1. Decision making
         self.event_bus.publish("decision_requested", {
             "agent_id": agent_id,
             "tick": tick
         })
-        
+
         # 2. Action execution happens in world systems
         # 3. Outcome processing happens automatically via subscriptions
         # 4. Reflection triggered periodically
-        
+
         if tick % 50 == 0:  # Reflect every 50 ticks
             self.event_bus.publish("reflection_triggered", {
                 "agent_id": agent_id,
@@ -327,43 +327,43 @@ Cognitive systems access world data through provider interfaces:
 ```python
 class ReflectionSystem(System):
     """Example of provider usage in cognitive systems."""
-    
+
     def __init__(self, simulation_state, config, cognitive_scaffold):
         super().__init__(simulation_state, config, cognitive_scaffold)
-        
+
         # Providers injected at runtime
         self.vitality_provider = None
         self.narrative_provider = None
         self.state_encoder = None
-    
+
     def set_providers(self, providers: Dict[str, Any]):
         """Dependency injection of world-specific providers."""
         self.vitality_provider = providers.get('vitality')
         self.narrative_provider = providers.get('narrative')
         self.state_encoder = providers.get('state_encoder')
-    
+
     async def generate_reflection(self, agent_id: str) -> str:
         """Generate reflection using injected providers."""
-        
+
         # Get agent components
         components = self.simulation_state.get_entity_components(agent_id)
-        
+
         # Use providers to extract world-specific context
         vitality = self.vitality_provider.get_normalized_vitality_metrics(
             agent_id, components, self.config
         )
-        
+
         narrative_context = self.narrative_provider.get_narrative_context(
             agent_id, components, self.config
         )
-        
+
         # Generate reflection prompt with LLM
         reflection = await self.cognitive_scaffold.generate_reflection(
             vitality_metrics=vitality,
             narrative_context=narrative_context,
             recent_experiences=self._get_recent_experiences(agent_id)
         )
-        
+
         return reflection
 ```
 
@@ -405,20 +405,20 @@ await runner.execute_tick(current_tick)
 ```python
 class CognitiveScaffold:
     """Optimized LLM integration with caching and batching."""
-    
+
     def __init__(self):
         self.prompt_cache = LRUCache(maxsize=1000)
         self.batch_queue = []
         self.response_futures = {}
-    
+
     async def generate_reflection(self, **context):
         """Generate reflection with caching and batching."""
-        
+
         # Check cache first
         cache_key = self._hash_context(context)
         if cache_key in self.prompt_cache:
             return self.prompt_cache[cache_key]
-        
+
         # Add to batch queue
         request_id = uuid.uuid4()
         self.batch_queue.append({
@@ -426,11 +426,11 @@ class CognitiveScaffold:
             'type': 'reflection',
             'context': context
         })
-        
+
         # Process batch when full or after timeout
         if len(self.batch_queue) >= 10:
             await self._process_batch()
-        
+
         # Return future for async completion
         future = asyncio.Future()
         self.response_futures[request_id] = future
@@ -449,41 +449,41 @@ from unittest.mock import Mock, AsyncMock
 
 class TestReflectionSystem:
     """Example test patterns for cognitive systems."""
-    
+
     @pytest.fixture
     def reflection_system(self):
         mock_state = Mock()
         mock_config = Mock()
         mock_scaffold = AsyncMock()
-        
+
         system = ReflectionSystem(mock_state, mock_config, mock_scaffold)
-        
+
         # Inject mock providers
         system.set_providers({
             'vitality': Mock(),
             'narrative': Mock(),
             'state_encoder': Mock()
         })
-        
+
         return system
-    
+
     async def test_reflection_generation(self, reflection_system):
         """Test reflection generation with mocked dependencies."""
-        
+
         # Setup mock responses
         reflection_system.vitality_provider.get_normalized_vitality_metrics.return_value = {
             'health_norm': 0.8,
             'energy_norm': 0.6
         }
-        
+
         reflection_system.narrative_provider.get_narrative_context.return_value = {
             'recent_events': ['Won a battle', 'Found treasure'],
             'social_context': 'Respected by peers'
         }
-        
+
         # Test reflection generation
         reflection = await reflection_system.generate_reflection("test_agent")
-        
+
         assert reflection is not None
         assert isinstance(reflection, str)
 ```
@@ -493,28 +493,28 @@ class TestReflectionSystem:
 ```python
 async def test_cognitive_pipeline_integration():
     """Test full cognitive pipeline with multiple systems."""
-    
+
     # Setup simulation environment
     manager = SimulationManager(test_config)
     manager.register_system(ActionSystem)
     manager.register_system(ReflectionSystem)
     manager.register_system(GoalSystem)
     manager.register_system(QLearningSystem)
-    
+
     # Create test agent with required components
     agent_id = "test_agent"
     manager.simulation_state.add_component(agent_id, MemoryComponent())
     manager.simulation_state.add_component(agent_id, IdentityComponent())
     manager.simulation_state.add_component(agent_id, GoalComponent())
-    
+
     # Run simulation for several ticks
     for tick in range(10):
         await manager.run_tick(tick)
-    
+
     # Verify cognitive state updates
     memory_comp = manager.simulation_state.get_component(agent_id, MemoryComponent)
     assert len(memory_comp.episodic_memory) > 0
-    
+
     goal_comp = manager.simulation_state.get_component(agent_id, GoalComponent)
     assert len(goal_comp.active_goals) > 0
 ```

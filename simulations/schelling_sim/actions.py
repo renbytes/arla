@@ -43,7 +43,7 @@ class MoveToEmptyCellAction(ActionInterface):
         Generates a move parameter if the agent is unsatisfied and there are
         empty cells available.
         """
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        #  Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(simulation_state, "environment"):
             return []
 

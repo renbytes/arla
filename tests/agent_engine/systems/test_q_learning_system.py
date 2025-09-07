@@ -218,11 +218,12 @@ class TestQLearningSystem:
         ]
 
         # Use patch to spy on the optimizer and utility network
-        with patch.object(
-            q_comp.optimizer, "step"
-        ) as mock_optimizer_step, patch.object(
-            q_comp.utility_network, "forward", wraps=q_comp.utility_network.forward
-        ) as mock_forward:
+        with (
+            patch.object(q_comp.optimizer, "step") as mock_optimizer_step,
+            patch.object(
+                q_comp.utility_network, "forward", wraps=q_comp.utility_network.forward
+            ) as mock_forward,
+        ):
             system._perform_learning_step(
                 entity_id=agent_id,
                 q_comp=q_comp,

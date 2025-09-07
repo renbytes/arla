@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, Dict
 from unittest.mock import Mock
 
 import pytest
@@ -12,8 +12,9 @@ class MockSchellingEnvironment(SchellingGridEnvironment):
     def __init__(self, width: int, height: int):
         super().__init__(width, height)
         # Initialize internal state for the mock
-        self.grid = {}
-        self.entity_positions = {}
+        self.grid: Dict[Tuple[int, int], str] = {}
+        # FIX: Added a type annotation to the 'entity_positions' dictionary.
+        self.entity_positions: Dict[str, Tuple[int, int]] = {}
 
     def can_move(self, from_pos: Any, to_pos: Any) -> bool:
         return True

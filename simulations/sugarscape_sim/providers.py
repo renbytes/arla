@@ -179,6 +179,11 @@ class HeuristicDecisionSelector(DecisionSelectorInterface):
 
         pos_comp = sim_state.get_component(entity_id, PositionComponent)
         perc_comp = sim_state.get_component(entity_id, PerceptionComponent)
+
+        #  Check if sim_state has the 'environment' attribute before using it.
+        if not isinstance(sim_state, SimulationState) or not sim_state.environment:
+            return random.choice(possible_actions) if possible_actions else None
+
         env = sim_state.environment
 
         if not pos_comp or not perc_comp or not isinstance(env, SugarscapeEnvironment):
@@ -359,13 +364,9 @@ class LLMHeuristicDecisionSelector(DecisionSelectorInterface):
         if not prompt:
             return "EXPLORE"
 
-        if not self.cognitive_scaffold:
-            print(
-                f"WARNING: CognitiveScaffold not available for {entity_id}. Defaulting to EXPLORE."
-            )
-            return "EXPLORE"
-
         try:
+            if not self.cognitive_scaffold:
+                return "EXPLORE"
             response = self.cognitive_scaffold.query(
                 agent_id=entity_id,
                 purpose="tactical_goal_selection",
@@ -434,13 +435,24 @@ class LLMHeuristicDecisionSelector(DecisionSelectorInterface):
             if a.action_type and a.action_type.action_id == "move"
         ]
         if not move_actions:
+            #  Check if action_type is not None before accessing action_id.
             return next(
-                (a for a in possible_actions if a.action_type.action_id == "stay"), None
+                (
+                    a
+                    for a in possible_actions
+                    if a.action_type and a.action_type.action_id == "stay"
+                ),
+                None,
             )
 
         perc_comp = cast(
             PerceptionComponent, sim_state.get_component(entity_id, PerceptionComponent)
         )
+
+        #  Check if sim_state has the 'environment' attribute.
+        if not isinstance(sim_state, SimulationState) or not sim_state.environment:
+            return random.choice(move_actions)
+
         env = cast(SugarscapeEnvironment, sim_state.environment)
 
         if perc_comp and env:
@@ -514,15 +526,9 @@ class StrategicLLMDecisionSelector(DecisionSelectorInterface):
         if not prompt:
             return default_plan
 
-        # ADD THIS CHECK to ensure the scaffold exists before use.
-        if not self.cognitive_scaffold:
-            print(
-                f"WARNING: CognitiveScaffold not available for {entity_id}. Defaulting to EXPLORE_RANDOMLY."
-            )
-            return default_plan
-        # END ADDITION
-
         try:
+            if not self.cognitive_scaffold:
+                return default_plan
             response = self.cognitive_scaffold.query(
                 agent_id=entity_id,
                 purpose="long_term_strategy",
@@ -591,6 +597,11 @@ class StrategicLLMDecisionSelector(DecisionSelectorInterface):
             for a in possible_actions
             if a.action_type and a.action_type.action_id == "move"
         ]
+
+        #  Check if sim_state has the 'environment' attribute.
+        if not isinstance(sim_state, SimulationState) or not sim_state.environment:
+            return random.choice(move_actions) if move_actions else None
+
         env = cast(SugarscapeEnvironment, sim_state.environment)
 
         if plan["type"] == "HARVEST_LOCALLY":
@@ -603,8 +614,13 @@ class StrategicLLMDecisionSelector(DecisionSelectorInterface):
             if harvest_actions:
                 return harvest_actions[0]
             if not move_actions:
+                #  Check if action_type is not None before accessing action_id.
                 return next(
-                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    (
+                        a
+                        for a in possible_actions
+                        if a.action_type and a.action_type.action_id == "stay"
+                    ),
                     None,
                 )
 
@@ -633,8 +649,13 @@ class StrategicLLMDecisionSelector(DecisionSelectorInterface):
 
         elif plan["type"] == "MIGRATE_TO_PEAK":
             if not move_actions:
+                #  Check if action_type is not None before accessing action_id.
                 return next(
-                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    (
+                        a
+                        for a in possible_actions
+                        if a.action_type and a.action_type.action_id == "stay"
+                    ),
                     None,
                 )
             target_corner = (
@@ -648,11 +669,16 @@ class StrategicLLMDecisionSelector(DecisionSelectorInterface):
             )
 
         elif plan["type"] == "EXPLORE_RANDOMLY":
+            #  Check if action_type is not None before accessing action_id.
             return (
                 random.choice(move_actions)
                 if move_actions
                 else next(
-                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    (
+                        a
+                        for a in possible_actions
+                        if a.action_type and a.action_type.action_id == "stay"
+                    ),
                     None,
                 )
             )
@@ -767,15 +793,22 @@ class SugarscapeRewardCalculator(RewardCalculatorInterface):
 
         reward_shaping_bonus = 0.0
         shaping_enabled = self.config.simulation.get("reward_shaping_enabled", False)
-        if shaping_enabled and action_type.action_id == "move":
-            env = self.simulation_state.environment
-            old_pos = outcome_details.get("old_pos")
-            new_pos = outcome_details.get("target_pos")
 
-            if old_pos and new_pos and isinstance(env, SugarscapeEnvironment):
-                old_dist = self._get_distance_to_nearest_sugar(old_pos, env)
-                new_dist = self._get_distance_to_nearest_sugar(new_pos, env)
-                reward_shaping_bonus = (old_dist - new_dist) * 0.1
+        #  Check if action_type is not None before accessing action_id.
+        if shaping_enabled and action_type and action_type.action_id == "move":
+            #  Check if self.simulation_state has the 'environment' attribute.
+            if (
+                isinstance(self.simulation_state, SimulationState)
+                and self.simulation_state.environment
+            ):
+                env = self.simulation_state.environment
+                old_pos = outcome_details.get("old_pos")
+                new_pos = outcome_details.get("target_pos")
+
+                if old_pos and new_pos and isinstance(env, SugarscapeEnvironment):
+                    old_dist = self._get_distance_to_nearest_sugar(old_pos, env)
+                    new_dist = self._get_distance_to_nearest_sugar(new_pos, env)
+                    reward_shaping_bonus = (old_dist - new_dist) * 0.1
 
         final_reward = base_reward + survival_penalty + reward_shaping_bonus
         return final_reward, {

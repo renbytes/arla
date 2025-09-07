@@ -85,14 +85,14 @@ The `ActionSystem` uses a dependency-injected `RewardCalculator` to determine th
 class EmotionModulatedRewardCalculator(RewardCalculatorInterface):
     def calculate_final_reward(self, base_reward, ..., entity_components):
         emotion_comp = entity_components.get(EmotionComponent)
-        
+
         # If the agent is feeling positive (high valence), it gets a bigger reward
         # for taking an action that aligns with its goals.
         if emotion_comp and emotion_comp.valence > 0.5:
             final_reward = base_reward * (1 + emotion_comp.valence)
         else:
             final_reward = base_reward
-            
+
         # ... return final_reward and breakdown ...
 ```
 

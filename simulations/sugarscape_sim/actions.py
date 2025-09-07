@@ -37,7 +37,7 @@ class MoveAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates parameters for all valid moves (N, S, E, W)."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        #  Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return []
 
@@ -94,7 +94,7 @@ class HarvestAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Action is possible if there is sugar at the agent's location."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        #  Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return []
 
@@ -147,7 +147,7 @@ class ShareAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates share options for all adjacent agents."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        #  Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return []
 
@@ -218,7 +218,7 @@ class AttackAction(ActionInterface):
         self, entity_id: str, sim_state: AbstractSimulationState, tick: int
     ) -> List[Dict[str, Any]]:
         """Generates attack options for all adjacent agents."""
-        # FIX: Check for attribute existence instead of strict type for mock-friendliness.
+        #  Check for attribute existence instead of strict type for mock-friendliness.
         if not hasattr(sim_state, "environment"):
             return []
 

@@ -1,5 +1,3 @@
-# agent-engine/tests/integration/test_smoke.py
-
 import unittest
 from typing import Any, Dict, List, Optional
 from unittest.mock import MagicMock
@@ -7,7 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from agent_core.agents.action_generator_interface import ActionGeneratorInterface
 from agent_core.agents.actions.action_interface import ActionInterface
+from agent_core.agents.actions.action_outcome import ActionOutcome
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
+from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
     Component,
@@ -36,9 +36,18 @@ class MockMoveAction(ActionInterface):
     def generate_possible_params(self, *args, **kwargs) -> List[Dict[str, Any]]:
         return [{}]  # Always one possible move
 
-    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+    #  Corrected the signature to match the ActionInterface and added a return value.
+    def execute(
+        self,
+        entity_id: str,
+        simulation_state: AbstractSimulationState,
+        params: Dict[str, Any],
+        current_tick: int,
+    ) -> ActionOutcome:
         # In a real scenario, this would be handled by a world system
-        pass
+        return ActionOutcome(
+            success=True, message="Mock move executed", base_reward=0.0
+        )
 
     def get_feature_vector(self, *args, **kwargs) -> List[float]:
         return [1.0]
@@ -137,7 +146,3 @@ class TestIntegrationSmoke(unittest.TestCase):
 
         # Verify the simulation ran for the correct number of ticks
         self.assertEqual(final_state.current_tick, 4)  # Ticks are 0-indexed
-
-
-if __name__ == "__main__":
-    pytest.main()

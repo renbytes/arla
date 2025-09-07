@@ -56,7 +56,7 @@ class TestSugarscapePerceptionProvider(unittest.TestCase):
         )
         mock_sim_state.environment = mock_env
 
-        # FIX: The test must pass the agent's components to the provider.
+        #  The test must pass the agent's components to the provider.
         components = {
             PositionComponent: mock_pos,
             MetabolismComponent: mock_metabolism,
@@ -165,7 +165,7 @@ class TestSugarscapeStateEncoder(unittest.TestCase):
 
         vector = encoder.encode_state(mock_sim_state, "agent_1", mock_config)
 
-        # FIX: The vector size is 9 (3 for agent state + 2*3 for perception).
+        #  The vector size is 9 (3 for agent state + 2*3 for perception).
         self.assertEqual(len(vector), 9)
 
         # Agent state assertions

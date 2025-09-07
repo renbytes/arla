@@ -46,7 +46,7 @@ class TestMoveAction(unittest.TestCase):
         action = MoveAction()
         mock_sim_state = MagicMock()
         mock_sim_state.get_component.return_value = None  # No PositionComponent
-        # FIX: The mock needs the environment attribute to pass the new check
+        #  The mock needs the environment attribute to pass the new check
         mock_sim_state.environment = MagicMock(spec=BerryWorldEnvironment)
 
         params = action.generate_possible_params("agent_1", mock_sim_state, 1)

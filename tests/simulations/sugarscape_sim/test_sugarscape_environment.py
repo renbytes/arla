@@ -71,7 +71,7 @@ class TestSugarscapeEnvironment:
         empty_cells = env.get_all_empty_cells()
 
         total_cells = env.width * env.height
-        # FIX: Changed from self.assertEqual to pytest-style assert
+        #  Changed from self.assertEqual to pytest-style assert
         assert len(empty_cells) == total_cells - 2
         assert (0, 0) not in empty_cells
         assert (1, 1) not in empty_cells

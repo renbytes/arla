@@ -46,7 +46,7 @@ class TestBerryPerceptionProvider(unittest.TestCase):
         provider.update_perception("agent_1", components, mock_sim_state, 0)
 
         visible = mock_perc.visible_entities
-        # FIX: The test was asserting 3, but only 2 items are in range.
+        #  The test was asserting 3, but only 2 items are in range.
         self.assertEqual(len(visible), 2)
         self.assertIn("berry_11_11", visible)
         self.assertIn("crystal_9_9", visible)
@@ -95,6 +95,6 @@ class TestBerryStateEncoder(unittest.TestCase):
         # agent_x, agent_y, health, is_boosted
         self.assertAlmostEqual(vector[0], 0.5)  # x
         self.assertAlmostEqual(vector[1], 0.5)  # y
-        # FIX: The test was asserting 0.0, but 50/100 is 0.5.
+        #  The test was asserting 0.0, but 50/100 is 0.5.
         self.assertAlmostEqual(vector[2], 0.5)  # health
         self.assertAlmostEqual(vector[3], 1.0)  # boosted
