@@ -1,13 +1,10 @@
 # .github/workflows/ci.yml
-
 name: Continuous Integration
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 jobs:
   ci:
     # The job name will be dynamically set based on the matrix task name
@@ -28,7 +25,6 @@ jobs:
             run_command: poetry run pytest --cov=agent_core --cov=agent_engine --cov-report=term-missing --cov-fail-under=80
             # Add a flag to indicate that this specific task needs graphviz
             needs_graphviz: true
-
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -59,12 +55,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          # Include pyproject.toml in cache key to invalidate when dependencies change
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v2
           restore-keys: |
+            poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v2
             poetry-${{ runner.os }}-
 
-      - name: "Install dependencies"
-        run: poetry install
+      - name: "Clean corrupted packages and install dependencies"
+        run: |
+          # Clean any corrupted mlflow packages that might exist
+          if [ -d ".venv" ]; then
+            poetry run pip uninstall mlflow mlflow-skinny mlflow-tracing -y || true
+          fi
+
+          # Install dependencies with retry logic
+          poetry install --no-cache || {
+            echo "Installation failed, cleaning environment and retrying..."
+            poetry env remove --all || true
+            poetry install --no-cache
+          }
+
+      - name: "Verify installation"
+        run: |
+          poetry run python -c "import sys; print('Python version:', sys.version)"
+          poetry run python -c "import pygraphviz; print('pygraphviz version:', pygraphviz.__version__)" || echo "pygraphviz not needed for this job"
 
       - name: "Run Task"
         run: ${{ matrix.task.run_command }}
