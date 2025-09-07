@@ -1,4 +1,3 @@
-# FILE: simulations/sugarscape_sim/providers.py
 """
 Defines the Provider classes for the Sugarscape simulation.
 Providers are the bridge between the world-agnostic agent-engine and the
@@ -17,6 +16,7 @@ from agent_core.agents.action_generator_interface import ActionGeneratorInterfac
 from agent_core.agents.actions.action_interface import ActionInterface
 from agent_core.agents.actions.action_registry import action_registry
 from agent_core.agents.decision_selector_interface import DecisionSelectorInterface
+from agent_core.cognition.scaffolding import CognitiveScaffold
 from agent_core.core.ecs.abstractions import SimulationState as AbstractSimulationState
 from agent_core.core.ecs.component import (
     ActionPlanComponent,
@@ -320,6 +320,344 @@ class QLearningDecisionSelector(DecisionSelectorInterface):
                     best_action = action_plan
 
             return best_action
+
+
+class LLMHeuristicDecisionSelector(DecisionSelectorInterface):
+    """
+    Group E (Tactical LLM): Uses an LLM for every tactical decision.
+    """
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        self.simulation_state = simulation_state
+        self.config = config
+        self.cognitive_scaffold: Optional[CognitiveScaffold] = (
+            simulation_state.cognitive_scaffold if simulation_state else None
+        )
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions or not self.cognitive_scaffold:
+            return random.choice(possible_actions) if possible_actions else None
+
+        current_tick = (
+            sim_state.current_tick if hasattr(sim_state, "current_tick") else 0
+        )
+
+        llm_goal = self._get_llm_goal(sim_state, entity_id, current_tick)
+        return self._select_action_for_goal(
+            llm_goal, possible_actions, sim_state, entity_id
+        )
+
+    def _get_llm_goal(
+        self, sim_state: AbstractSimulationState, entity_id: str, current_tick: int
+    ) -> str:
+        prompt = self._build_llm_prompt(sim_state, entity_id)
+        if not prompt:
+            return "EXPLORE"
+
+        if not self.cognitive_scaffold:
+            print(
+                f"WARNING: CognitiveScaffold not available for {entity_id}. Defaulting to EXPLORE."
+            )
+            return "EXPLORE"
+
+        try:
+            response = self.cognitive_scaffold.query(
+                agent_id=entity_id,
+                purpose="tactical_goal_selection",
+                prompt=prompt,
+                current_tick=current_tick,
+            )
+            goal = response.strip().upper()
+            return "HARVEST" if "HARVEST" in goal else "EXPLORE"
+        except Exception as e:
+            print(f"Tactical LLM goal selection failed for {entity_id}: {e}")
+        return "EXPLORE"
+
+    def _build_llm_prompt(
+        self, sim_state: AbstractSimulationState, entity_id: str
+    ) -> Optional[str]:
+        energy_comp = cast(
+            EnergyComponent, sim_state.get_component(entity_id, EnergyComponent)
+        )
+        perc_comp = cast(
+            PerceptionComponent, sim_state.get_component(entity_id, PerceptionComponent)
+        )
+        if not energy_comp or not perc_comp:
+            return None
+
+        status = f"My current energy is {energy_comp.current_energy:.0f} out of {energy_comp.initial_energy:.0f}."
+        visible_sugar = [
+            v for v in perc_comp.visible_entities.values() if v["type"] == "sugar"
+        ]
+        perception = (
+            f"I see {len(visible_sugar)} sugar patches."
+            if visible_sugar
+            else "I cannot see any sugar."
+        )
+
+        return f"""
+        Given my situation, what is my single most important priority?
+        Choose ONE: HARVEST or EXPLORE.
+
+        Situation:
+        - {status}
+        - {perception}
+
+        Priority:
+        """
+
+    def _select_action_for_goal(
+        self,
+        goal: str,
+        possible_actions: List[ActionPlanComponent],
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+    ) -> Optional[ActionPlanComponent]:
+        """Heuristic to execute a tactical goal."""
+        if goal == "HARVEST":
+            harvest_actions = [
+                a
+                for a in possible_actions
+                if a.action_type and a.action_type.action_id == "harvest"
+            ]
+            if harvest_actions:
+                return harvest_actions[0]
+
+        move_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and a.action_type.action_id == "move"
+        ]
+        if not move_actions:
+            return next(
+                (a for a in possible_actions if a.action_type.action_id == "stay"), None
+            )
+
+        perc_comp = cast(
+            PerceptionComponent, sim_state.get_component(entity_id, PerceptionComponent)
+        )
+        env = cast(SugarscapeEnvironment, sim_state.environment)
+
+        if perc_comp and env:
+            richest_patch_pos = None
+            max_sugar = -1
+            for v in perc_comp.visible_entities.values():
+                if v["type"] == "sugar" and v["amount"] > max_sugar:
+                    max_sugar = v["amount"]
+                    richest_patch_pos = v["position"]
+
+            if richest_patch_pos:
+                return min(
+                    move_actions,
+                    key=lambda m: env.distance(
+                        m.params["target_pos"], richest_patch_pos
+                    ),
+                )
+        return random.choice(move_actions)
+
+
+class StrategicLLMDecisionSelector(DecisionSelectorInterface):
+    """
+    Group F (Strategic LLM): Uses an LLM for periodic strategic planning.
+    """
+
+    def __init__(self, simulation_state: Any = None, config: Any = None):
+        self.simulation_state = simulation_state
+        self.config = config
+        self.cognitive_scaffold: Optional[CognitiveScaffold] = (
+            simulation_state.cognitive_scaffold if simulation_state else None
+        )
+        self.strategic_planning_interval = 20
+        self.last_plan_tick: Dict[str, int] = {}
+        self.current_plan: Dict[str, Dict[str, Any]] = {}
+
+    def select(
+        self,
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+        possible_actions: List[ActionPlanComponent],
+    ) -> Optional[ActionPlanComponent]:
+        if not possible_actions or not self.cognitive_scaffold:
+            return random.choice(possible_actions) if possible_actions else None
+
+        current_tick = (
+            sim_state.current_tick if hasattr(sim_state, "current_tick") else 0
+        )
+        last_plan_tick = self.last_plan_tick.get(
+            entity_id, -self.strategic_planning_interval
+        )
+
+        if current_tick - last_plan_tick >= self.strategic_planning_interval:
+            plan = self._get_llm_strategic_plan(sim_state, entity_id, current_tick)
+            self.current_plan[entity_id] = plan
+            self.last_plan_tick[entity_id] = current_tick
+
+        active_plan = self.current_plan.get(entity_id)
+        if not active_plan:
+            return random.choice(possible_actions)
+
+        return self._select_action_for_plan(
+            active_plan, possible_actions, sim_state, entity_id
+        )
+
+    def _get_llm_strategic_plan(
+        self, sim_state: AbstractSimulationState, entity_id: str, current_tick: int
+    ) -> Dict[str, Any]:
+        """Queries an LLM for a long-term strategic plan."""
+        prompt = self._build_llm_strategic_prompt(sim_state, entity_id)
+        default_plan = {"type": "EXPLORE_RANDOMLY"}
+        if not prompt:
+            return default_plan
+
+        # ADD THIS CHECK to ensure the scaffold exists before use.
+        if not self.cognitive_scaffold:
+            print(
+                f"WARNING: CognitiveScaffold not available for {entity_id}. Defaulting to EXPLORE_RANDOMLY."
+            )
+            return default_plan
+        # END ADDITION
+
+        try:
+            response = self.cognitive_scaffold.query(
+                agent_id=entity_id,
+                purpose="long_term_strategy",
+                prompt=prompt,
+                current_tick=current_tick,
+            )
+            plan_str = response.strip().upper()
+            if "MIGRATE_TO_NW_PEAK" in plan_str:
+                return {"type": "MIGRATE_TO_PEAK", "target": "NW"}
+            if "MIGRATE_TO_SE_PEAK" in plan_str:
+                return {"type": "MIGRATE_TO_PEAK", "target": "SE"}
+            if "HARVEST_LOCALLY" in plan_str:
+                return {"type": "HARVEST_LOCALLY"}
+        except Exception as e:
+            print(f"Strategic LLM plan selection failed for {entity_id}: {e}")
+
+        return default_plan
+
+    def _build_llm_strategic_prompt(
+        self, sim_state: AbstractSimulationState, entity_id: str
+    ) -> Optional[str]:
+        """Constructs a prompt for the LLM for strategic planning."""
+        energy_comp = cast(
+            EnergyComponent, sim_state.get_component(entity_id, EnergyComponent)
+        )
+        perc_comp = cast(
+            PerceptionComponent, sim_state.get_component(entity_id, PerceptionComponent)
+        )
+        if not energy_comp or not perc_comp:
+            return None
+
+        status = f"My energy is {energy_comp.current_energy:.0f}/{energy_comp.initial_energy:.0f}."
+        visible_sugar = [
+            v for v in perc_comp.visible_entities.values() if v["type"] == "sugar"
+        ]
+        perception = (
+            f"I see {len(visible_sugar)} sugar patches."
+            if visible_sugar
+            else "I see no sugar."
+        )
+
+        return f"""
+        You are an agent in a survival simulation. The world is a grid with two
+        major resource peaks, one in the northwest (NW) and one in the southeast (SE).
+        What is your long-term strategic plan for the next 20-30 steps?
+
+        Choose ONE from: MIGRATE_TO_NW_PEAK, MIGRATE_TO_SE_PEAK, HARVEST_LOCALLY, EXPLORE_RANDOMLY.
+
+        My Situation:
+        - {status}
+        - {perception}
+
+        My Strategic Plan:
+        """
+
+    def _select_action_for_plan(
+        self,
+        plan: Dict[str, Any],
+        possible_actions: List[ActionPlanComponent],
+        sim_state: AbstractSimulationState,
+        entity_id: str,
+    ) -> Optional[ActionPlanComponent]:
+        """Heuristic to execute a strategic plan."""
+        move_actions = [
+            a
+            for a in possible_actions
+            if a.action_type and a.action_type.action_id == "move"
+        ]
+        env = cast(SugarscapeEnvironment, sim_state.environment)
+
+        if plan["type"] == "HARVEST_LOCALLY":
+            # Same logic as the heuristic selector
+            harvest_actions = [
+                a
+                for a in possible_actions
+                if a.action_type and a.action_type.action_id == "harvest"
+            ]
+            if harvest_actions:
+                return harvest_actions[0]
+            if not move_actions:
+                return next(
+                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    None,
+                )
+
+            perc_comp = cast(
+                PerceptionComponent,
+                sim_state.get_component(entity_id, PerceptionComponent),
+            )
+            if perc_comp:
+                richest_patch = max(
+                    (
+                        v
+                        for v in perc_comp.visible_entities.values()
+                        if v["type"] == "sugar"
+                    ),
+                    key=lambda p: p["amount"],
+                    default=None,
+                )
+                if richest_patch:
+                    return min(
+                        move_actions,
+                        key=lambda m: env.distance(
+                            m.params["target_pos"], richest_patch["position"]
+                        ),
+                    )
+            return random.choice(move_actions)
+
+        elif plan["type"] == "MIGRATE_TO_PEAK":
+            if not move_actions:
+                return next(
+                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    None,
+                )
+            target_corner = (
+                (env.width * 0.25, env.height * 0.25)
+                if plan["target"] == "NW"
+                else (env.width * 0.75, env.height * 0.75)
+            )
+            return min(
+                move_actions,
+                key=lambda m: env.distance(m.params["target_pos"], target_corner),
+            )
+
+        elif plan["type"] == "EXPLORE_RANDOMLY":
+            return (
+                random.choice(move_actions)
+                if move_actions
+                else next(
+                    (a for a in possible_actions if a.action_type.action_id == "stay"),
+                    None,
+                )
+            )
+
+        return random.choice(possible_actions) if possible_actions else None
 
 
 class SugarscapeStateEncoder(StateEncoderInterface):

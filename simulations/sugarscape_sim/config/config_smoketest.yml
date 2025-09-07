@@ -1,12 +1,12 @@
-# FILE: simulations/sugarscape_sim/config/config_harshenvironment.yml
+# FILE: simulations/sugarscape_sim/config/config_smoketest.yml
 
 # A unique identifier for this simulation type
 simulation_package: "simulations.sugarscape_sim"
 
 # Core simulation settings
 simulation:
-  steps: 500
-  log_directory: "data/logs/sugarscape_harshenv"
+  steps: 500 # A shorter run is fine for a smoke test
+  log_directory: "data/logs/sugarscape_smoketest"
   random_seed: 42
   reward_shaping_enabled: false
   learning_phase_survival_only: false
@@ -18,7 +18,7 @@ environment:
     width: 50
     height: 50
     initial_sugar_distribution: "gaussian"
-    sugar_regeneration_rate: 0.4
+    sugar_regeneration_rate: 0.2 # HARSHER: Drastically reduced from 0.7
     max_sugar_per_cell: 4
 
 # Agent foundational settings (copied from base config)

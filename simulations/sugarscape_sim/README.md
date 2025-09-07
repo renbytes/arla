@@ -36,6 +36,11 @@ make run-local \
   STEPS=1000
 ```
 
+Or use the command below to run the full A/B test:
+```bash
+make run FILE=simulations/sugarscape_sim/experiments/sugarscape_ab_test.yml WORKERS=6
+```
+
 ### Step 3: Generate the Visualization
 
 After the simulation is complete, create the animated GIF from the saved frames. You will need to get the RUN_ID from the MLflow UI for the simulation you just ran.
@@ -45,6 +50,13 @@ make make-gif RENDER_DIR=data/gif_renders/sugarscape_sim RUN_ID=<your_run_id_her
 ```
 
 This will create a GIF file named after the run ID in the project's root directory.
+
+### Step 3. Run the A/B test analysis
+
+Run the following the run the A/B test analysis:
+```bash
+docker compose exec app poetry run python simulations/sugarscape_sim/analysis/analyze_sugarscape.py
+```
 
 ## Evaluating the Results
 

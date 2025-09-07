@@ -1,14 +1,13 @@
-# FILE: simulations/sugarscape_sim/analysis/analyze_sugarscape.py
 """
 Performs a statistical analysis of the Sugarscape experiment results.
 
-This script connects to the PostgreSQL database, fetches the final
-active agent count for each simulation run from a specified experiment,
+This script connects to the PostgreSQL database, fetches key performance
+and social metrics for each simulation run from a specified experiment,
 and conducts an ANOVA test to determine if there are statistically
-significant performance differences between the experimental groups.
+significant differences between the experimental groups.
 
 Example Usage:
-poetry run python simulations/sugarscape_sim/analysis/analyze_sugarscape.py "Sugarscape - Harsh Env A/B Test"
+poetry run python simulations/sugarscape_sim/analysis/analyze_sugarscape.py "Sugarscape - Full Cognitive Comparison"
 """
 
 import os
@@ -37,32 +36,46 @@ def get_db_connection():
 
 
 def fetch_experiment_data(engine, experiment_name: str) -> pd.DataFrame:
-    """Fetches the final active agent count for each run in the experiment."""
+    """
+    Fetches final survival and aggregated social metrics for each run in the experiment.
+    """
     query = text(
         """
         WITH LatestExperiment AS (
+            -- Step 1: Find the ID of the most recent experiment with the given name.
             SELECT id FROM experiments
             WHERE name = :exp_name
             ORDER BY created_at DESC
             LIMIT 1
         ),
-        FinalMetrics AS (
-            SELECT DISTINCT ON (simulation_id)
+        AggregatedMetrics AS (
+            -- Step 2: For each simulation, get the final active agent count and
+            -- sum the total social actions over the entire run.
+            SELECT
                 simulation_id,
-                (data ->> 'active_agents')::int AS final_active_agents
+                -- Get the last recorded value for active_agents for each simulation
+                (array_agg((data->>'active_agents')::int ORDER BY tick DESC))[1] AS final_active_agents,
+                -- Sum the counts for each social action, defaulting to 0 if the key is missing
+                SUM(COALESCE((data->>'attack_count')::int, 0)) AS total_attacks,
+                SUM(COALESCE((data->>'share_count')::int, 0)) AS total_shares,
+                SUM(COALESCE((data->>'reproduce_count')::int, 0)) AS total_reproductions
             FROM metrics
             WHERE simulation_id IN (
                 SELECT id FROM simulation_runs WHERE experiment_id = (SELECT id FROM LatestExperiment)
             )
-            ORDER BY simulation_id, tick DESC
+            GROUP BY simulation_id
         )
+        -- Step 3: Join the results with the simulation run details to get the group name.
         SELECT
-            sr.variation_name as agent_group,
-            fm.final_active_agents
+            sr.variation_name AS agent_group,
+            am.final_active_agents,
+            am.total_attacks,
+            am.total_shares,
+            am.total_reproductions
         FROM
             simulation_runs sr
         JOIN
-            FinalMetrics fm ON sr.id = fm.simulation_id
+            AggregatedMetrics am ON sr.id = am.simulation_id
         WHERE
             sr.experiment_id = (SELECT id FROM LatestExperiment)
             AND sr.completed_at IS NOT NULL;
@@ -73,26 +86,24 @@ def fetch_experiment_data(engine, experiment_name: str) -> pd.DataFrame:
     return df
 
 
-def print_analysis_summary(df: pd.DataFrame, alpha: float = 0.05):
-    """Performs ANOVA and Tukey's HSD test and prints a summary."""
+def print_analysis_summary(
+    df: pd.DataFrame, metric_column: str, metric_title: str, alpha: float = 0.05
+):
+    """
+    Performs ANOVA and Tukey's HSD test for a given metric and prints a summary.
+    """
     console = Console()
-    console.rule("[bold cyan]Sugarscape Experiment: Statistical Analysis[/bold cyan]")
+    console.rule(f"[bold cyan]Analysis for: {metric_title}[/bold cyan]")
 
-    groups = [
-        df[df["agent_group"] == g]["final_active_agents"]
-        for g in df["agent_group"].unique()
-    ]
-    f_stat, p_value = f_oneway(*groups)
-
-    # Print Group Summaries
-    summary_table = Table(title="Group Summary Statistics (Final Active Agents)")
+    # --- Group Summary Table ---
+    summary_table = Table(title=f"Group Summary Statistics ({metric_title})")
     summary_table.add_column("Agent Group", style="cyan")
     summary_table.add_column("Mean", style="magenta")
     summary_table.add_column("Std Dev", style="green")
     summary_table.add_column("N", style="yellow")
 
     for group_name in sorted(df["agent_group"].unique()):
-        group_data = df[df["agent_group"] == group_name]["final_active_agents"]
+        group_data = df[df["agent_group"] == group_name][metric_column]
         summary_table.add_row(
             group_name,
             f"{group_data.mean():.2f}",
@@ -101,7 +112,21 @@ def print_analysis_summary(df: pd.DataFrame, alpha: float = 0.05):
         )
     console.print(summary_table)
 
-    # Print ANOVA Results
+    # --- Statistical Tests ---
+    groups = [
+        df[df["agent_group"] == g][metric_column] for g in df["agent_group"].unique()
+    ]
+
+    # Check for variance before running tests
+    if all(g.var() == 0 for g in groups):
+        console.print(
+            "\n[yellow]⚠️  Skipping statistical tests: No variance found in any group for this metric.[/yellow]"
+        )
+        console.rule()
+        return
+
+    f_stat, p_value = f_oneway(*groups)
+
     console.print("\n[bold]🔬 ANOVA Test Results:[/bold]")
     console.print(f"  - F-Statistic: {f_stat:.4f}")
     console.print(f"  - P-Value: {p_value:.4f}")
@@ -111,11 +136,9 @@ def print_analysis_summary(df: pd.DataFrame, alpha: float = 0.05):
             f"  [green]✅ The p-value is less than {alpha}, indicating a statistically significant difference exists somewhere among the groups.[/green]"
         )
 
-        # Perform and print Tukey's HSD post-hoc test
         tukey_result = pairwise_tukeyhsd(
-            endog=df["final_active_agents"], groups=df["agent_group"], alpha=alpha
+            endog=df[metric_column], groups=df["agent_group"], alpha=alpha
         )
-
         console.print(
             "\n[bold]Pairwise Tukey HSD Test (shows which groups differ):[/bold]"
         )
@@ -123,9 +146,8 @@ def print_analysis_summary(df: pd.DataFrame, alpha: float = 0.05):
 
     else:
         console.print(
-            f"  [yellow]❌ The p-value is greater than {alpha}, indicating no statistically significant difference was found among the groups.[/yellow]"
+            f"  [yellow]❌ The p-value is greater than {alpha}, indicating no statistically significant difference was found.[/yellow]"
         )
-
     console.rule()
 
 
@@ -135,7 +157,7 @@ def main(
         ..., help="The exact name of the experiment to analyze from the database."
     ),
 ):
-    """Main function to orchestrate the analysis."""
+    """Main function to orchestrate the analysis for multiple metrics."""
     try:
         engine = get_db_connection()
         data = fetch_experiment_data(engine, experiment_name)
@@ -148,7 +170,18 @@ def main(
             print(data)
             return
 
-        print_analysis_summary(data)
+        metrics_to_analyze = [
+            ("final_active_agents", "Final Active Agents (Survival)"),
+            ("total_attacks", "Total Attacks"),
+            ("total_shares", "Total Shares"),
+            ("total_reproductions", "Total Reproductions"),
+        ]
+
+        for metric_col, metric_title in metrics_to_analyze:
+            if metric_col in data.columns:
+                print_analysis_summary(data, metric_col, metric_title)
+            else:
+                print(f"Metric column '{metric_col}' not found in data. Skipping.")
 
     except Exception as e:
         print(f"\nAn error occurred during analysis: {e}")

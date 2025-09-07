@@ -1,3 +1,4 @@
+# FILE: simulations/sugarscape_sim/environment.py
 """
 Defines the Sugarscape simulation environment.
 
@@ -56,26 +57,30 @@ class SugarscapeEnvironment(EnvironmentInterface):
             gaussian1 = np.exp(-(dist1**2) / (2 * (self.width / 6) ** 2))
             gaussian2 = np.exp(-(dist2**2) / (2 * (self.width / 6) ** 2))
             sugar = (gaussian1 + gaussian2) * self.max_sugar_per_cell
-            return sugar.astype(int)
+            # CHANGED: The sugar map is now an array of floats
+            return sugar.astype(float)
         else:
+            # CHANGED: The sugar map is now an array of floats
             return self.rng.integers(
                 0, self.max_sugar_per_cell + 1, size=(self.width, self.height)
-            )
+            ).astype(float)
 
     def regenerate_sugar(self) -> None:
         """Increments the sugar in all cells up to the maximum."""
+        # This operation now works correctly because the dtypes match.
         self.sugar_map += self.sugar_regeneration_rate
         np.clip(self.sugar_map, 0, self.max_sugar_per_cell, out=self.sugar_map)
 
     def get_sugar_at(self, position: Tuple[int, int]) -> int:
-        """Returns the amount of sugar at a given position."""
-        return self.sugar_map[position[1], position[0]]
+        """Returns the integer amount of sugar at a given position."""
+        return int(self.sugar_map[position[1], position[0]])
 
     def consume_sugar(self, position: Tuple[int, int]) -> int:
-        """Consumes all sugar at a position and returns the amount."""
+        """Consumes the integer portion of sugar and returns the amount."""
         sugar_amount = self.get_sugar_at(position)
-        self.sugar_map[position[1], position[0]] = 0
-        return int(sugar_amount)
+        # The agent harvests the integer amount, leaving the fraction.
+        self.sugar_map[position[1], position[0]] -= sugar_amount
+        return sugar_amount
 
     def get_all_empty_cells(self) -> List[Tuple[int, int]]:
         """
@@ -91,7 +96,6 @@ class SugarscapeEnvironment(EnvironmentInterface):
         empty_cells = self.get_all_empty_cells()
         if not empty_cells:
             return None
-        # Use the seeded RNG for deterministic selection.
         return empty_cells[self.rng.choice(len(empty_cells))]
 
     def update_entity_position(

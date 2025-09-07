@@ -1,24 +1,16 @@
 {
-    "name": "Baseline Forager Scenario",
-    "description": "A controlled experiment baseline with a homogeneous population of 'Forager' agents. This setup is designed to test the efficiency of the low-metabolism, high-vision strategy in isolation.",
-    "agent_distribution": {
-      "forager": 50,
-      "rusher": 0
-    },
-    "agent_archetypes": [
-      {
-        "name": "forager",
-        "description": "Low metabolism, high vision. Optimized for efficiency.",
-        "initial_energy": 75,
-        "metabolic_rate": 1,
-        "vision_range": 6
-      },
-      {
-        "name": "rusher",
-        "description": "High metabolism, low vision. A high-risk, high-reward strategy.",
-        "initial_energy": 100,
-        "metabolic_rate": 4,
-        "vision_range": 2
-      }
-    ]
-  }
+  "name": "Isolated Cognitive Test Scenario",
+  "description": "A harsh world with a single, standardized agent archetype to strictly isolate the effects of different cognitive strategies.",
+  "agent_distribution": {
+    "standard_agent": 50
+  },
+  "agent_archetypes": [
+    {
+      "name": "standard_agent",
+      "description": "A calibrated agent with fixed parameters for all experimental groups.",
+      "initial_energy": 250,
+      "metabolic_rate": 1,
+      "vision_range": 4
+    }
+  ]
+}

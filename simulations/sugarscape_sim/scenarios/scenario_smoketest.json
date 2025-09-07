@@ -1,0 +1,24 @@
+{
+    "name": "Smoke Test Scenario - Harsh",
+    "description": "A harsh world with high-metabolism agents to validate survival pressure.",
+    "agent_distribution": {
+      "forager": 50,
+      "rusher": 0
+    },
+    "agent_archetypes": [
+      {
+        "name": "forager",
+        "description": "High metabolism, high vision. Designed for a harsh world.",
+        "initial_energy": 75,
+        "metabolic_rate": 2,
+        "vision_range": 6
+      },
+      {
+        "name": "rusher",
+        "description": "High metabolism, low vision.",
+        "initial_energy": 100,
+        "metabolic_rate": 4,
+        "vision_range": 2
+      }
+    ]
+  }

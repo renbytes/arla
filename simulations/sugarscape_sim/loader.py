@@ -1,3 +1,4 @@
+# FILE: simulations/sugarscape_sim/loader.py
 """
 Defines the ScenarioLoader for the Sugarscape simulation.
 
@@ -8,7 +9,7 @@ updated to use a seeded random number generator for deterministic agent placemen
 """
 
 import json
-from typing import Any, List
+from typing import Any
 
 import numpy as np
 from agent_core.core.ecs.component import (
@@ -29,7 +30,7 @@ from .environment import SugarscapeEnvironment
 class SugarscapeScenarioLoader(ScenarioLoaderInterface):
     """
     Loads the Sugarscape scenario, creating agents based on defined archetypes
-    and placing them in a reproducible manner.
+    and placing them in a reproducible, uniform grid.
     """
 
     def __init__(
@@ -41,28 +42,39 @@ class SugarscapeScenarioLoader(ScenarioLoaderInterface):
 
     def load(self) -> None:
         """
-        Loads the scenario, initializes agents with archetype-specific
-        components, and places them in the environment deterministically.
+        Loads the scenario, initializes agents, and places them in a
+        deterministic, uniform grid to reduce environmental variance.
         """
         with open(self.scenario_path, "r") as f:
             scenario_data = json.load(f)
 
         env = self.simulation_state.environment
-        # FIX: Explicitly check if the environment is the correct type.
-        # This helps mypy confirm the type of 'env' for subsequent calls.
         if not isinstance(env, SugarscapeEnvironment):
             raise TypeError("Environment must be a SugarscapeEnvironment instance.")
 
         archetypes = {arch["name"]: arch for arch in scenario_data["agent_archetypes"]}
         agent_distribution = scenario_data["agent_distribution"]
+        total_agents = sum(agent_distribution.values())
 
-        all_empty_cells: List[tuple[int, int]] = env.get_all_empty_cells()
-        if not all_empty_cells:
-            print("WARNING: No empty cells to spawn agents.")
-            return
+        # This creates a deterministic, grid-based spawn pattern.
+        spawn_locations = []
+        if total_agents > 0:
+            grid_side = int(np.ceil(np.sqrt(total_agents)))
+            spacing_x = env.width // (grid_side + 1)
+            spacing_y = env.height // (grid_side + 1)
 
-        self.rng.shuffle(all_empty_cells)
-        spawn_locations = iter(all_empty_cells)
+            for i in range(total_agents):
+                row = (i // grid_side) + 1
+                col = (i % grid_side) + 1
+                x, y = col * spacing_x, row * spacing_y
+                if env.is_valid_position((x, y)) and not env.get_entities_at_position(
+                    (x, y)
+                ):
+                    spawn_locations.append((x, y))
+
+        # Shuffle the deterministic locations to randomly assign archetypes
+        self.rng.shuffle(spawn_locations)
+        spawn_iterator = iter(spawn_locations)
 
         agent_counter = 0
         for archetype_name, count in agent_distribution.items():
@@ -77,12 +89,11 @@ class SugarscapeScenarioLoader(ScenarioLoaderInterface):
                 self.simulation_state.add_entity(agent_id)
 
                 try:
-                    start_pos = next(spawn_locations)
+                    start_pos = next(spawn_iterator)
                 except StopIteration:
-                    print(f"WARNING: Ran out of empty cells to spawn agent {agent_id}.")
+                    print(f"WARNING: Ran out of spawn locations for agent {agent_id}.")
                     continue
 
-                # Add components based on the archetype's definition
                 self.simulation_state.add_component(
                     agent_id, PositionComponent(x=start_pos[0], y=start_pos[1])
                 )
