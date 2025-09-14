@@ -1,0 +1,5 @@
+{
+    "name": "Default Commons Scenario",
+    "description": "A standard setup with 50 Herder agents.",
+    "num_agents": 50
+}

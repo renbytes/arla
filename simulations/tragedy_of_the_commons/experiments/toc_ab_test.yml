@@ -1,0 +1,24 @@
+experiment_name: "Commons - Heuristic vs QLearning"
+
+base_config_path: "simulations/tragedy_of_the_commons/config/config.yml"
+
+simulation_package: "simulations.tragedy_of_the_commons"
+
+# Use the standardized scenario to ensure a fair test
+scenarios:
+  - "simulations/sugarscape_sim/scenarios/default.json"
+
+# Run each variation multiple times for statistical significance
+runs_per_scenario: 15
+
+# Define all experimental groups, including both LLM agent types
+variations:
+  - name: "GroupA-Baseline-Heuristic"
+    overrides:
+      decision_selector:
+        class: "simulations.tragedy_of_the_commons.providers.HeuristicDecisionSelector"
+
+  - name: "GroupB-Experimental-QLearning"
+    overrides:
+      decision_selector:
+        class: "simulations.tragedy_of_the_commons.providers.QLearningDecisionSelector"
