@@ -1,0 +1,12 @@
+# simulations/disease_sim/experiments/validate_model.yml
+
+experiment_name: "Disease Model Validation"
+base_config_path: "simulations/disease_sim/config/config.yml"
+simulation_package: "simulations.disease_sim"
+scenarios:
+  - "simulations/disease_sim/scenarios/default.json"
+runs_per_scenario: 10 # Run multiple times for statistical robustness
+
+variations:
+  - name: "Baseline-SEIR"
+    overrides: {} # No overrides, just run the default config

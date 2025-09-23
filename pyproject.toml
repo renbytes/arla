@@ -29,6 +29,10 @@ from = "agent-persist/src"
 include = "agent_concurrent"
 from = "agent-concurrent/src"
 
+[[tool.poetry.packages]]
+include = "disease_sim"
+from = "simulations"
+
 [tool.poetry.scripts]
 agentsim = "agent_sim.cli:app"
 arla = "agent_sim.cli:app"

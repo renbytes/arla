@@ -1,0 +1,57 @@
+# simulations/disease_sim/config/config.yml
+simulation_package: "simulations.disease_sim"
+
+simulation:
+  steps: 200
+  log_directory: "data/logs/disease_sim"
+  random_seed: 42
+
+environment:
+  class: "simulations.disease_sim.environment.DiseaseEnvironment"
+  params:
+    width: 50
+    height: 50
+
+disease:
+  infection_probability_i: 0.05
+  infection_probability_e: 0.01
+  incubation_period_mean: 8
+  infection_period_mean: 14
+
+network:
+  avg_degree: 6
+  rewiring_prob: 0.1
+
+interventions:
+  lockdown_tick: 80
+  lockdown_effectiveness: 0.8
+
+# --- Boilerplate for engine compatibility ---
+agent:
+  foundational: { num_agents: 100 }
+  cognitive: {}
+  costs: {}
+  dynamics: {}
+  emotional_dynamics: {}
+  identity_dynamics: {}
+learning:
+  q_learning: {}
+  memory: {}
+scenario_path: "simulations/disease_sim/scenarios/default.json"
+scenario_loader:
+  class: "simulations.disease_sim.loader.DiseaseScenarioLoader"
+action_generator:
+  class: "simulations.disease_sim.providers.DiseaseActionGenerator"
+decision_selector:
+  class: "simulations.disease_sim.providers.PassiveDecisionSelector"
+component_factory:
+  class: "simulations.disease_sim.providers.DiseaseComponentFactory"
+actions:
+  - "simulations.disease_sim.actions"
+logging:
+  components_to_log:
+    - "simulations.disease_sim.components.PositionComponent"
+    - "simulations.disease_sim.components.DiseaseStateComponent"
+    - "simulations.disease_sim.components.NeighborhoodComponent"
+rendering:
+  enabled: false
