@@ -6,7 +6,7 @@ simulation_package: "simulations.tragedy_of_the_commons"
 
 # Use the standardized scenario to ensure a fair test
 scenarios:
-  - "simulations/sugarscape_sim/scenarios/default.json"
+  - "simulations/tragedy_of_the_commons/scenarios/default.json"
 
 # Run each variation multiple times for statistical significance
 runs_per_scenario: 15

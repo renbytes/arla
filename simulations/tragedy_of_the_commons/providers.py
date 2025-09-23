@@ -208,7 +208,7 @@ class CommonsStateEncoder(StateEncoderInterface):
         east = env.get_resource_at((pos_comp.x + 1, pos_comp.y))
         west = env.get_resource_at((pos_comp.x - 1, pos_comp.y))
 
-        max_res = sim_state.config.environment.max_resource_per_patch
+        max_res = sim_state.config.environment.params.max_resource_per_patch
 
         feature_vector = [
             norm_energy,

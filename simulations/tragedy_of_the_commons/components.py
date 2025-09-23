@@ -25,7 +25,7 @@ class PositionComponent(Component):
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the component's data to a dictionary."""
-        return {"x": self.x, "y": self.y}
+        return {"x": int(self.x), "y": int(self.y)}
 
     def validate(self, entity_id: str) -> Tuple[bool, List[str]]:
         """Validates the component's internal state."""

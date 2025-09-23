@@ -47,9 +47,9 @@ class CommonsScenarioLoader(ScenarioLoaderInterface):
                 self.simulation_state.add_component(
                     resource_id,
                     ResourceComponent(
-                        current_resource=self.simulation_state.config.environment.initial_resource_level,
-                        max_resource=self.simulation_state.config.environment.max_resource_per_patch,
-                        regeneration_rate=self.simulation_state.config.environment.resource_regeneration_rate,
+                        current_resource=self.simulation_state.config.environment.params.initial_resource_level,
+                        max_resource=self.simulation_state.config.environment.params.max_resource_per_patch,
+                        regeneration_rate=self.simulation_state.config.environment.params.resource_regeneration_rate,
                     ),
                 )
                 env.resource_grid[(x, y)] = resource_id
