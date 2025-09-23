@@ -1,16 +1,49 @@
+# ==============================================================================
+# ARLA Project Docker Compose - Optimized for Development
+# ==============================================================================
+
 services:
-  # The Application Service
+  # Main application service
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     volumes:
-      - .:/app
+      # Source code volumes for live development
+      - ./agent-core/src:/app/agent-core/src:rw
+      - ./agent-engine/src:/app/agent-engine/src:rw
+      - ./agent-sim/src:/app/agent-sim/src:rw
+      - ./agent-concurrent/src:/app/agent-concurrent/src:rw
+      - ./agent-persist/src:/app/agent-persist/src:rw
+      - ./simulations:/app/simulations:rw
+
+      # Configuration and dependency files
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./poetry.lock:/app/poetry.lock:ro
+      - ./agent-core/pyproject.toml:/app/agent-core/pyproject.toml:ro
+      - ./agent-engine/pyproject.toml:/app/agent-engine/pyproject.toml:ro
+      - ./agent-sim/pyproject.toml:/app/agent-sim/pyproject.toml:ro
+      - ./agent-concurrent/pyproject.toml:/app/agent-concurrent/pyproject.toml:ro
+      - ./agent-persist/pyproject.toml:/app/agent-persist/pyproject.toml:ro
+
+      # Data and output directories
+      - ./data:/app/data:rw
+      - ./mlruns:/app/mlruns:rw
+
+      # Scripts and utilities
+      - ./scripts:/app/scripts:rw
+
+      # Preserve virtual environment and cache
       - poetry_venv:/app/.venv
+      - poetry_cache:/opt/poetry-cache
     env_file:
       - .env
     environment:
-      PYTHONPATH: /app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations
+      PYTHONPATH: "/app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations"
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
     depends_on:
       db:
         condition: service_healthy
@@ -18,21 +51,52 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_healthy
-    command: tail -f /dev/null
+    networks:
+      - arla_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import agent_sim; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # The Worker Service
+  # Celery worker service
   worker:
     build:
       context: .
       dockerfile: Dockerfile
-    command: poetry run agentsim start-worker -Q "experiments,simulations" -c 4
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    command: >
+      sh -c "
+        echo 'Starting Celery worker...' &&
+        /opt/poetry/bin/poetry run agentsim start-worker -Q 'experiments,simulations' -c 4
+      "
+    volumes:
+      # Same volumes as app for consistency
+      - ./agent-core/src:/app/agent-core/src:rw
+      - ./agent-engine/src:/app/agent-engine/src:rw
+      - ./agent-sim/src:/app/agent-sim/src:rw
+      - ./agent-concurrent/src:/app/agent-concurrent/src:rw
+      - ./agent-persist/src:/app/agent-persist/src:rw
+      - ./simulations:/app/simulations:rw
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./poetry.lock:/app/poetry.lock:ro
+      - ./agent-core/pyproject.toml:/app/agent-core/pyproject.toml:ro
+      - ./agent-engine/pyproject.toml:/app/agent-engine/pyproject.toml:ro
+      - ./agent-sim/pyproject.toml:/app/agent-sim/pyproject.toml:ro
+      - ./agent-concurrent/pyproject.toml:/app/agent-concurrent/pyproject.toml:ro
+      - ./agent-persist/pyproject.toml:/app/agent-persist/pyproject.toml:ro
+      - ./data:/app/data:rw
+      - ./mlruns:/app/mlruns:rw
+      - poetry_venv:/app/.venv
+      - poetry_cache:/opt/poetry-cache
     env_file:
       - .env
-    volumes:
-      - .:/app
-      - poetry_venv:/app/.venv
     environment:
-      PYTHONPATH: /app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations
+      PYTHONPATH: "/app/agent-core/src:/app/agent-engine/src:/app/agent-sim/src:/app/agent-concurrent/src:/app/agent-persist/src:/app/simulations"
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
     depends_on:
       db:
         condition: service_healthy
@@ -40,9 +104,17 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_healthy
+    networks:
+      - arla_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import agent_sim; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # The PostgreSQL Database Service
+  # PostgreSQL database
   db:
     image: postgres:15-alpine
     volumes:
@@ -50,82 +122,133 @@ services:
     env_file:
       - .env
     ports:
-      - "5432:5432"
-    command: postgres -c 'max_connections=400'
+      - "${POSTGRES_PORT:-5432}:5432"
+    command: >
+      postgres
+      -c max_connections=400
+      -c shared_buffers=128MB
+      -c effective_cache_size=512MB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+    networks:
+      - arla_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-arla}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  # The Redis Service
+  # Redis cache and message broker
   redis:
     image: redis:7.2-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    networks:
+      - arla_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 10s
 
-  # The MLflow Service
+  # MLflow experiment tracking
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.14.1
     ports:
-      - "5001:5000"
+      - "${MLFLOW_PORT:-5001}:5000"
     volumes:
-      - ./mlruns:/mlruns
+      - ./mlruns:/mlruns:rw
     env_file:
       - .env
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      - MLFLOW_AUTH_CONFIG_PATH=/auth_config.ini
+      MLFLOW_AUTH_CONFIG_PATH: /auth_config.ini
     command:
       - bash
       - -c
       - |
-        # Install curl and PostgreSQL driver for auth database
-        apt-get update && apt-get install -y curl libpq-dev &&
-        pip install psycopg2-binary &&
+        set -e
+        echo "Installing dependencies..."
+        apt-get update && apt-get install -y --no-install-recommends curl libpq-dev
+        pip install --no-cache-dir psycopg2-binary
 
-        # Create auth config with PostgreSQL connection
-        cat > /auth_config.ini << EOF
+        echo "Creating auth config..."
+        cat > /auth_config.ini << 'EOF'
         [mlflow]
         admin_username = admin
         admin_password = password
         default_permission = READ
-        database_uri = postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+        database_uri = postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-arla}
         EOF
 
-        # Start MLflow with authentication
+        echo "Starting MLflow server..."
         exec mlflow server \
           --host 0.0.0.0 \
           --port 5000 \
           --backend-store-uri file:///mlruns \
-          --app-name basic-auth
+          --app-name basic-auth \
+          --serve-artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - arla_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:5000/"]
-      interval: 15s
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:5000/health"]
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 45s
+      start_period: 60s
     restart: unless-stopped
 
-  log_viewer:
+  # Container log viewer
+  dozzle:
     image: amir20/dozzle:latest
-    container_name: dozzle
+    container_name: arla_dozzle
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "9999:8080"
+      - "${DOZZLE_PORT:-9999}:8080"
+    environment:
+      DOZZLE_LEVEL: info
+      DOZZLE_TAILSIZE: 300
+      DOZZLE_FILTER: "name=arla"
+    networks:
+      - arla_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+# Named volumes for data persistence
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   poetry_venv:
+    driver: local
+  poetry_cache:
+    driver: local
+
+# Custom network for service communication
+networks:
+  arla_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

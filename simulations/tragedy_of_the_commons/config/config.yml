@@ -1,0 +1,66 @@
+# simulations/tragedy_of_the_commons/config/config.yml
+simulation_package: "simulations.tragedy_of_the_commons"
+
+simulation:
+  steps: 500
+  log_directory: "data/logs/tragedy_of_the_commons"
+  random_seed: 42
+
+environment:
+  class: "simulations.tragedy_of_the_commons.environment.CommonsEnvironment"
+  params:
+    width: 25
+    height: 25
+    initial_resource_level: 10.0
+    max_resource_per_patch: 20
+    resource_regeneration_rate: 0.1
+
+agent:
+  initial_energy: 100.0
+  metabolic_cost_per_tick: 0.5
+  graze_amount: 5.0
+  # Dummy values required by base schemas
+  foundational:
+    num_agents: 50
+  cognitive: {}
+  costs: {}
+  dynamics: {}
+  emotional_dynamics: {}
+  identity_dynamics: {}
+
+learning:
+  q_learning:
+    alpha: 0.1
+    gamma: 0.95
+    initial_epsilon: 1.0
+    epsilon_decay_rate: 0.9995
+    min_epsilon: 0.05
+  memory: {}
+
+scenario_path: "simulations/tragedy_of_the_commons/scenarios/default.json"
+
+scenario_loader:
+  class: "simulations.tragedy_of_the_commons.loader.CommonsScenarioLoader"
+
+action_generator:
+  class: "simulations.tragedy_of_the_commons.providers.CommonsActionGenerator"
+
+decision_selector:
+  class: "simulations.tragedy_of_the_commons.providers.HeuristicDecisionSelector"
+
+component_factory:
+  class: "simulations.tragedy_of_the_commons.providers.CommonsComponentFactory"
+
+actions:
+  - "simulations.tragedy_of_the_commons.actions"
+
+logging:
+  components_to_log:
+    - "simulations.tragedy_of_the_commons.components.PositionComponent"
+    - "simulations.tragedy_of_the_commons.components.EnergyComponent"
+
+rendering:
+  enabled: true
+  output_directory: "data/gif_renders/tragedy_of_the_commons"
+  frames_per_second: 15
+  pixel_scale: 15

@@ -23,18 +23,47 @@ RENDER_DIR ?= data/gif_renders
 FPS ?= 15
 WORKERS ?= 4
 
+# --- Build Configuration ---
+# Enable Docker BuildKit for better caching and parallel builds
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
 
 # --- Core Docker Commands ---
 
 ## up: Build images, start services, and initialize the database.
 up:
 	@echo "🚀 Building images and starting all services..."
-	@docker compose up -d --build
-	@echo "⏳ Waiting 10 seconds for services to stabilize..."
-	@sleep 10
+	@echo "   Using BuildKit for optimized caching..."
+	@DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose up -d --build
+	@echo "⏳ Waiting for services to be healthy..."
+	@docker compose exec -T db sh -c 'until pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB; do sleep 1; done' || true
+	@docker compose exec -T redis sh -c 'until redis-cli ping; do sleep 1; done' || true
 	@echo "🔑 Initializing database tables..."
 	@make init-db
 	@echo "✅ All services are up and the database is initialized."
+	@echo ""
+	@echo "📊 Service Status:"
+	@docker compose ps
+	@echo ""
+	@echo "🔗 Available endpoints:"
+	@echo "   - Application shell: docker compose exec app bash"
+	@echo "   - MLflow UI: http://localhost:5001 (admin/password)"
+	@echo "   - Dozzle logs: http://localhost:9999"
+	@echo "   - PostgreSQL: localhost:5432"
+	@echo "   - Redis: localhost:6379"
+
+## up-rebuild: Force rebuild all images from scratch (ignores cache).
+up-rebuild:
+	@echo "🔨 Force rebuilding all images from scratch..."
+	@DOCKER_BUILDKIT=1 docker compose build --no-cache
+	@echo "🚀 Starting services with fresh images..."
+	@docker compose up -d
+	@echo "⏳ Waiting for services to be healthy..."
+	@docker compose exec -T db sh -c 'until pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB; do sleep 1; done' || true
+	@docker compose exec -T redis sh -c 'until redis-cli ping; do sleep 1; done' || true
+	@echo "🔑 Initializing database tables..."
+	@make init-db
+	@echo "✅ All services are up with fresh builds."
 
 ## down: Stop and remove all containers, networks, and volumes.
 down:
@@ -49,7 +78,7 @@ logs:
 ## init-db: Connects to the DB and creates all necessary tables.
 init-db:
 	@echo "Initializing database and creating tables..."
-	@docker compose exec app poetry run python -m agent_sim.infrastructure.database.init_db
+	@docker compose exec app /opt/poetry/bin/poetry run python -m agent_sim.infrastructure.database.init_db
 
 ## setup: Create the .env file from the example template.
 setup:
@@ -67,7 +96,7 @@ run:
 	@sleep 5
 	@echo "▶️ Submitting experiment from: $(FILE)"
 	# This command will now succeed because the 'app' container is running.
-	@docker compose exec app poetry run agentsim run-experiment $(FILE)
+	@docker compose exec app /opt/poetry/bin/poetry run agentsim run-experiment $(FILE)
 
 ## run-local: Run a single, local simulation for quick testing and debugging.
 run-local:

@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+
+# Project specific - LARGE DIRECTORIES
+data/
+mlruns/
+site/
+all_code_and_configs.txt
+arla_monorepo_workspace.egg-info/
+logs/
+*.log
+*.db
+*.sqlite
+
+# Rust build artifacts
+**/target/
+**/*.so
+Cargo.lock
+
+# Documentation
+docs/
+*.md
+!README.md  # Keep README.md as it's needed by Poetry
+
+# Environment files
+.env*
+!.env.example
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Testing
+coverage.xml
+*.cover
+.hypothesis/
+
+# Package managers
+poetry.lock.bak
+pip-log.txt
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Archives
+*.tar
+*.tar.gz
+*.zip
+*.gz
+
+# Media files (if you have any)
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.gif
+!docs/**/*.png
+!docs/**/*.jpg
