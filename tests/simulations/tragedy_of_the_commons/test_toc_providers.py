@@ -28,7 +28,8 @@ def mock_sim_state_provider():
     # Make the mock environment identifiable as a CommonsEnvironment
     state.environment = MagicMock(spec=CommonsEnvironment)
     state.config = MagicMock()
-    state.config.environment.max_resource_per_patch = 20.0
+    # Correctly nest 'max_resource_per_patch' under 'params' to match the actual config structure.
+    state.config.environment.params.max_resource_per_patch = 20.0
     return state
 
 
@@ -38,7 +39,7 @@ class TestHeuristicDecisionSelector:
     @pytest.fixture
     def selector(self) -> HeuristicDecisionSelector:
         """Provides a HeuristicDecisionSelector instance."""
-        # Pass the mock config, similar to how it's done in the run.py
+        # Pass mock objects, similar to how it's done in the run.py
         return HeuristicDecisionSelector(simulation_state=None, config=None)
 
     def test_prefers_graze_action(self, selector: HeuristicDecisionSelector):
@@ -75,14 +76,13 @@ class TestHeuristicDecisionSelector:
         move_to_good = ActionPlanComponent(
             action_type=MagicMock(action_id="move"), params={"target_pos": (1, 2)}
         )
-        wait_action = ActionPlanComponent(
-            action_type=MagicMock(action_id="wait"), params={}
-        )
+        wait_action = ActionPlanComponent(action_type=MagicMock(action_id="wait"))
         possible_actions = [move_to_good, wait_action, move_to_best]
 
         selected = selector.select(mock_sim_state_provider, "agent_1", possible_actions)
         assert selected is not None
-        assert selected.action_type.action_id == "move"
+        # It should select the move action, which has params
+        assert "target_pos" in selected.params
         assert selected.params["target_pos"] == (1, 1)
 
     def test_prefers_wait_if_no_good_move(
@@ -117,13 +117,13 @@ class TestCommonsStateEncoder:
         pos_comp = PositionComponent(x=5, y=5)
         energy_comp = EnergyComponent(current_energy=80.0, initial_energy=100.0)
 
-        # Use a more robust side_effect that handles different component types
-        def get_component_side_effect(entity_id, comp_type):
-            if comp_type is PositionComponent:
+        # Configure get_component mock to return the correct component based on type for robustness.
+        def get_component_side_effect(entity_id, component_type):
+            if component_type is PositionComponent:
                 return pos_comp
-            if comp_type is EnergyComponent:
+            if component_type is EnergyComponent:
                 return energy_comp
-            return None
+            return MagicMock()  # Return a default mock for any other type
 
         mock_sim_state_provider.get_component.side_effect = get_component_side_effect
 
@@ -143,7 +143,10 @@ class TestCommonsStateEncoder:
         )
 
         # Execute
-        features = encoder.encode_state(mock_sim_state_provider, "agent_1", None)
+        # FIX: Pass the mocked config object to the encoder.
+        features = encoder.encode_state(
+            mock_sim_state_provider, "agent_1", mock_sim_state_provider.config
+        )
 
         # Verify
         assert isinstance(features, np.ndarray)

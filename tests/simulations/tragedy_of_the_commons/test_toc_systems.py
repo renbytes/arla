@@ -1,149 +1,222 @@
 """
-Unit tests for the provider classes in the Tragedy of the Commons simulation.
+Unit tests for the system classes in the Tragedy of the Commons simulation.
 
-This file tests the logic of action generators, decision selectors, and state
-encoders to ensure they produce the correct outputs based on a given
-simulation state.
+This file tests the core logic of each system (Metabolism, Vitals, Movement, etc.)
+to ensure they correctly modify component and environment state based on
+the simulation rules.
 """
 
-import numpy as np
 import pytest
 from unittest.mock import MagicMock
-from simulations.tragedy_of_the_commons.providers import (
-    HeuristicDecisionSelector,
-    CommonsStateEncoder,
+
+# FIX: Use absolute imports to resolve the ImportError
+from simulations.tragedy_of_the_commons.systems import (
+    MetabolismSystem,
+    VitalsSystem,
+    MovementSystem,
+    GrazingSystem,
+    ResourceRegenerationSystem,
 )
-from simulations.tragedy_of_the_commons.environment import CommonsEnvironment
 from simulations.tragedy_of_the_commons.components import (
     EnergyComponent,
     PositionComponent,
+    ResourceComponent,
 )
-from agent_core.core.ecs.component import ActionPlanComponent
+from simulations.tragedy_of_the_commons.environment import CommonsEnvironment
+from agent_core.core.ecs.component import TimeBudgetComponent
+from agent_core.agents.actions.action_outcome import ActionOutcome
+
+# --- Mocks and Fixtures ---
 
 
 @pytest.fixture
-def mock_sim_state_provider():
-    """Provides a mock SimulationState for provider tests."""
+def mock_sim_state():
+    """Provides a mock SimulationState for system tests."""
     state = MagicMock()
-    # Make the mock environment identifiable as a CommonsEnvironment
     state.environment = MagicMock(spec=CommonsEnvironment)
     state.config = MagicMock()
-    state.config.environment.max_resource_per_patch = 20.0
+    state.event_bus = MagicMock()
+    # Mock entities as a dictionary
+    state.entities = {}
+
+    def get_component(entity_id, comp_type):
+        return state.entities.get(entity_id, {}).get(comp_type)
+
+    def get_entities_with_components(comp_types):
+        result = {}
+        for entity_id, components in state.entities.items():
+            if all(comp_type in components for comp_type in comp_types):
+                result[entity_id] = components
+        return result
+
+    state.get_component.side_effect = get_component
+    state.get_entities_with_components.side_effect = get_entities_with_components
+
     return state
 
 
-class TestHeuristicDecisionSelector:
-    """Tests for the HeuristicDecisionSelector."""
+# --- System Tests ---
 
-    @pytest.fixture
-    def selector(self) -> HeuristicDecisionSelector:
-        """Provides a HeuristicDecisionSelector instance."""
-        # Pass the mock config, similar to how it's done in the run.py
-        return HeuristicDecisionSelector(simulation_state=None, config=None)
 
-    def test_prefers_graze_action(self, selector: HeuristicDecisionSelector):
-        """Test that the selector chooses to graze if possible."""
-        graze_action = ActionPlanComponent(action_type=MagicMock(action_id="graze"))
-        move_action = ActionPlanComponent(action_type=MagicMock(action_id="move"))
-        possible_actions = [move_action, graze_action]
+@pytest.mark.asyncio
+class TestMetabolismSystem:
+    """Tests for the MetabolismSystem."""
 
-        selected = selector.select(MagicMock(), "agent_1", possible_actions)
-        assert selected is not None
-        assert selected.action_type.action_id == "graze"
+    async def test_update_decreases_energy(self, mock_sim_state):
+        """Verify that the system correctly applies metabolic cost."""
+        # Arrange
+        mock_sim_state.config.agent.metabolic_cost_per_tick = 0.5
+        agent_id = "herder_1"
+        energy_comp = EnergyComponent(current_energy=100.0, initial_energy=100.0)
+        time_comp = TimeBudgetComponent(initial_time_budget=100)
+        mock_sim_state.entities[agent_id] = {
+            EnergyComponent: energy_comp,
+            TimeBudgetComponent: time_comp,
+        }
 
-    def test_prefers_move_to_best_patch_if_no_graze(
-        self, selector: HeuristicDecisionSelector, mock_sim_state_provider
-    ):
-        """Test that the selector moves towards the richest patch if it cannot graze."""
+        system = MetabolismSystem(mock_sim_state, mock_sim_state.config, None)
 
-        # Setup environment mock to return different resource levels
-        def get_resource_at_side_effect(pos):
-            if pos == (1, 1):
-                return 10.0  # Best patch
-            if pos == (1, 2):
-                return 5.0
-            return 0.0
+        # Act
+        await system.update(current_tick=1)
 
-        mock_sim_state_provider.environment.get_resource_at.side_effect = (
-            get_resource_at_side_effect
+        # Assert
+        assert energy_comp.current_energy == 99.5
+
+    async def test_update_does_not_affect_inactive_agents(self, mock_sim_state):
+        """Verify that inactive agents do not consume energy."""
+        # Arrange
+        mock_sim_state.config.agent.metabolic_cost_per_tick = 0.5
+        agent_id = "herder_1"
+        energy_comp = EnergyComponent(current_energy=100.0, initial_energy=100.0)
+        time_comp = TimeBudgetComponent(initial_time_budget=100)
+        time_comp.is_active = False  # Agent is inactive
+        mock_sim_state.entities[agent_id] = {
+            EnergyComponent: energy_comp,
+            TimeBudgetComponent: time_comp,
+        }
+
+        system = MetabolismSystem(mock_sim_state, mock_sim_state.config, None)
+
+        # Act
+        await system.update(current_tick=1)
+
+        # Assert
+        assert energy_comp.current_energy == 100.0
+
+
+@pytest.mark.asyncio
+class TestVitalsSystem:
+    """Tests for the VitalsSystem."""
+
+    async def test_deactivates_agent_at_zero_energy(self, mock_sim_state):
+        """Verify agents are deactivated when their energy reaches zero."""
+        # Arrange
+        agent_id = "herder_1"
+        energy_comp = EnergyComponent(current_energy=0.0, initial_energy=100.0)
+        time_comp = TimeBudgetComponent(initial_time_budget=100)
+        mock_sim_state.entities[agent_id] = {
+            EnergyComponent: energy_comp,
+            TimeBudgetComponent: time_comp,
+        }
+
+        system = VitalsSystem(mock_sim_state, mock_sim_state.config, None)
+
+        # Act
+        await system.update(current_tick=1)
+
+        # Assert
+        assert not time_comp.is_active
+        mock_sim_state.environment.remove_entity.assert_called_with(agent_id)
+        mock_sim_state.event_bus.publish.assert_called_with(
+            "agent_deactivated",
+            {"entity_id": agent_id, "current_tick": 1},
         )
 
-        # Create move actions to different patches
-        move_to_best = ActionPlanComponent(
-            action_type=MagicMock(action_id="move"), params={"target_pos": (1, 1)}
-        )
-        move_to_good = ActionPlanComponent(
-            action_type=MagicMock(action_id="move"), params={"target_pos": (1, 2)}
-        )
-        wait_action = ActionPlanComponent(action_type=MagicMock(action_id="wait"))
-        possible_actions = [move_to_good, wait_action, move_to_best]
 
-        selected = selector.select(mock_sim_state_provider, "agent_1", possible_actions)
-        assert selected is not None
-        # It should select the move action, which has params
-        assert "target_pos" in selected.params
-        assert selected.params["target_pos"] == (1, 1)
+class TestMovementSystem:
+    """Tests for the MovementSystem."""
 
-    def test_prefers_wait_if_no_good_move(
-        self, selector: HeuristicDecisionSelector, mock_sim_state_provider
-    ):
-        """Test that the selector waits if it cannot graze or find a better patch."""
-        # Mock the environment to return 0 for all resource checks
-        mock_sim_state_provider.environment.get_resource_at.return_value = 0.0
-
-        move_action = ActionPlanComponent(
-            action_type=MagicMock(action_id="move"), params={"target_pos": (1, 1)}
-        )
-        wait_action = ActionPlanComponent(action_type=MagicMock(action_id="wait"))
-        possible_actions = [move_action, wait_action]
-
-        selected = selector.select(mock_sim_state_provider, "agent_1", possible_actions)
-        assert selected is not None
-        assert selected.action_type.action_id == "wait"
-
-
-class TestCommonsStateEncoder:
-    """Tests for the CommonsStateEncoder."""
-
-    @pytest.fixture
-    def encoder(self) -> CommonsStateEncoder:
-        """Provides a CommonsStateEncoder instance."""
-        return CommonsStateEncoder()
-
-    def test_encode_state(self, encoder: CommonsStateEncoder, mock_sim_state_provider):
-        """Test the state encoding logic."""
-        # Setup mocks
+    def test_on_move_updates_position(self, mock_sim_state):
+        """Verify a successful move updates the PositionComponent and environment."""
+        # Arrange
+        agent_id = "herder_1"
         pos_comp = PositionComponent(x=5, y=5)
-        energy_comp = EnergyComponent(current_energy=80.0, initial_energy=100.0)
-        mock_sim_state_provider.get_component.side_effect = [pos_comp, energy_comp]
+        mock_sim_state.entities[agent_id] = {PositionComponent: pos_comp}
+        mock_sim_state.environment.is_valid_position.return_value = True
+        mock_sim_state.environment.is_occupied_by_agent.return_value = False
 
-        # Use a dictionary for a more robust side_effect
-        def get_resource_at_side_effect(pos):
-            resource_map = {
-                (5, 5): 10.0,  # Center
-                (5, 4): 12.0,  # North
-                (5, 6): 8.0,  # South
-                (6, 5): 15.0,  # East
-                (4, 5): 5.0,  # West
-            }
-            return resource_map.get(pos, 0.0)
+        event_data = {
+            "entity_id": agent_id,
+            "action_plan_component": MagicMock(params={"target_pos": (6, 5)}),
+        }
 
-        mock_sim_state_provider.environment.get_resource_at.side_effect = (
-            get_resource_at_side_effect
+        system = MovementSystem(mock_sim_state, mock_sim_state.config, None)
+
+        # Act
+        system.on_move(event_data)
+
+        # Assert
+        assert pos_comp.position == (6, 5)
+        mock_sim_state.environment.update_entity_position.assert_called_with(
+            agent_id, (5, 5), (6, 5)
+        )
+        mock_sim_state.event_bus.publish.assert_called_with(
+            "action_outcome_ready", event_data
         )
 
-        # Execute
-        features = encoder.encode_state(mock_sim_state_provider, "agent_1", None)
 
-        # Verify
-        assert isinstance(features, np.ndarray)
-        assert features.shape == (6,)
-        assert features.dtype == np.float32
+class TestGrazingSystem:
+    """Tests for the GrazingSystem."""
 
-        # Expected values: [norm_energy, center, N, S, E, W]
-        # norm_energy = 80/100 = 0.8
-        # resources are normalized by max_resource (20.0)
-        expected_features = np.array(
-            [0.8, 10 / 20, 12 / 20, 8 / 20, 15 / 20, 5 / 20], dtype=np.float32
-        )
-        np.testing.assert_allclose(features, expected_features, rtol=1e-6)
+    def test_on_graze_updates_energy_and_resource(self, mock_sim_state):
+        """Verify grazing increases agent energy and decreases patch resources."""
+        # Arrange
+        agent_id = "herder_1"
+        pos_comp = PositionComponent(x=5, y=5)
+        energy_comp = EnergyComponent(current_energy=50.0, initial_energy=100.0)
+        mock_sim_state.entities[agent_id] = {
+            PositionComponent: pos_comp,
+            EnergyComponent: energy_comp,
+        }
+        mock_sim_state.config.agent.graze_amount = 5.0
+        # Mock environment returns 5.0 resources consumed
+        mock_sim_state.environment.consume_resource.return_value = 5.0
+
+        event_data = {"entity_id": agent_id, "action_plan_component": MagicMock()}
+
+        system = GrazingSystem(mock_sim_state, mock_sim_state.config, None)
+
+        # Act
+        system.on_graze(event_data)
+
+        # Assert
+        assert energy_comp.current_energy == 55.0
+        mock_sim_state.environment.consume_resource.assert_called_with((5, 5), 5.0)
+        # Check that the reward in the outcome matches the consumed amount
+        outcome = event_data["action_outcome"]
+        assert isinstance(outcome, ActionOutcome)
+        assert outcome.base_reward == 5.0
+
+
+@pytest.mark.asyncio
+class TestResourceRegenerationSystem:
+    """Tests for the ResourceRegenerationSystem."""
+
+    async def test_regenerates_resources(self, mock_sim_state):
+        """Verify that the system calls regenerate on resource components."""
+        # Arrange
+        res_comp1 = MagicMock(spec=ResourceComponent)
+        res_comp2 = MagicMock(spec=ResourceComponent)
+        mock_sim_state.entities = {
+            "grass_1": {ResourceComponent: res_comp1},
+            "grass_2": {ResourceComponent: res_comp2},
+        }
+
+        system = ResourceRegenerationSystem(mock_sim_state, mock_sim_state.config, None)
+
+        # Act
+        await system.update(current_tick=1)
+
+        # Assert
+        res_comp1.regenerate.assert_called_once()
+        res_comp2.regenerate.assert_called_once()
