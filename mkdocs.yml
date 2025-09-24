@@ -60,6 +60,9 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
+  - blog:
+      blog_dir: blog
+      authors_file: blog/.authors.yml
   - rss
 
 # Page tree
