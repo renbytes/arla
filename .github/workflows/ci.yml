@@ -34,12 +34,16 @@ jobs:
         with:
           python-version: "3.11.9"
 
-      # This step will only run for the "Run Tests & Check Coverage" job
-      - name: "Install Graphviz"
-        if: matrix.task.needs_graphviz == true
+      # Install system dependencies FIRST, before Poetry installation
+      - name: "Install system dependencies"
         run: |
           sudo apt-get update
-          sudo apt-get install -y graphviz graphviz-dev libgraphviz-dev pkg-config
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            graphviz \
+            graphviz-dev \
+            libgraphviz-dev \
+            pkg-config
 
       - name: "Install Poetry"
         run: |
@@ -56,9 +60,9 @@ jobs:
         with:
           path: .venv
           # Include pyproject.toml in cache key to invalidate when dependencies change
-          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v2
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v3
           restore-keys: |
-            poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v2
+            poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock', '**/pyproject.toml') }}-v3
             poetry-${{ runner.os }}-
 
       - name: "Clean corrupted packages and install dependencies"
@@ -78,7 +82,7 @@ jobs:
       - name: "Verify installation"
         run: |
           poetry run python -c "import sys; print('Python version:', sys.version)"
-          poetry run python -c "import pygraphviz; print('pygraphviz version:', pygraphviz.__version__)" || echo "pygraphviz not needed for this job"
+          poetry run python -c "import pygraphviz; print('pygraphviz version:', pygraphviz.__version__)"
 
       - name: "Run Task"
         run: ${{ matrix.task.run_command }}
