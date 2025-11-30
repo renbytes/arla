@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import numpy as np
 
@@ -83,6 +83,24 @@ class Component(CognitiveComponent):
         Attempts to automatically fix validation errors.
         """
         return False  # Default: no auto-fix
+
+    @staticmethod
+    def _get_component_fields(cls: Type["Component"]) -> Dict[str, str]:
+        """
+        [NEW] Returns a dictionary mapping attribute names to stringified types,
+        excluding methods and private attributes. This is used by BQL for introspection.
+        """
+        # Get type hints, excluding 'self' if present, and callable attributes
+        hints = get_type_hints(cls)
+        
+        # Also check for attributes that are instance variables but might not 
+        # have explicit type hints (e.g., if using __init__ only).
+        # We'll use a simple filter for clarity.
+        fields = {}
+        for name, hint in hints.items():
+            if not name.startswith("_") and not callable(getattr(cls, name, None)):
+                fields[name] = str(hint)
+        return fields
 
 
 # -----------------------------------------------------------------------

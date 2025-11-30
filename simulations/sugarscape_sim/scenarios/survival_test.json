@@ -1,0 +1,25 @@
+{
+    "name": "BQL Survival Test Scenario",
+    "description": "A minimal run with two agents to test behavioral assertions.",
+    "agent_distribution": {
+      "forager": 1,
+      "sacrificial": 1
+    },
+    "agent_archetypes": [
+      {
+        "name": "forager",
+        "description": "Standard agent with good starting energy.",
+        "initial_energy": 250,
+        "metabolic_rate": 1,
+        "vision_range": 4
+      },
+      {
+        "name": "sacrificial",
+        "description": "Agent designed to fail by starting with low energy and high metabolism.",
+        "initial_energy": 10,
+        "metabolic_rate": 5,
+        "vision_range": 1
+      }
+    ]
+  }
+  

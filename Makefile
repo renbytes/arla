@@ -94,6 +94,7 @@ run:
 	@docker compose up -d app worker --scale worker=$(WORKERS)
 	@echo "⏳ Waiting 5 seconds for services to initialize..."
 	@sleep 5
+	@make init-db
 	@echo "▶️ Submitting experiment from: $(FILE)"
 	# This command will now succeed because the 'app' container is running.
 	@docker compose exec app /opt/poetry/bin/poetry run agentsim run-experiment $(FILE)
@@ -138,6 +139,10 @@ run-example:
 	  --config "simulations/schelling_sim/config/config.yml" \
 	  --scenario "simulations/schelling_sim/scenarios/default.json" \
 	  --steps 150
+
+bql-demo:
+	@echo "🔬 Executing BQL Behavioral Unit Test Demo..."
+	@docker compose exec app poetry run python tests/integration/run_bql_demo.py
 
 ## make-gif: Creates a GIF from a specific simulation run's render.
 make-gif:

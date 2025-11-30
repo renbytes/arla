@@ -18,6 +18,7 @@ services:
       - ./agent-concurrent/src:/app/agent-concurrent/src:rw
       - ./agent-persist/src:/app/agent-persist/src:rw
       - ./simulations:/app/simulations:rw
+      - ./tests:/app/tests:rw
 
       # Configuration and dependency files
       - ./pyproject.toml:/app/pyproject.toml:ro
@@ -80,6 +81,7 @@ services:
       - ./agent-concurrent/src:/app/agent-concurrent/src:rw
       - ./agent-persist/src:/app/agent-persist/src:rw
       - ./simulations:/app/simulations:rw
+      - ./tests:/app/tests:rw
       - ./pyproject.toml:/app/pyproject.toml:ro
       - ./poetry.lock:/app/poetry.lock:ro
       - ./agent-core/pyproject.toml:/app/agent-core/pyproject.toml:ro

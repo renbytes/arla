@@ -7,7 +7,7 @@ import asyncio
 import importlib
 import os
 import uuid
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, List
 
 import mlflow
 import numpy as np
@@ -27,6 +27,11 @@ from agent_sim.infrastructure.logging.database_emitter import DatabaseEmitter
 from agent_sim.infrastructure.logging.mlflow_exporter import MLflowExporter
 from omegaconf import OmegaConf
 
+# --- NEW IMPORTS FOR BQL REPORTING ---
+from agent_core.testing.bql import BehavioralAssertion
+from agent_sim.infrastructure.database.bql_test_reporter import BQLTestReporter
+from agent_sim.infrastructure.database.bql_executor import BQLExecutor # Needed for the reporter
+
 from .environment import SugarscapeEnvironment
 from .metrics.sugarscape_metrics_calculator import SugarscapeMetricsCalculator
 from .providers import (
@@ -39,7 +44,7 @@ from .providers import (
 from .systems import (
     MetricTrackerSystem,
     RenderingSystem,
-    VitalsSystem,  # NEW: Import the VitalsSystem
+    VitalsSystem,
 )
 
 
@@ -59,6 +64,8 @@ async def setup_and_run(
     task_id: str,
     experiment_id: str,
     config_overrides: Dict[str, Any],
+    # [NEW ARGUMENT] to accept assertions
+    behavioral_assertions: List[BehavioralAssertion] = [] 
 ):
     config = OmegaConf.create(config_overrides)
     db_manager = AsyncDatabaseManager()
@@ -99,6 +106,8 @@ async def setup_and_run(
         run_id=run_id,
         task_id=task_id,
         experiment_id=experiment_id,
+        # [NEW INJECTION] Pass assertions to the engine
+        behavioral_assertions=behavioral_assertions 
     )
 
     loader.simulation_state = manager.simulation_state
@@ -120,7 +129,7 @@ async def setup_and_run(
     for system_path in config.systems:
         system_class = import_class(system_path)
         if system_class is RenderingSystem and not config.rendering.get(
-            "enabled", False
+           "enabled", False
         ):
             continue
         manager.register_system(system_class)
@@ -163,7 +172,7 @@ async def setup_and_run(
     if "QLearningDecisionSelector" in config.decision_selector["class"]:
         for agent_id in manager.simulation_state.entities:
             if "agent_" in agent_id or "forager_" in agent_id or "rusher_" in agent_id:
-                manager.simulation_state.add_component(
+                 manager.simulation_state.add_component(
                     agent_id,
                     QLearningComponent(
                         state_feature_dim=9,
@@ -177,12 +186,27 @@ async def setup_and_run(
     print(
         f"🚀 Starting Sugarscape Simulation (Run ID: {run_id}) for {config.simulation.steps} steps..."
     )
-    await manager.run()
+    # MODIFIED: Run method now returns BQL status
+    bql_status = await manager.run() 
     print(f"✅ Simulation {run_id} completed.")
+    
+    # --- BQL ASSERTION EXECUTION AND REPORTING ---
+    if behavioral_assertions:
+        reporter = BQLTestReporter(
+            run_id=run_id,
+            db_manager=db_manager,
+            assertions=behavioral_assertions
+        )
+        final_results = await reporter.execute_and_report()
+        return final_results
+    
+    return {"BQL_STATUS": bql_status}
 
 
 def start_simulation(
-    run_id: str, task_id: str, experiment_name: str, config_overrides: Dict[str, Any]
+    run_id: str, task_id: str, experiment_name: str, config_overrides: Dict[str, Any],
+    # [NEW ARGUMENT] for symmetry with async function
+    behavioral_assertions: List[BehavioralAssertion] = [] 
 ):
     """Synchronous entry point for external callers."""
     if not run_id:
@@ -199,7 +223,7 @@ def start_simulation(
             current_run_id = run.info.run_id
             print(f"✅ Started new MLflow run for local execution: {current_run_id}")
             asyncio.run(
-                setup_and_run(current_run_id, task_id, experiment_id, config_overrides)
+                setup_and_run(current_run_id, task_id, experiment_id, config_overrides, behavioral_assertions)
             )
     else:
-        asyncio.run(setup_and_run(run_id, task_id, experiment_name, config_overrides))
+        asyncio.run(setup_and_run(run_id, task_id, experiment_name, config_overrides, behavioral_assertions))
