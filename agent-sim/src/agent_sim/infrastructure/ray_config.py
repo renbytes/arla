@@ -25,7 +25,9 @@ def init_ray():
         # For production, this could be modified to connect to a specific address.
         ray.init(address="auto", ignore_reinit_error=True)
         print("[bold green]✔ Ray cluster initialized successfully.[/bold green]")
-        print(f"   - Dashboard URL: [link={ray.get_dashboard_url()}]http://127.0.0.1:8265[/link]")
+        print(
+            f"   - Dashboard URL: [link={ray.get_dashboard_url()}]http://127.0.0.1:8265[/link]"
+        )
     except Exception as e:
         print(f"[bold red]❌ Failed to initialize Ray cluster: {e}[/bold red]")
         print("   - Please ensure Ray is properly installed.")

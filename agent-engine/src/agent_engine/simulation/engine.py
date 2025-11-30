@@ -18,14 +18,14 @@ from agent_core.core.ecs.component_factory_interface import ComponentFactoryInte
 from agent_core.core.ecs.event_bus import EventBus
 from agent_core.environment.interface import EnvironmentInterface
 from agent_core.simulation.scenario_loader_interface import ScenarioLoaderInterface
-from agent_core.testing.bql import BehavioralAssertion # [NEW IMPORT]
+from agent_core.testing.bql import BehavioralAssertion  # [NEW IMPORT]
 from agent_persist.store import FileStateStore
 from omegaconf import OmegaConf
 from pydantic import BaseModel
 
 from agent_engine.simulation.simulation_state import SimulationState
 from agent_engine.simulation.system import SystemManager
-from agent_engine.utils.manifest import create_run_manifest # [NEW IMPORT]
+from agent_engine.utils.manifest import create_run_manifest  # [NEW IMPORT]
 
 
 class SimulationManager:
@@ -53,7 +53,7 @@ class SimulationManager:
         self.config = config
         self.device = "cpu"
         self.db_logger = db_logger
-        self.behavioral_assertions = behavioral_assertions # Stored for post-run check
+        self.behavioral_assertions = behavioral_assertions  # Stored for post-run check
 
         self.environment = environment
         self.scenario_loader = scenario_loader
@@ -125,7 +125,7 @@ class SimulationManager:
 
     async def run(self, start_step: int = 0, end_step: Optional[int] = None) -> None:
         """
-        Executes the main ECS simulation loop asynchronously. 
+        Executes the main ECS simulation loop asynchronously.
         Triggers post-run BQL assertions if assertions were provided.
         """
         num_steps = end_step if end_step is not None else self.config.simulation.steps
@@ -140,13 +140,12 @@ class SimulationManager:
 
         print("\nSimulation loop finished.")
         self.save_state(num_steps)
-        
+
         # [NEW LOGIC] Publish assertion check request for external processing
         self._publish_assertions_pending()
-        
-        # NOTE: The SimulationManager does not wait for BQL results. 
-        # The calling script/test harness is responsible for retrieving them.
 
+        # NOTE: The SimulationManager does not wait for BQL results.
+        # The calling script/test harness is responsible for retrieving them.
 
     def save_state(self, tick: int) -> None:
         """Saves the current simulation state to a file."""
@@ -298,7 +297,7 @@ class SimulationManager:
                         "run_id": self.simulation_id,
                         "assertions": self.behavioral_assertions,
                         "max_tick": self.simulation_state.current_tick,
-                        "db_manager": self.db_logger
-                    }
+                        "db_manager": self.db_logger,
+                    },
                 )
             print("--- BQL Event published for post-run analysis.")

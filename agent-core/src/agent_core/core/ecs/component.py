@@ -92,8 +92,8 @@ class Component(CognitiveComponent):
         """
         # Get type hints, excluding 'self' if present, and callable attributes
         hints = get_type_hints(cls)
-        
-        # Also check for attributes that are instance variables but might not 
+
+        # Also check for attributes that are instance variables but might not
         # have explicit type hints (e.g., if using __init__ only).
         # We'll use a simple filter for clarity.
         fields = {}
